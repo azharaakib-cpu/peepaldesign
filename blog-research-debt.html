@@ -1,0 +1,543 @@
+<!doctype html>
+<html lang="en" class="no-js blog article">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Research debt — Peepal Design</title>
+<meta name="description" content="Teams price design debt and technical debt. Nobody prices the third kind: the compounding cost of shipping on assumptions nobody tested.">
+<meta name="theme-color" content="#0B0B0C">
+<link rel="stylesheet" href="assets/css/contact-sheet.css?v=301">
+<script>document.documentElement.className = document.documentElement.className.replace('no-js','js');</script>
+</head>
+<body>
+<!--
+  ARTICLE. Section order is taken from the Spendesk article the client
+  referenced: breadcrumb, meta block (byline, date, category), title, body with
+  subheads and inline figures, an inline CTA, a contents list, the mailing list,
+  an author card, related reads, a closing CTA. The UI is this site's own.
+
+  THE WHOLE ARTICLE IS AUTHORED. No client editorial exists on this build.
+  Sign it off or replace it before launch.
+
+  THE TWO FIGURES ARE SCHEMATICS, NOT DATA, and are captioned as such. Drawing a
+  chart with invented numbers on a real studio's blog would be fabricating
+  evidence, so neither figure carries an axis value and neither claims a
+  measurement. If real figures exist, replace the drawings and the captions
+  together — never leave a schematic caption on a real chart.
+
+  BYLINE: the studio, not a person. Supply a real author and the .pauthor block
+  takes a name, a role and a portrait.
+
+  The contents rail is sticky on wide screens and collapses above the article
+  below 1080px, where there is no room beside the column.
+-->
+
+<a class="skip" href="#body">Skip to the article</a>
+
+<div class="bgwash" id="bgWash" aria-hidden="true"></div>
+<div class="grain" aria-hidden="true"></div>
+
+<!-- ============================ NAV ============================ -->
+<header class="nav" id="nav">
+  <div class="nav__inner">
+    <a class="logo" href="index.html" aria-label="Peepal Design home">
+      <!-- Artwork lives at assets/brand/logomark.svg — swap that file, not this markup. -->
+      <img class="logo__mark" src="assets/brand/logomark.svg" alt="" width="26" height="26"
+           onerror="this.onerror=null;this.src='assets/brand/logomark.png'">
+      <span class="logo__word">peepaldesign</span>
+    </a>
+
+    <nav class="nav__menu" aria-label="Primary">
+      <div class="nav__item nav__item--mega has-menu">
+        <button class="nav__link" aria-expanded="false" aria-controls="m-services">Our Services<svg class="caret" viewBox="0 0 10 6" aria-hidden="true"><path d="M1 1l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg></button>
+        <!-- Headings, item lists and promo copy are all client-supplied.
+             "UX Benchmarking - UX Index" was originally given under two
+             columns; the client removed the Value Added copy on 2026-08-12, so
+             it now appears once, under User Research Services. -->
+        <div class="dropdown dropdown--panel dropdown--panel-wide" id="m-services" hidden>
+          <div class="mega">
+            <div class="mega__col">
+              <span class="mega__head">User Research Services</span>
+              <a class="megaitem megaitem--compact" href="service-quantitative-qualitative-research.html">
+                <span class="megaitem__dot" aria-hidden="true"></span>
+                <span class="megaitem__body"><span class="megaitem__title">Quantitative and Qualitative research</span></span>
+                <svg class="megaitem__arrow" viewBox="0 0 16 10" aria-hidden="true"><path d="M0 5h14M10 1l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </a>
+              <a class="megaitem megaitem--compact" href="service-usability-testing.html">
+                <span class="megaitem__dot" aria-hidden="true"></span>
+                <span class="megaitem__body"><span class="megaitem__title">Usability Testing</span></span>
+                <svg class="megaitem__arrow" viewBox="0 0 16 10" aria-hidden="true"><path d="M0 5h14M10 1l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </a>
+              <a class="megaitem megaitem--compact" href="service-ux-benchmarking.html">
+                <span class="megaitem__dot" aria-hidden="true"></span>
+                <span class="megaitem__body"><span class="megaitem__title">UX Benchmarking - UX Index</span></span>
+                <svg class="megaitem__arrow" viewBox="0 0 16 10" aria-hidden="true"><path d="M0 5h14M10 1l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </a>
+              <a class="megaitem megaitem--compact" href="service-ai-opportunity-mapping.html">
+                <span class="megaitem__dot" aria-hidden="true"></span>
+                <span class="megaitem__body"><span class="megaitem__title">AI Opportunity Mapping</span></span>
+                <svg class="megaitem__arrow" viewBox="0 0 16 10" aria-hidden="true"><path d="M0 5h14M10 1l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </a>
+            </div>
+            <div class="mega__col">
+              <span class="mega__head">Design Services</span>
+              <a class="megaitem megaitem--compact" href="service-ux-ui-design.html">
+                <span class="megaitem__dot" aria-hidden="true"></span>
+                <span class="megaitem__body"><span class="megaitem__title">UX-UI Design</span></span>
+                <svg class="megaitem__arrow" viewBox="0 0 16 10" aria-hidden="true"><path d="M0 5h14M10 1l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </a>
+              <a class="megaitem megaitem--compact" href="service-service-design.html">
+                <span class="megaitem__dot" aria-hidden="true"></span>
+                <span class="megaitem__body"><span class="megaitem__title">Service Design</span></span>
+                <svg class="megaitem__arrow" viewBox="0 0 16 10" aria-hidden="true"><path d="M0 5h14M10 1l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </a>
+              <a class="megaitem megaitem--compact" href="service-ux-for-ai-product.html">
+                <span class="megaitem__dot" aria-hidden="true"></span>
+                <span class="megaitem__body"><span class="megaitem__title">UX for AI Product</span></span>
+                <svg class="megaitem__arrow" viewBox="0 0 16 10" aria-hidden="true"><path d="M0 5h14M10 1l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </a>
+              <a class="megaitem megaitem--compact" href="service-conversational-ai-ux.html">
+                <span class="megaitem__dot" aria-hidden="true"></span>
+                <span class="megaitem__body"><span class="megaitem__title">Conversational AI - UX Design</span></span>
+                <svg class="megaitem__arrow" viewBox="0 0 16 10" aria-hidden="true"><path d="M0 5h14M10 1l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </a>
+              <a class="megaitem megaitem--compact" href="service-ai-product-prototyping.html">
+                <span class="megaitem__dot" aria-hidden="true"></span>
+                <span class="megaitem__body"><span class="megaitem__title">AI Product Prototyping</span></span>
+                <svg class="megaitem__arrow" viewBox="0 0 16 10" aria-hidden="true"><path d="M0 5h14M10 1l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </a>
+              <a class="megaitem megaitem--compact" href="service-design-accessibility.html">
+                <span class="megaitem__dot" aria-hidden="true"></span>
+                <span class="megaitem__body"><span class="megaitem__title">Design for Accessibility</span></span>
+                <svg class="megaitem__arrow" viewBox="0 0 16 10" aria-hidden="true"><path d="M0 5h14M10 1l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </a>
+              <a class="megaitem megaitem--compact" href="service-design-systems.html">
+                <span class="megaitem__dot" aria-hidden="true"></span>
+                <span class="megaitem__body"><span class="megaitem__title">Design Systems</span></span>
+                <svg class="megaitem__arrow" viewBox="0 0 16 10" aria-hidden="true"><path d="M0 5h14M10 1l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </a>
+              <a class="megaitem megaitem--compact" href="service-data-visualisation.html">
+                <span class="megaitem__dot" aria-hidden="true"></span>
+                <span class="megaitem__body"><span class="megaitem__title">Data Visualisation</span></span>
+                <svg class="megaitem__arrow" viewBox="0 0 16 10" aria-hidden="true"><path d="M0 5h14M10 1l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </a>
+            </div>
+            <div class="mega__col">
+              <span class="mega__head">Value Added Services</span>
+              <a class="megaitem megaitem--compact" href="service-ux-team-augmentation.html">
+                <span class="megaitem__dot" aria-hidden="true"></span>
+                <span class="megaitem__body"><span class="megaitem__title">UX Team Augmentation</span></span>
+                <svg class="megaitem__arrow" viewBox="0 0 16 10" aria-hidden="true"><path d="M0 5h14M10 1l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </a>
+              <a class="megaitem megaitem--compact" href="service-design-thinking-workshop.html">
+                <span class="megaitem__dot" aria-hidden="true"></span>
+                <span class="megaitem__body"><span class="megaitem__title">Design Thinking Workshop</span></span>
+                <svg class="megaitem__arrow" viewBox="0 0 16 10" aria-hidden="true"><path d="M0 5h14M10 1l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </a>
+              <a class="megaitem megaitem--compact" href="service-ux-audit.html">
+                <span class="megaitem__dot" aria-hidden="true"></span>
+                <span class="megaitem__body"><span class="megaitem__title">UX Audit</span></span>
+                <svg class="megaitem__arrow" viewBox="0 0 16 10" aria-hidden="true"><path d="M0 5h14M10 1l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </a>
+            </div>
+            <a class="mega__promo" href="index.html#services">
+              <img src="assets/img/services/research.jpg?v=2" alt="" width="896" height="1200"
+                   loading="lazy" decoding="async">
+              <span class="mega__promo-body">
+                <span class="mega__promo-title">Research that reveals what users actually need</span>
+                <span class="learn">Explore<svg viewBox="0 0 16 10" aria-hidden="true"><path d="M0 5h14M10 1l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+              </span>
+            </a>
+          </div>
+        </div>
+      </div>
+      <div class="nav__item"><a class="nav__link" href="portfolio.html">Portfolio</a></div>
+      <div class="nav__item nav__item--mega has-menu">
+        <button class="nav__link" aria-expanded="false" aria-controls="m-training">Trainings<svg class="caret" viewBox="0 0 10 6" aria-hidden="true"><path d="M1 1l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg></button>
+        <!-- Programme names, one-line descriptions and promo copy are all taken
+             from the client's reference. The reference shows the first item
+             pre-highlighted; that is rendered as a hover state rather than a
+             default, since a menu should not arrive with a row already picked. -->
+        <div class="dropdown dropdown--panel" id="m-training" hidden>
+          <div class="mega mega--list">
+            <div class="mega__list">
+              <a class="megaitem" href="training-uxpm.html">
+                <span class="megaitem__dot" aria-hidden="true"></span>
+                <span class="megaitem__body">
+                  <span class="megaitem__title">UX-PM level 1-2-3</span>
+                  <span class="megaitem__desc">For product managers</span>
+                </span>
+                <svg class="megaitem__arrow" viewBox="0 0 16 10" aria-hidden="true"><path d="M0 5h14M10 1l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </a>
+              <a class="megaitem" href="training-researchops.html">
+                <span class="megaitem__dot" aria-hidden="true"></span>
+                <span class="megaitem__body">
+                  <span class="megaitem__title">Research Ops</span>
+                  <span class="megaitem__desc">Scale your research practice</span>
+                </span>
+                <svg class="megaitem__arrow" viewBox="0 0 16 10" aria-hidden="true"><path d="M0 5h14M10 1l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </a>
+              <a class="megaitem" href="training-design-leaders.html">
+                <span class="megaitem__dot" aria-hidden="true"></span>
+                <span class="megaitem__body">
+                  <span class="megaitem__title">Design Leaders Masterclass</span>
+                  <span class="megaitem__desc">Lead with design thinking</span>
+                </span>
+                <svg class="megaitem__arrow" viewBox="0 0 16 10" aria-hidden="true"><path d="M0 5h14M10 1l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </a>
+              <a class="megaitem" href="index.html#services">
+                <span class="megaitem__dot" aria-hidden="true"></span>
+                <span class="megaitem__body">
+                  <span class="megaitem__title">UX Maturity Model</span>
+                  <span class="megaitem__desc">Assess &amp; elevate your org</span>
+                </span>
+                <svg class="megaitem__arrow" viewBox="0 0 16 10" aria-hidden="true"><path d="M0 5h14M10 1l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </a>
+            </div>
+            <a class="mega__promo" href="index.html#services">
+              <img src="assets/img/services/training.jpg?v=2" alt="" width="896" height="1200"
+                   loading="lazy" decoding="async">
+              <span class="mega__promo-body">
+                <span class="mega__promo-title">Build PM skills grounded in UX</span>
+                <span class="learn">Explore<svg viewBox="0 0 16 10" aria-hidden="true"><path d="M0 5h14M10 1l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+              </span>
+            </a>
+          </div>
+        </div>
+      </div>
+      <div class="nav__item nav__item--mega has-menu">
+        <button class="nav__link" aria-expanded="false" aria-controls="m-story">Our Story<svg class="caret" viewBox="0 0 10 6" aria-hidden="true"><path d="M1 1l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg></button>
+        <!-- Labels, descriptions and promo copy from the client's reference.
+             "Blogs" has no destination on this single-page build yet, so it
+             points at #top like the footer's other pending links. -->
+        <div class="dropdown dropdown--panel" id="m-story" hidden>
+          <div class="mega mega--list">
+            <div class="mega__list">
+              <a class="megaitem" href="our-journey.html">
+                <span class="megaitem__dot" aria-hidden="true"></span>
+                <span class="megaitem__body">
+                  <span class="megaitem__title">Our Journey</span>
+                  <span class="megaitem__desc">18 years of design</span>
+                </span>
+                <svg class="megaitem__arrow" viewBox="0 0 16 10" aria-hidden="true"><path d="M0 5h14M10 1l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </a>
+              <a class="megaitem" href="our-global-family.html">
+                <span class="megaitem__dot" aria-hidden="true"></span>
+                <span class="megaitem__body">
+                  <span class="megaitem__title">Our Global Family</span>
+                  <span class="megaitem__desc">Meet the team</span>
+                </span>
+                <svg class="megaitem__arrow" viewBox="0 0 16 10" aria-hidden="true"><path d="M0 5h14M10 1l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </a>
+              <a class="megaitem" href="careers.html">
+                <span class="megaitem__dot" aria-hidden="true"></span>
+                <span class="megaitem__body">
+                  <span class="megaitem__title">Careers</span>
+                  <span class="megaitem__desc">Join us</span>
+                </span>
+                <svg class="megaitem__arrow" viewBox="0 0 16 10" aria-hidden="true"><path d="M0 5h14M10 1l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </a>
+              <a class="megaitem is-here" aria-current="page" href="blog.html">
+                <span class="megaitem__dot" aria-hidden="true"></span>
+                <span class="megaitem__body">
+                  <span class="megaitem__title">Blogs</span>
+                  <span class="megaitem__desc">Insights &amp; thinking</span>
+                </span>
+                <svg class="megaitem__arrow" viewBox="0 0 16 10" aria-hidden="true"><path d="M0 5h14M10 1l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </a>
+            </div>
+            <a class="mega__promo" href="index.html#global">
+              <img src="assets/img/services/design.jpg?v=2" alt="" width="896" height="1200"
+                   loading="lazy" decoding="async">
+              <span class="mega__promo-body">
+                <span class="mega__promo-title">From pixels to AI — our story</span>
+                <span class="learn">Explore<svg viewBox="0 0 16 10" aria-hidden="true"><path d="M0 5h14M10 1l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+              </span>
+            </a>
+          </div>
+        </div>
+      </div>
+    </nav>
+
+    <a class="btn btn--mark nav__cta" href="index.html#contact">Get in touch</a>
+
+    <button class="burger" id="burger" aria-expanded="false" aria-controls="mobileMenu" aria-label="Open menu">
+      <span></span><span></span>
+    </button>
+  </div>
+</header>
+<div class="nav__progress" id="navProgress" aria-hidden="true"></div>
+
+<div class="mobilemenu" id="mobileMenu" hidden>
+  <a class="mm__link" href="portfolio.html">Portfolio</a>
+  <div class="mm__group">
+    <button class="mm__toggle" type="button" aria-expanded="false" aria-controls="mm-services">Our Services<svg class="mm__chev" viewBox="0 0 10 6" aria-hidden="true"><path d="M1 1l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg></button>
+    <div class="mm__panel" id="mm-services" hidden>
+    <span class="mm__head">User Research Services</span>
+    <a class="mm__sub" href="service-quantitative-qualitative-research.html"><span class="mm__subt">Quantitative and Qualitative research</span></a>
+    <a class="mm__sub" href="service-usability-testing.html"><span class="mm__subt">Usability Testing</span></a>
+    <a class="mm__sub" href="service-ux-benchmarking.html"><span class="mm__subt">UX Benchmarking - UX Index</span></a>
+    <a class="mm__sub" href="service-ai-opportunity-mapping.html"><span class="mm__subt">AI Opportunity Mapping</span></a>
+    <span class="mm__head">Design Services</span>
+    <a class="mm__sub" href="service-ux-ui-design.html"><span class="mm__subt">UX-UI Design</span></a>
+    <a class="mm__sub" href="service-service-design.html"><span class="mm__subt">Service Design</span></a>
+    <a class="mm__sub" href="service-ux-for-ai-product.html"><span class="mm__subt">UX for AI Product</span></a>
+    <a class="mm__sub" href="service-conversational-ai-ux.html"><span class="mm__subt">Conversational AI - UX Design</span></a>
+    <a class="mm__sub" href="service-ai-product-prototyping.html"><span class="mm__subt">AI Product Prototyping</span></a>
+    <a class="mm__sub" href="service-design-accessibility.html"><span class="mm__subt">Design for Accessibility</span></a>
+    <a class="mm__sub" href="service-design-systems.html"><span class="mm__subt">Design Systems</span></a>
+    <a class="mm__sub" href="service-data-visualisation.html"><span class="mm__subt">Data Visualisation</span></a>
+    <span class="mm__head">Value Added Services</span>
+    <a class="mm__sub" href="service-ux-team-augmentation.html"><span class="mm__subt">UX Team Augmentation</span></a>
+    <a class="mm__sub" href="service-design-thinking-workshop.html"><span class="mm__subt">Design Thinking Workshop</span></a>
+    <a class="mm__sub" href="service-ux-audit.html"><span class="mm__subt">UX Audit</span></a>
+    </div>
+  </div>
+  <div class="mm__group">
+    <button class="mm__toggle" type="button" aria-expanded="false" aria-controls="mm-training">Trainings<svg class="mm__chev" viewBox="0 0 10 6" aria-hidden="true"><path d="M1 1l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg></button>
+    <div class="mm__panel" id="mm-training" hidden>
+    <a class="mm__sub" href="training-uxpm.html"><span class="mm__subt">UX-PM level 1-2-3</span><span class="mm__subd">For product managers</span></a>
+    <a class="mm__sub" href="training-researchops.html"><span class="mm__subt">Research Ops</span><span class="mm__subd">Scale your research practice</span></a>
+    <a class="mm__sub" href="training-design-leaders.html"><span class="mm__subt">Design Leaders Masterclass</span><span class="mm__subd">Lead with design thinking</span></a>
+    <a class="mm__sub" href="index.html#services"><span class="mm__subt">UX Maturity Model</span><span class="mm__subd">Assess &amp; elevate your org</span></a>
+    </div>
+  </div>
+  <div class="mm__group">
+    <button class="mm__toggle" type="button" aria-expanded="false" aria-controls="mm-story">Our Story<svg class="mm__chev" viewBox="0 0 10 6" aria-hidden="true"><path d="M1 1l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg></button>
+    <div class="mm__panel" id="mm-story" hidden>
+    <a class="mm__sub" href="our-journey.html"><span class="mm__subt">Our Journey</span><span class="mm__subd">18 years of design</span></a>
+    <a class="mm__sub" href="our-global-family.html"><span class="mm__subt">Our Global Family</span><span class="mm__subd">Meet the team</span></a>
+    <a class="mm__sub" href="careers.html"><span class="mm__subt">Careers</span><span class="mm__subd">Join us</span></a>
+    <a class="mm__sub is-here" aria-current="page" href="blog.html"><span class="mm__subt">Blogs</span><span class="mm__subd">Insights &amp; thinking</span></a>
+    </div>
+  </div>
+  <a class="mm__link" href="index.html#faq">FAQ</a>
+  <a class="btn btn--mark mm__cta" href="index.html#contact">Get in touch</a>
+</div>
+
+<main id="top">
+
+<!-- NOT class="art" here: that name is already taken by the case-study image
+     rule, which carries object-fit and transform:scale(1.04) — it inflated this
+     article by 27px each side. Page-level scoping lives on <html> instead. -->
+<article class="frame sec sec--case">
+  <nav class="cs__crumb" aria-label="Breadcrumb">
+    <a href="index.html">Home</a> <span aria-hidden="true">/</span>
+    <a href="blog.html">Insights &amp; Blog</a> <span aria-hidden="true">/</span>
+    <span aria-current="page">Research practice</span>
+  </nav>
+
+  <header class="arthead">
+    <h1 class="arthead__t develop">Research debt: the interest you pay on every question you didn&rsquo;t ask</h1>
+    <p class="arthead__dek develop" data-delay="1">Teams price design debt. They price technical debt. Almost nobody prices the third kind &mdash; and it is the one that compounds quietest.</p>
+
+    <div class="artmeta develop" data-delay="2">
+      <span class="artmeta__by">
+        <span class="artmeta__av" aria-hidden="true">
+          <img src="assets/brand/logomark.svg" alt="" width="20" height="20"
+               onerror="this.onerror=null;this.src='assets/brand/logomark.png'">
+        </span>
+        <span class="artmeta__who">
+          <span class="artmeta__name">Peepal Design</span>
+          <span class="artmeta__role">Research practice</span>
+        </span>
+      </span>
+      <span class="artmeta__sep" aria-hidden="true"></span>
+      <time class="artmeta__date" datetime="2026-08-06">6 August 2026</time>
+      <span class="artmeta__sep" aria-hidden="true"></span>
+      <span class="artmeta__read">9 min read</span>
+      <!-- the reference carries the topic tag in this block, not above the
+           title; stacked under the breadcrumb it read as the same word twice -->
+      <a class="artmeta__tag" href="blog.html#latest">Research practice</a>
+    </div>
+  </header>
+
+  <!-- Lead image. Drawn from the studio's existing library, like every other
+       thumbnail on the blog — see the note at the top of blog.html. -->
+  <figure class="arthero develop" data-delay="3">
+    <img src="assets/img/services/research.jpg" alt="" fetchpriority="high">
+  </figure>
+
+  <div class="artwrap">
+
+    <!-- CONTENTS ------------------------------------------------------- -->
+    <nav class="toc" id="toc" aria-labelledby="tocH">
+      <p class="toc__h" id="tocH">Contents</p>
+      <ol class="toc__list">
+        <li><a href="#what">What research debt actually is</a></li>
+        <li><a href="#where">Where it accrues</a></li>
+        <li><a href="#compounding">The compounding part</a></li>
+        <li><a href="#paying">Paying it down</a></li>
+        <li><a href="#practice">What we changed in our own practice</a></li>
+      </ol>
+    </nav>
+
+    <!-- BODY ----------------------------------------------------------- -->
+    <div class="artbody" id="body">
+      <p class="artlead">A product team can tell you, to the sprint, how much technical debt they are carrying. Many can tell you where the design system has drifted. Ask the same team which of their core assumptions about users has never been tested, and you will usually get a pause, then a list &mdash; and the list is longer than anyone expected it to be.</p>
+
+      <p>That list is research debt. It is not ignorance; ignorance is not knowing. Research debt is <em>proceeding as though you know</em>, at speed, on a belief nobody has checked. Like the other two kinds it is often the right trade at the time. Like the other two kinds it accrues interest, and the interest is paid by whoever is holding the product eighteen months later.</p>
+
+      <h2 id="what">What research debt actually is</h2>
+      <p>Every product decision rests on a stack of assumptions. Some are cheap and safe &mdash; people can read. Some are load-bearing: that the person who chooses the product is the person who uses it; that users will tolerate a one-time setup for a long-term gain; that the workflow we drew on the whiteboard resembles the one on the floor.</p>
+      <p>A load-bearing assumption that has been tested is a finding. The same assumption untested is a debt, and you can price it the same way you price any debt: by what it would cost to settle now, against what it will cost to settle later.</p>
+
+      <figure class="artfig">
+        <svg viewBox="0 0 620 240" role="img" aria-label="Schematic: the cost of reversing a decision rises steeply the later it is questioned.">
+          <path d="M60 200h520M60 200V28" stroke="currentColor" stroke-width="1" opacity=".35"/>
+          <path d="M60 190C170 186 300 168 400 128 468 100 520 62 566 40" fill="none"
+                stroke="var(--mark)" stroke-width="2" stroke-linecap="round"/>
+          <g opacity=".3" stroke="currentColor" stroke-width="1" stroke-dasharray="3 5">
+            <path d="M180 200V182"/><path d="M300 200V170"/><path d="M420 200V118"/><path d="M540 200V48"/>
+          </g>
+          <g class="artfig__lab" fill="currentColor">
+            <text x="150" y="222">Discovery</text>
+            <text x="272" y="222">Design</text>
+            <text x="396" y="222">Build</text>
+            <text x="504" y="222">In market</text>
+            <text x="20" y="178" transform="rotate(-90 20 178)">Cost to reverse</text>
+          </g>
+        </svg>
+        <figcaption>Schematic, not measured data. The shape is the point: the same question costs a conversation in discovery and a roadmap in market.</figcaption>
+      </figure>
+
+      <h2 id="where">Where it accrues</h2>
+      <p>In our own project reviews, the same four places come up again and again.</p>
+      <ul class="artlist">
+        <li><strong>The persona nobody has met.</strong> Written in a workshop, never checked against a person. It survives because it is useful, not because it is true.</li>
+        <li><strong>The edge case that turns out to be the median.</strong> Shared devices, patchy connectivity, someone else filling in the form. Dismissed early as an edge, discovered later as most of the market.</li>
+        <li><strong>The number without a question behind it.</strong> Analytics will tell you where people leave with real precision. It will never tell you why, and a dashboard read confidently is one of the most expensive forms of this debt.</li>
+        <li><strong>The competitor assumption.</strong> &ldquo;Users expect it this way because everyone does it this way.&rdquo; Sometimes true. Sometimes an entire category has been carrying the same untested belief for a decade.</li>
+      </ul>
+
+      <h2 id="compounding">The compounding part</h2>
+      <p>Here is what makes it debt rather than a one-off cost. An untested assumption does not sit still. It gets built on.</p>
+      <p>Someone designs a flow around it. Someone writes copy that reinforces it. Someone builds a data model that encodes it, and now the assumption is not a belief in a document, it is a foreign key. A researcher who questions it in month two is asking a question. A researcher who questions it in month fourteen is asking for a migration.</p>
+
+      <figure class="artfig">
+        <svg viewBox="0 0 620 200" role="img" aria-label="Schematic: one untested assumption becomes the base of a widening stack of dependent decisions.">
+          <g opacity=".9">
+            <rect x="278" y="150" width="64" height="26" rx="2" fill="none" stroke="var(--mark)" stroke-width="1.6"/>
+            <text x="310" y="167" text-anchor="middle" class="artfig__lab" fill="var(--mark)">assumption</text>
+          </g>
+          <g opacity=".42" stroke="currentColor" stroke-width="1.3" fill="none">
+            <rect x="214" y="106" width="88" height="24" rx="2"/><rect x="318" y="106" width="88" height="24" rx="2"/>
+            <rect x="150" y="62" width="88" height="24" rx="2"/><rect x="254" y="62" width="88" height="24" rx="2"/><rect x="358" y="62" width="88" height="24" rx="2"/>
+            <rect x="86" y="18" width="88" height="24" rx="2"/><rect x="190" y="18" width="88" height="24" rx="2"/><rect x="294" y="18" width="88" height="24" rx="2"/><rect x="398" y="18" width="88" height="24" rx="2"/>
+          </g>
+          <g opacity=".22" stroke="currentColor" stroke-width="1">
+            <path d="M300 150v-20M330 150v-20M258 106V86M290 106V86M350 106V86M382 106V86M194 62V42M226 62V42M298 62V42M330 62V42M402 62V42M434 62V42"/>
+          </g>
+        </svg>
+        <figcaption>Schematic. The debt is not the box at the bottom; it is everything resting on it by the time anyone asks.</figcaption>
+      </figure>
+
+      <div class="artcta">
+        <p class="artcta__p">We run this as a standing exercise on every engagement &mdash; an assumption register, priced and reviewed. It is part of how our ResearchOps training is taught.</p>
+        <a class="btn btn--ghost" href="training-researchops.html">See the ResearchOps programme</a>
+      </div>
+
+      <h2 id="paying">Paying it down</h2>
+      <p>You cannot test everything, and a team that tries will ship nothing. The useful move is not more research; it is <em>explicit</em> research debt. Three things make the difference.</p>
+      <p><strong>Write the assumptions down where the decisions are made.</strong> Not in a research repository nobody opens &mdash; in the same document as the roadmap. An assumption that lives beside the decision it supports gets re-read every time that decision is revisited.</p>
+      <p><strong>Price each one before you decide to carry it.</strong> Two questions: what does it cost to check now, and what does it cost to be wrong in market? Most assumptions are cheap on both counts and can be carried without ceremony. A handful are cheap to check and ruinous to get wrong. Those are the only ones worth arguing about.</p>
+      <p><strong>Give it a review date.</strong> Debt you have chosen deliberately, with a date on it, is a plan. The same debt undated is just a thing you forgot.</p>
+
+      <h2 id="practice">What we changed in our own practice</h2>
+      <p>Two things, both small, both awkward at first.</p>
+      <p>The first: our reports no longer end with recommendations. They end with the assumptions the work resolved, and the ones it did not &mdash; named, with what it would take to close each. A recommendation is a decision made by the person with the least context about budget, sequencing and politics. Handing a client a live list of open questions turned out to be worth more, and it is a great deal more honest about what a study can settle.</p>
+      <p>The second: we ask the assumption question in the kick-off, before scoping. Not &ldquo;what do you want to learn&rdquo; but &ldquo;what are you already sure about?&rdquo; The answers to the second question are where the research debt is, and they are almost never in the brief.</p>
+      <p>Neither is complicated. Both are uncomfortable, because both make visible how much of any product is running on belief. That discomfort is the useful part. You cannot pay down a debt you have not written on the balance sheet.</p>
+    </div>
+  </div>
+
+  <!-- AUTHOR ------------------------------------------------------------ -->
+  <section class="cs develop" id="author">
+    <div class="pauthor">
+      <span class="pauthor__av" aria-hidden="true">
+        <img src="assets/brand/logomark.svg" alt="" width="34" height="34"
+             onerror="this.onerror=null;this.src='assets/brand/logomark.png'">
+      </span>
+      <div class="pauthor__body">
+        <span class="pauthor__code">Written by</span>
+        <h2 class="pauthor__name">Peepal Design</h2>
+        <p class="pauthor__bio">A research-first UX studio. Part of Bridged Global &mdash; a worldwide network of UX designers and design specialists. Founded 2016, Mumbai, India.</p>
+        <a class="pauthor__go" href="our-journey.html">More about the studio
+          <svg viewBox="0 0 16 10" aria-hidden="true"><path d="M0 5h14M10 1l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </a>
+      </div>
+    </div>
+  </section>
+
+
+</article>
+
+</main>
+
+<!-- ============================ FOOTER ============================ -->
+<footer class="foot">
+  <div class="foot__grid">
+    <div class="foot__brand">
+      <a class="logo logo--foot" href="index.html" aria-label="Peepal Design home">
+        <img class="logo__mark" src="assets/brand/logomark.svg" alt="" width="24" height="24"
+             onerror="this.onerror=null;this.src='assets/brand/logomark.png'">
+        <span class="logo__word">peepaldesign</span>
+      </a>
+      <p>A research-first UX studio. Part of Bridged Global — a worldwide network of UX designers and design specialists. Founded 2016. Mumbai, India.</p>
+      <div class="foot__social">
+        <a href="#top" aria-label="LinkedIn"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4.5 7.5h2.6V16H4.5zM5.8 3.4a1.6 1.6 0 1 1 0 3.2 1.6 1.6 0 0 1 0-3.2ZM9.3 7.5h2.5v1.2a2.8 2.8 0 0 1 2.5-1.4c2 0 3.2 1.3 3.2 3.7V16h-2.6v-4.4c0-1.2-.4-1.9-1.4-1.9-1 0-1.6.7-1.6 1.9V16H9.3Z" fill="currentColor"/></svg></a>
+        <a href="#top" aria-label="X"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 4h3.2l3.1 4.3L13.9 4H16l-4.6 5.6L16.4 16h-3.2l-3.4-4.6L5.9 16H4l4.9-6L4 4Z" fill="currentColor"/></svg></a>
+        <a href="#top" aria-label="Instagram"><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="3.5" y="3.5" width="13" height="13" rx="4" fill="none" stroke="currentColor" stroke-width="1.4"/><circle cx="10" cy="10" r="3.2" fill="none" stroke="currentColor" stroke-width="1.4"/><circle cx="14" cy="6" r="1" fill="currentColor"/></svg></a>
+        <a href="#top" aria-label="Behance"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M2 5h4.6c1.8 0 2.9.8 2.9 2.2 0 1-.5 1.6-1.3 1.9 1 .3 1.7 1 1.7 2.2 0 1.7-1.3 2.7-3.3 2.7H2Zm2 3.4h2.2c.7 0 1.2-.3 1.2-.9s-.4-.9-1.2-.9H4Zm0 4h2.4c.9 0 1.4-.4 1.4-1s-.5-1-1.4-1H4ZM12 5.6h4.6V7H12ZM14.4 8.2c2 0 3.3 1.4 3.3 3.5v.5h-4.8c.1.9.7 1.4 1.6 1.4.7 0 1.1-.2 1.4-.7h1.7c-.4 1.4-1.6 2.2-3.1 2.2-2 0-3.4-1.4-3.4-3.4s1.4-3.5 3.3-3.5Zm-1.5 2.8h3c-.1-.8-.7-1.3-1.5-1.3s-1.4.5-1.5 1.3Z" fill="currentColor"/></svg></a>
+      </div>
+    </div>
+
+    <nav class="foot__col" aria-label="Services">
+      <span class="foot__code">SERVICES</span>
+      <a href="#services">User Research</a>
+      <a href="#services">UX Design</a>
+      <a href="#services">LEGO® Serious Play</a>
+      <a href="#services">UX Training</a>
+      <a href="#services">UX Audit</a>
+    </nav>
+
+    <nav class="foot__col" aria-label="Company">
+      <span class="foot__code">COMPANY</span>
+      <a href="#global">About Us</a>
+      <a href="#services">Services</a>
+      <a href="#work">Work</a>
+      <a href="#services">Training</a>
+      <a href="blog.html">Insights &amp; Blog</a>
+      <a href="careers.html" aria-current="page">Careers</a>
+      <a href="#contact">Contact Us</a>
+    </nav>
+
+    <nav class="foot__col" aria-label="Global family">
+      <span class="foot__code">GLOBAL FAMILY</span>
+      <a href="https://boldinsight.com/" target="_blank" rel="noopener">Bold Insight</a>
+      <a href="https://www.uintent.com/" target="_blank" rel="noopener">uintent</a>
+      <a href="https://uism.co.jp/" target="_blank" rel="noopener">UIsm</a>
+      <a href="https://www.xplusx.net/" target="_blank" rel="noopener">XPLUSX</a>
+    </nav>
+  </div>
+
+  <div class="foot__bar">
+    <span>© 2024 Peepal Design — User Experience Design Consulting Pvt. Ltd.</span>
+    <span class="foot__legal"><a href="#top">Privacy Policy</a><a href="#top">Terms of Use</a></span>
+  </div>
+</footer>
+
+<!-- A real anchor, so the page still returns to the top with JavaScript off;
+     the script only decides when the plate is visible. -->
+<a class="totop" id="toTop" href="#top" aria-label="Back to top">
+  <svg class="totop__glyph" viewBox="0 0 14 14" fill="none" stroke="currentColor"
+       stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    <path d="M2.4 2.4h9.2"/>
+    <g class="totop__arrow"><path d="M7 12.6V5.6"/><path d="M3.6 9 7 5.6 10.4 9"/></g>
+  </svg>
+  <span class="totop__code" aria-hidden="true">Top</span>
+</a>
+
+<script src="assets/js/main.js?v=218"></script>
+</body>
+</html>

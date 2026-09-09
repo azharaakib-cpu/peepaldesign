@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 225" width="400" height="225" role="img" aria-label="">
+  <defs>
+    <linearGradient id="phaBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#223339"/>
+      <stop offset="100%" stop-color="#101619"/>
+    </linearGradient>
+    <radialGradient id="phaBloom" cx="72%" cy="26%" r="75%">
+      <stop offset="0%" stop-color="#1CB4C6" stop-opacity=".55"/>
+      <stop offset="100%" stop-color="#1CB4C6" stop-opacity="0"/>
+    </radialGradient>
+    <pattern id="phaDots" width="16" height="16" patternUnits="userSpaceOnUse">
+      <circle cx="1.5" cy="1.5" r="1.5" fill="#F4F3F0" fill-opacity=".22"/>
+    </pattern>
+  </defs>
+  <rect width="400" height="225" fill="url(#phaBg)"/>
+  <rect width="400" height="225" fill="url(#phaBloom)"/>
+  <rect width="400" height="225" fill="url(#phaDots)"/>
+  <path d="M170 79
+           C 188 63, 220 63, 236 81
+           C 253 100, 251 130, 232 147
+           C 213 164, 182 163, 166 144
+           C 151 127, 152 96, 170 79 Z"
+        fill="none" stroke="#B9C4C6" stroke-width="2" stroke-linecap="round" opacity=".85"/>
+  <path d="M281 150 L296 165" stroke="#FF850B" stroke-width="2.4" stroke-linecap="round"/>
+  <circle cx="301" cy="170" r="3" fill="#FF850B"/>
+</svg>

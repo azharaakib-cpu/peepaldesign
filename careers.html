@@ -1,0 +1,849 @@
+<!doctype html>
+<html lang="en" class="no-js careers">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Careers — Peepal Design</title>
+<meta name="description" content="Open roles across research, design, strategy and product thinking at Peepal Design — plus how we hire, and what it is like to work here.">
+<meta name="theme-color" content="#0B0B0C">
+<link rel="stylesheet" href="assets/css/contact-sheet.css?v=301">
+<script>document.documentElement.className = document.documentElement.className.replace('no-js','js');</script>
+</head>
+<body>
+<!--
+  CAREERS. On the UX-PM page's template at the client's request: the crumb,
+  .cs__head, .cs blocks and the numbered .lvl cards. Every section leads with
+  the three-part .secthead — overline, heading, description.
+
+  Copy is the client's own, transcribed from Careers.pdf; same font-encoding
+  fault as every other reference, so retyped throughout.
+
+  The job filter is the portfolio's own filter module, generalised on
+  2026-08-13 to take the list it governs from a data attribute. A filter row
+  that did not filter would be a broken control, so either it works or it is
+  not drawn.
+
+  TWO THINGS THE REFERENCE HAS THAT THIS PAGE DOES NOT, both in PRODUCT.md:
+  descriptions for application steps 02-04 (its stepper only exposes the active
+  one, and inventing a company's hiring process is not mine to do), and the
+  "career updates" email signup, which has no endpoint on this site — a
+  subscribe box that silently discards an address is worse than none.
+
+  "Apply now" has no applicant tracking system behind it either; every one
+  points at the contact section.
+
+  No cursor loupe. That flourish belongs to the home hero alone.
+-->
+
+<a class="skip" href="#advantage">Skip to the roles</a>
+
+<div class="bgwash" id="bgWash" aria-hidden="true"></div>
+<div class="grain" aria-hidden="true"></div>
+
+<!-- ============================ NAV ============================ -->
+<header class="nav" id="nav">
+  <div class="nav__inner">
+    <a class="logo" href="index.html" aria-label="Peepal Design home">
+      <!-- Artwork lives at assets/brand/logomark.svg — swap that file, not this markup. -->
+      <img class="logo__mark" src="assets/brand/logomark.svg" alt="" width="26" height="26"
+           onerror="this.onerror=null;this.src='assets/brand/logomark.png'">
+      <span class="logo__word">peepaldesign</span>
+    </a>
+
+    <nav class="nav__menu" aria-label="Primary">
+      <div class="nav__item nav__item--mega has-menu">
+        <button class="nav__link" aria-expanded="false" aria-controls="m-services">Our Services<svg class="caret" viewBox="0 0 10 6" aria-hidden="true"><path d="M1 1l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg></button>
+        <!-- Headings, item lists and promo copy are all client-supplied.
+             "UX Benchmarking - UX Index" was originally given under two
+             columns; the client removed the Value Added copy on 2026-08-12, so
+             it now appears once, under User Research Services. -->
+        <div class="dropdown dropdown--panel dropdown--panel-wide" id="m-services" hidden>
+          <div class="mega">
+            <div class="mega__col">
+              <span class="mega__head">User Research Services</span>
+              <a class="megaitem megaitem--compact" href="service-quantitative-qualitative-research.html">
+                <span class="megaitem__dot" aria-hidden="true"></span>
+                <span class="megaitem__body"><span class="megaitem__title">Quantitative and Qualitative research</span></span>
+                <svg class="megaitem__arrow" viewBox="0 0 16 10" aria-hidden="true"><path d="M0 5h14M10 1l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </a>
+              <a class="megaitem megaitem--compact" href="service-usability-testing.html">
+                <span class="megaitem__dot" aria-hidden="true"></span>
+                <span class="megaitem__body"><span class="megaitem__title">Usability Testing</span></span>
+                <svg class="megaitem__arrow" viewBox="0 0 16 10" aria-hidden="true"><path d="M0 5h14M10 1l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </a>
+              <a class="megaitem megaitem--compact" href="service-ux-benchmarking.html">
+                <span class="megaitem__dot" aria-hidden="true"></span>
+                <span class="megaitem__body"><span class="megaitem__title">UX Benchmarking - UX Index</span></span>
+                <svg class="megaitem__arrow" viewBox="0 0 16 10" aria-hidden="true"><path d="M0 5h14M10 1l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </a>
+              <a class="megaitem megaitem--compact" href="service-ai-opportunity-mapping.html">
+                <span class="megaitem__dot" aria-hidden="true"></span>
+                <span class="megaitem__body"><span class="megaitem__title">AI Opportunity Mapping</span></span>
+                <svg class="megaitem__arrow" viewBox="0 0 16 10" aria-hidden="true"><path d="M0 5h14M10 1l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </a>
+            </div>
+            <div class="mega__col">
+              <span class="mega__head">Design Services</span>
+              <a class="megaitem megaitem--compact" href="service-ux-ui-design.html">
+                <span class="megaitem__dot" aria-hidden="true"></span>
+                <span class="megaitem__body"><span class="megaitem__title">UX-UI Design</span></span>
+                <svg class="megaitem__arrow" viewBox="0 0 16 10" aria-hidden="true"><path d="M0 5h14M10 1l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </a>
+              <a class="megaitem megaitem--compact" href="service-service-design.html">
+                <span class="megaitem__dot" aria-hidden="true"></span>
+                <span class="megaitem__body"><span class="megaitem__title">Service Design</span></span>
+                <svg class="megaitem__arrow" viewBox="0 0 16 10" aria-hidden="true"><path d="M0 5h14M10 1l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </a>
+              <a class="megaitem megaitem--compact" href="service-ux-for-ai-product.html">
+                <span class="megaitem__dot" aria-hidden="true"></span>
+                <span class="megaitem__body"><span class="megaitem__title">UX for AI Product</span></span>
+                <svg class="megaitem__arrow" viewBox="0 0 16 10" aria-hidden="true"><path d="M0 5h14M10 1l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </a>
+              <a class="megaitem megaitem--compact" href="service-conversational-ai-ux.html">
+                <span class="megaitem__dot" aria-hidden="true"></span>
+                <span class="megaitem__body"><span class="megaitem__title">Conversational AI - UX Design</span></span>
+                <svg class="megaitem__arrow" viewBox="0 0 16 10" aria-hidden="true"><path d="M0 5h14M10 1l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </a>
+              <a class="megaitem megaitem--compact" href="service-ai-product-prototyping.html">
+                <span class="megaitem__dot" aria-hidden="true"></span>
+                <span class="megaitem__body"><span class="megaitem__title">AI Product Prototyping</span></span>
+                <svg class="megaitem__arrow" viewBox="0 0 16 10" aria-hidden="true"><path d="M0 5h14M10 1l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </a>
+              <a class="megaitem megaitem--compact" href="service-design-accessibility.html">
+                <span class="megaitem__dot" aria-hidden="true"></span>
+                <span class="megaitem__body"><span class="megaitem__title">Design for Accessibility</span></span>
+                <svg class="megaitem__arrow" viewBox="0 0 16 10" aria-hidden="true"><path d="M0 5h14M10 1l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </a>
+              <a class="megaitem megaitem--compact" href="service-design-systems.html">
+                <span class="megaitem__dot" aria-hidden="true"></span>
+                <span class="megaitem__body"><span class="megaitem__title">Design Systems</span></span>
+                <svg class="megaitem__arrow" viewBox="0 0 16 10" aria-hidden="true"><path d="M0 5h14M10 1l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </a>
+              <a class="megaitem megaitem--compact" href="service-data-visualisation.html">
+                <span class="megaitem__dot" aria-hidden="true"></span>
+                <span class="megaitem__body"><span class="megaitem__title">Data Visualisation</span></span>
+                <svg class="megaitem__arrow" viewBox="0 0 16 10" aria-hidden="true"><path d="M0 5h14M10 1l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </a>
+            </div>
+            <div class="mega__col">
+              <span class="mega__head">Value Added Services</span>
+              <a class="megaitem megaitem--compact" href="service-ux-team-augmentation.html">
+                <span class="megaitem__dot" aria-hidden="true"></span>
+                <span class="megaitem__body"><span class="megaitem__title">UX Team Augmentation</span></span>
+                <svg class="megaitem__arrow" viewBox="0 0 16 10" aria-hidden="true"><path d="M0 5h14M10 1l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </a>
+              <a class="megaitem megaitem--compact" href="service-design-thinking-workshop.html">
+                <span class="megaitem__dot" aria-hidden="true"></span>
+                <span class="megaitem__body"><span class="megaitem__title">Design Thinking Workshop</span></span>
+                <svg class="megaitem__arrow" viewBox="0 0 16 10" aria-hidden="true"><path d="M0 5h14M10 1l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </a>
+              <a class="megaitem megaitem--compact" href="service-ux-audit.html">
+                <span class="megaitem__dot" aria-hidden="true"></span>
+                <span class="megaitem__body"><span class="megaitem__title">UX Audit</span></span>
+                <svg class="megaitem__arrow" viewBox="0 0 16 10" aria-hidden="true"><path d="M0 5h14M10 1l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </a>
+            </div>
+            <a class="mega__promo" href="index.html#services">
+              <img src="assets/img/services/research.jpg?v=2" alt="" width="896" height="1200"
+                   loading="lazy" decoding="async">
+              <span class="mega__promo-body">
+                <span class="mega__promo-title">Research that reveals what users actually need</span>
+                <span class="learn">Explore<svg viewBox="0 0 16 10" aria-hidden="true"><path d="M0 5h14M10 1l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+              </span>
+            </a>
+          </div>
+        </div>
+      </div>
+      <div class="nav__item"><a class="nav__link" href="portfolio.html">Portfolio</a></div>
+      <div class="nav__item nav__item--mega has-menu">
+        <button class="nav__link" aria-expanded="false" aria-controls="m-training">Trainings<svg class="caret" viewBox="0 0 10 6" aria-hidden="true"><path d="M1 1l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg></button>
+        <!-- Programme names, one-line descriptions and promo copy are all taken
+             from the client's reference. The reference shows the first item
+             pre-highlighted; that is rendered as a hover state rather than a
+             default, since a menu should not arrive with a row already picked. -->
+        <div class="dropdown dropdown--panel" id="m-training" hidden>
+          <div class="mega mega--list">
+            <div class="mega__list">
+              <a class="megaitem" href="training-uxpm.html">
+                <span class="megaitem__dot" aria-hidden="true"></span>
+                <span class="megaitem__body">
+                  <span class="megaitem__title">UX-PM level 1-2-3</span>
+                  <span class="megaitem__desc">For product managers</span>
+                </span>
+                <svg class="megaitem__arrow" viewBox="0 0 16 10" aria-hidden="true"><path d="M0 5h14M10 1l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </a>
+              <a class="megaitem" href="training-researchops.html">
+                <span class="megaitem__dot" aria-hidden="true"></span>
+                <span class="megaitem__body">
+                  <span class="megaitem__title">Research Ops</span>
+                  <span class="megaitem__desc">Scale your research practice</span>
+                </span>
+                <svg class="megaitem__arrow" viewBox="0 0 16 10" aria-hidden="true"><path d="M0 5h14M10 1l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </a>
+              <a class="megaitem" href="training-design-leaders.html">
+                <span class="megaitem__dot" aria-hidden="true"></span>
+                <span class="megaitem__body">
+                  <span class="megaitem__title">Design Leaders Masterclass</span>
+                  <span class="megaitem__desc">Lead with design thinking</span>
+                </span>
+                <svg class="megaitem__arrow" viewBox="0 0 16 10" aria-hidden="true"><path d="M0 5h14M10 1l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </a>
+              <a class="megaitem" href="index.html#services">
+                <span class="megaitem__dot" aria-hidden="true"></span>
+                <span class="megaitem__body">
+                  <span class="megaitem__title">UX Maturity Model</span>
+                  <span class="megaitem__desc">Assess &amp; elevate your org</span>
+                </span>
+                <svg class="megaitem__arrow" viewBox="0 0 16 10" aria-hidden="true"><path d="M0 5h14M10 1l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </a>
+            </div>
+            <a class="mega__promo" href="index.html#services">
+              <img src="assets/img/services/training.jpg?v=2" alt="" width="896" height="1200"
+                   loading="lazy" decoding="async">
+              <span class="mega__promo-body">
+                <span class="mega__promo-title">Build PM skills grounded in UX</span>
+                <span class="learn">Explore<svg viewBox="0 0 16 10" aria-hidden="true"><path d="M0 5h14M10 1l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+              </span>
+            </a>
+          </div>
+        </div>
+      </div>
+      <div class="nav__item nav__item--mega has-menu">
+        <button class="nav__link" aria-expanded="false" aria-controls="m-story">Our Story<svg class="caret" viewBox="0 0 10 6" aria-hidden="true"><path d="M1 1l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg></button>
+        <!-- Labels, descriptions and promo copy from the client's reference.
+             "Blogs" points at blog.html as of 2026-08-13. -->
+        <div class="dropdown dropdown--panel" id="m-story" hidden>
+          <div class="mega mega--list">
+            <div class="mega__list">
+              <a class="megaitem" href="our-journey.html">
+                <span class="megaitem__dot" aria-hidden="true"></span>
+                <span class="megaitem__body">
+                  <span class="megaitem__title">Our Journey</span>
+                  <span class="megaitem__desc">18 years of design</span>
+                </span>
+                <svg class="megaitem__arrow" viewBox="0 0 16 10" aria-hidden="true"><path d="M0 5h14M10 1l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </a>
+              <a class="megaitem" href="our-global-family.html">
+                <span class="megaitem__dot" aria-hidden="true"></span>
+                <span class="megaitem__body">
+                  <span class="megaitem__title">Our Global Family</span>
+                  <span class="megaitem__desc">Meet the team</span>
+                </span>
+                <svg class="megaitem__arrow" viewBox="0 0 16 10" aria-hidden="true"><path d="M0 5h14M10 1l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </a>
+              <a class="megaitem is-here" aria-current="page" href="careers.html">
+                <span class="megaitem__dot" aria-hidden="true"></span>
+                <span class="megaitem__body">
+                  <span class="megaitem__title">Careers</span>
+                  <span class="megaitem__desc">Join us</span>
+                </span>
+                <svg class="megaitem__arrow" viewBox="0 0 16 10" aria-hidden="true"><path d="M0 5h14M10 1l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </a>
+              <a class="megaitem" href="blog.html">
+                <span class="megaitem__dot" aria-hidden="true"></span>
+                <span class="megaitem__body">
+                  <span class="megaitem__title">Blogs</span>
+                  <span class="megaitem__desc">Insights &amp; thinking</span>
+                </span>
+                <svg class="megaitem__arrow" viewBox="0 0 16 10" aria-hidden="true"><path d="M0 5h14M10 1l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </a>
+            </div>
+            <a class="mega__promo" href="index.html#global">
+              <img src="assets/img/services/design.jpg?v=2" alt="" width="896" height="1200"
+                   loading="lazy" decoding="async">
+              <span class="mega__promo-body">
+                <span class="mega__promo-title">From pixels to AI — our story</span>
+                <span class="learn">Explore<svg viewBox="0 0 16 10" aria-hidden="true"><path d="M0 5h14M10 1l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+              </span>
+            </a>
+          </div>
+        </div>
+      </div>
+    </nav>
+
+    <a class="btn btn--mark nav__cta" href="index.html#contact">Get in touch</a>
+
+    <button class="burger" id="burger" aria-expanded="false" aria-controls="mobileMenu" aria-label="Open menu">
+      <span></span><span></span>
+    </button>
+  </div>
+</header>
+<div class="nav__progress" id="navProgress" aria-hidden="true"></div>
+
+<div class="mobilemenu" id="mobileMenu" hidden>
+  <a class="mm__link" href="portfolio.html">Portfolio</a>
+  <div class="mm__group">
+    <button class="mm__toggle" type="button" aria-expanded="false" aria-controls="mm-services">Our Services<svg class="mm__chev" viewBox="0 0 10 6" aria-hidden="true"><path d="M1 1l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg></button>
+    <div class="mm__panel" id="mm-services" hidden>
+    <span class="mm__head">User Research Services</span>
+    <a class="mm__sub" href="service-quantitative-qualitative-research.html"><span class="mm__subt">Quantitative and Qualitative research</span></a>
+    <a class="mm__sub" href="service-usability-testing.html"><span class="mm__subt">Usability Testing</span></a>
+    <a class="mm__sub" href="service-ux-benchmarking.html"><span class="mm__subt">UX Benchmarking - UX Index</span></a>
+    <a class="mm__sub" href="service-ai-opportunity-mapping.html"><span class="mm__subt">AI Opportunity Mapping</span></a>
+    <span class="mm__head">Design Services</span>
+    <a class="mm__sub" href="service-ux-ui-design.html"><span class="mm__subt">UX-UI Design</span></a>
+    <a class="mm__sub" href="service-service-design.html"><span class="mm__subt">Service Design</span></a>
+    <a class="mm__sub" href="service-ux-for-ai-product.html"><span class="mm__subt">UX for AI Product</span></a>
+    <a class="mm__sub" href="service-conversational-ai-ux.html"><span class="mm__subt">Conversational AI - UX Design</span></a>
+    <a class="mm__sub" href="service-ai-product-prototyping.html"><span class="mm__subt">AI Product Prototyping</span></a>
+    <a class="mm__sub" href="service-design-accessibility.html"><span class="mm__subt">Design for Accessibility</span></a>
+    <a class="mm__sub" href="service-design-systems.html"><span class="mm__subt">Design Systems</span></a>
+    <a class="mm__sub" href="service-data-visualisation.html"><span class="mm__subt">Data Visualisation</span></a>
+    <span class="mm__head">Value Added Services</span>
+    <a class="mm__sub" href="service-ux-team-augmentation.html"><span class="mm__subt">UX Team Augmentation</span></a>
+    <a class="mm__sub" href="service-design-thinking-workshop.html"><span class="mm__subt">Design Thinking Workshop</span></a>
+    <a class="mm__sub" href="service-ux-audit.html"><span class="mm__subt">UX Audit</span></a>
+    </div>
+  </div>
+  <div class="mm__group">
+    <button class="mm__toggle" type="button" aria-expanded="false" aria-controls="mm-training">Trainings<svg class="mm__chev" viewBox="0 0 10 6" aria-hidden="true"><path d="M1 1l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg></button>
+    <div class="mm__panel" id="mm-training" hidden>
+    <a class="mm__sub" href="training-uxpm.html"><span class="mm__subt">UX-PM level 1-2-3</span><span class="mm__subd">For product managers</span></a>
+    <a class="mm__sub" href="training-researchops.html"><span class="mm__subt">Research Ops</span><span class="mm__subd">Scale your research practice</span></a>
+    <a class="mm__sub" href="training-design-leaders.html"><span class="mm__subt">Design Leaders Masterclass</span><span class="mm__subd">Lead with design thinking</span></a>
+    <a class="mm__sub" href="index.html#services"><span class="mm__subt">UX Maturity Model</span><span class="mm__subd">Assess &amp; elevate your org</span></a>
+    </div>
+  </div>
+  <div class="mm__group">
+    <button class="mm__toggle" type="button" aria-expanded="false" aria-controls="mm-story">Our Story<svg class="mm__chev" viewBox="0 0 10 6" aria-hidden="true"><path d="M1 1l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg></button>
+    <div class="mm__panel" id="mm-story" hidden>
+    <a class="mm__sub" href="our-journey.html"><span class="mm__subt">Our Journey</span><span class="mm__subd">18 years of design</span></a>
+    <a class="mm__sub" href="our-global-family.html"><span class="mm__subt">Our Global Family</span><span class="mm__subd">Meet the team</span></a>
+    <a class="mm__sub is-here" aria-current="page" href="careers.html"><span class="mm__subt">Careers</span><span class="mm__subd">Join us</span></a>
+    <a class="mm__sub" href="blog.html"><span class="mm__subt">Blogs</span><span class="mm__subd">Insights &amp; thinking</span></a>
+    </div>
+  </div>
+  <a class="mm__link" href="index.html#faq">FAQ</a>
+  <a class="btn btn--mark mm__cta" href="index.html#contact">Get in touch</a>
+</div>
+
+<main id="top">
+
+<article class="frame sec sec--case">
+  <nav class="cs__crumb" aria-label="Breadcrumb">
+    <a href="index.html">Home</a> <span aria-hidden="true">/</span>
+    <span aria-current="page">Careers</span>
+  </nav>
+
+  <header class="cs__head">
+    <h1 class="cs__title develop">Shape the future, <em>design your career</em></h1>
+    <p class="cs__intro develop" data-delay="1">Work with us to explore roles that challenge you, sharpen your craft, and help you grow across research, design, strategy and product thinking.</p>
+    <!-- No buttons here, at the client's request. The sticky tab row directly
+         below reaches the same two places. -->
+  </header>
+
+  <!-- Full-bleed carousel (client request, 2026-08-14, converting the single
+       banner image built earlier the same day): four slides, each still 1080px
+       tall and permanently cropped to a 540px window — half the image, as
+       specified before this became a carousel — sliding via transform on
+       .peek__track, JS in CAREERS HERO CAROUSEL. Dots are real tab-role
+       buttons, not decoration: each jumps straight to its slide and reflects
+       which one is showing, including during autoplay.
+       No photographs exist yet for any of the four; every <img> falls back to
+       a numbered placeholder of the same contact-sheet design used elsewhere
+       on this page, so the carousel is fully functional today and each slide
+       fills in independently the moment its file lands at
+       assets/img/careers/hero-<n>.jpg. -->
+  <div class="peek" data-carousel aria-roledescription="carousel" aria-label="Life at Peepal Design">
+    <ul class="peek__track">
+      <li class="peek__slide" role="tabpanel" aria-roledescription="slide" aria-label="1 of 4">
+        <img class="peek__img" src="assets/img/careers/hero-1.jpeg"
+             alt="" width="1376" height="768" loading="eager" decoding="async"
+             onerror="this.onerror=null;this.src='assets/img/careers/hero-1.svg'">
+      </li>
+      <li class="peek__slide" role="tabpanel" aria-roledescription="slide" aria-label="2 of 4">
+        <img class="peek__img" src="assets/img/careers/hero-2.jpeg"
+             alt="" width="1376" height="768" loading="lazy" decoding="async"
+             onerror="this.onerror=null;this.src='assets/img/careers/hero-2.svg'">
+      </li>
+      <li class="peek__slide" role="tabpanel" aria-roledescription="slide" aria-label="3 of 4">
+        <img class="peek__img" src="assets/img/careers/hero-3.jpeg"
+             alt="" width="1376" height="768" loading="lazy" decoding="async"
+             onerror="this.onerror=null;this.src='assets/img/careers/hero-3.svg'">
+      </li>
+      <li class="peek__slide" role="tabpanel" aria-roledescription="slide" aria-label="4 of 4">
+        <img class="peek__img" src="assets/img/careers/hero-4.jpeg"
+             alt="" width="1376" height="768" loading="lazy" decoding="async"
+             onerror="this.onerror=null;this.src='assets/img/careers/hero-4.svg'">
+      </li>
+    </ul>
+    <div class="peek__dots" role="tablist" aria-label="Slides">
+        <button class="peek__dot is-on" type="button" role="tab" aria-selected="true" aria-label="Go to slide 1"></button>
+        <button class="peek__dot" type="button" role="tab" aria-selected="false" aria-label="Go to slide 2"></button>
+        <button class="peek__dot" type="button" role="tab" aria-selected="false" aria-label="Go to slide 3"></button>
+        <button class="peek__dot" type="button" role="tab" aria-selected="false" aria-label="Go to slide 4"></button>
+    </div>
+  </div>
+
+  <section class="cs develop" id="advantage">
+    <header class="secthead" data-drift>
+      <span class="secthead__over">Working here</span>
+      <h2 class="secthead__h">The Peepal advantage</h2>
+      <p class="secthead__p">Benefits and rituals that make work meaningful, sustainable and growth-focused.</p>
+    </header>
+
+    <!-- The home page's services pattern: the list reads at normal speed on the
+         left while the plate on the right stays put and changes exposure to
+         whichever item is crossing the middle of the viewport. Same .svc markup
+         and the same module in main.js drives it — data-svc pairs an item to its
+         shot, so nothing here needs its own script.
+
+         Photographs supplied 2026-08-14 as 01-04.jpeg, in the same order as the
+         items. Their filenames are kept rather than renamed; the mapping is in
+         the folder README. The drawn placeholders stay wired as onerror
+         fallbacks so a pulled file degrades instead of leaving a hole. -->
+    <div class="svc">
+      <div class="svc__col">
+      <article class="svc__item" data-svc="0">
+        <h3>In-house workshops</h3>
+        <p>Skill development through expert sessions, hackdays and cross-discipline learning.</p>
+      </article>
+      <article class="svc__item" data-svc="1">
+        <h3>Mentored internships</h3>
+        <p>Learn by shipping real work, with direct guidance from senior practitioners.</p>
+      </article>
+      <article class="svc__item" data-svc="2">
+        <h3>Flexible work style</h3>
+        <p>Hybrid and remote-friendly collaboration, with trust, accountability and clear outcomes.</p>
+      </article>
+      <article class="svc__item" data-svc="3">
+        <h3>Team rituals</h3>
+        <p>Friday insights, showcase sessions and collaborative critique loops.</p>
+      </article>
+      </div>
+      <div class="svc__stage" aria-hidden="true">
+        <div class="svc__frame">
+        <img class="svc__shot is-on" src="assets/img/careers/01.jpeg" alt="Colleagues at a whiteboard covered in sticky notes, working through a session around a large touchscreen."
+             width="896" height="1200" loading="lazy" decoding="async" data-svc="0"
+             onerror="this.onerror=null;this.src='assets/img/careers/workshops.svg'">
+        <img class="svc__shot" src="assets/img/careers/02.jpeg" alt="A senior designer talking a younger colleague through work on screen."
+             width="896" height="1200" loading="lazy" decoding="async" data-svc="1"
+             onerror="this.onerror=null;this.src='assets/img/careers/internships.svg'">
+        <img class="svc__shot" src="assets/img/careers/03.jpeg" alt="Someone working from home joining colleagues in a meeting room by video."
+             width="896" height="1200" loading="lazy" decoding="async" data-svc="2"
+             onerror="this.onerror=null;this.src='assets/img/careers/flexible.svg'">
+        <img class="svc__shot" src="assets/img/careers/04.jpeg" alt="The team gathered at a wall screen, reviewing work together."
+             width="896" height="1200" loading="lazy" decoding="async" data-svc="3"
+             onerror="this.onerror=null;this.src='assets/img/careers/rituals.svg'">
+          <span class="svc__stamp" id="svcStamp">01 &middot; In-house workshops</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+
+  <section class="cs develop" id="jobs">
+    <header class="secthead" data-drift>
+      <span class="secthead__over">Open roles</span>
+      <h2 class="secthead__h">Job openings</h2>
+      <p class="secthead__p">Find your opportunity to contribute and grow. Browse current roles by function.</p>
+    </header>
+    <!-- Chips, not tabs. The sticky row above already uses the tab shape for
+         navigation, and two identical-looking rows on one page would read as two
+         levels of the same control. These are sentence-case pills that outline
+         rather than fill when chosen. -->
+    <div class="jobbar">
+      <ul class="filters__row jobbar__filts" id="jobFilters"
+          data-filters="jobList" data-filter-item=".job" data-filter-empty="jobsEmpty"
+          data-page-size="4" data-pager="jobPager" data-filter-search="jobSearch">
+        <li><button class="filt filt--chip is-on" type="button" data-cat="all" aria-pressed="true">All</button></li>
+        <li><button class="filt filt--chip" type="button" data-cat="research" aria-pressed="false">Research</button></li>
+        <li><button class="filt filt--chip" type="button" data-cat="design" aria-pressed="false">Design</button></li>
+        <li><button class="filt filt--chip" type="button" data-cat="writing" aria-pressed="false">UX Writing</button></li>
+        <li><button class="filt filt--chip" type="button" data-cat="business" aria-pressed="false">Business &amp; Marketing</button></li>
+        <li><button class="filt filt--chip" type="button" data-cat="hr" aria-pressed="false">HR</button></li>
+      </ul>
+
+      <div class="jobsearch">
+        <label class="vh" for="jobSearch">Search roles</label>
+        <svg class="jobsearch__ico" viewBox="0 0 16 16" aria-hidden="true"><circle cx="7" cy="7" r="5" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="m11 11 4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        <input class="jobsearch__in" id="jobSearch" type="search" placeholder="Search roles" autocomplete="off">
+      </div>
+    </div>
+    <div class="jobs" id="jobList">
+      <article class="job" data-cats="design">
+        <div class="job__body">
+          <h3 class="job__t">UI Lead</h3>
+          <p class="job__p">Define and deliver innovative UI solutions, lead project squads and elevate product quality.</p>
+          <p class="job__meta">Remote / Hybrid <span aria-hidden="true">·</span> 5–6 years</p>
+        </div>
+        <template class="jd__src" data-fn="Design"><p class="jd__lead">You own the visual and interaction craft on two or three client engagements at a time — setting the bar for what ships, and bringing the squad with you. This is a hands-on lead role: you are in the file, not only reviewing it.</p>
+<div class="jd__block"><h4 class="jd__h">What you'll do</h4><ul class="jd__list">
+<li>Define the UI direction for a product and defend it through to build, with the reasoning written down.</li>
+<li>Lead a project squad of two to four designers — briefing, critique, and unblocking.</li>
+<li>Build and maintain the component library a client's team will inherit from us.</li>
+<li>Work directly with client engineering on feasibility, handoff and QA of the live build.</li>
+<li>Raise the studio's craft floor: run critique, and mentor the designers around you.</li>
+</ul></div>
+<div class="jd__block"><h4 class="jd__h">What you'll bring</h4><ul class="jd__list">
+<li>Five to six years designing digital products, with shipped work you can walk us through.</li>
+<li>Real fluency in a modern design tool and in systems thinking — tokens, variants, states, the lot.</li>
+<li>The ability to explain a design decision to a sceptical stakeholder without retreating from it.</li>
+<li>Experience working alongside researchers and acting on what they find.</li>
+</ul></div>
+<div class="jd__block"><h4 class="jd__h">Nice to have</h4><ul class="jd__list">
+<li>Front-end literacy — enough to read a component and know what you are asking for.</li>
+<li>Motion and prototyping work in your portfolio.</li>
+</ul></div></template>
+        <a class="btn btn--ghost job__cta" href="index.html#contact" data-sheet-open="job">Apply now</a>
+      </article>
+      <article class="job" data-cats="design">
+        <div class="job__body">
+          <h3 class="job__t">Senior UX Lead</h3>
+          <p class="job__p">Drive UX strategy and interaction design for complex enterprise and consumer journeys.</p>
+          <p class="job__meta">Remote / Hybrid <span aria-hidden="true">·</span> 3–5 years</p>
+        </div>
+        <template class="jd__src" data-fn="Design"><p class="jd__lead">You take complex, unglamorous problems — enterprise workflows, regulated journeys, multi-role systems — and make them make sense. You set the UX strategy for an engagement and stay accountable for the outcome, not just the deliverable.</p>
+<div class="jd__block"><h4 class="jd__h">What you'll do</h4><ul class="jd__list">
+<li>Frame the problem with the client before anyone opens a design tool.</li>
+<li>Map end-to-end journeys across roles, systems and edge cases, and find where they break.</li>
+<li>Turn research findings into interaction models the team can build against.</li>
+<li>Run workshops with client stakeholders — including the ones who disagree with each other.</li>
+<li>Carry the argument into steering meetings, with evidence.</li>
+</ul></div>
+<div class="jd__block"><h4 class="jd__h">What you'll bring</h4><ul class="jd__list">
+<li>Three to five years in UX, with at least one genuinely complex system behind you.</li>
+<li>Comfort with ambiguity, and a method for reducing it that you can describe.</li>
+<li>Strong facilitation — you can hold a room of twelve people to an outcome.</li>
+<li>Writing that is clear enough to stand in for you when you are not in the meeting.</li>
+</ul></div>
+<div class="jd__block"><h4 class="jd__h">Nice to have</h4><ul class="jd__list">
+<li>Service design or LEGO&reg; Serious Play facilitation experience.</li>
+<li>Exposure to regulated sectors — finance, health, mobility, public services.</li>
+</ul></div></template>
+        <a class="btn btn--ghost job__cta" href="index.html#contact" data-sheet-open="job">Apply now</a>
+      </article>
+      <article class="job" data-cats="research">
+        <div class="job__body">
+          <h3 class="job__t">UX Researcher</h3>
+          <p class="job__p">Plan and run user interviews, usability tests and synthesis frameworks across projects.</p>
+          <p class="job__meta">Remote / Hybrid <span aria-hidden="true">·</span> 2–4 years</p>
+        </div>
+        <template class="jd__src" data-fn="Research"><p class="jd__lead">Research is the studio's centre of gravity, not a phase. You plan and run studies that change what gets built — and you are in the room when those decisions are made.</p>
+<div class="jd__block"><h4 class="jd__h">What you'll do</h4><ul class="jd__list">
+<li>Scope research questions with the client, and push back when the question is wrong.</li>
+<li>Run interviews, contextual enquiry, diary studies and usability tests, moderated and unmoderated.</li>
+<li>Recruit and screen participants, including in tier-2 and tier-3 markets.</li>
+<li>Synthesise into frameworks a design team can act on, not a slide deck that gets filed.</li>
+<li>Present findings to stakeholders and stay for the argument that follows.</li>
+</ul></div>
+<div class="jd__block"><h4 class="jd__h">What you'll bring</h4><ul class="jd__list">
+<li>Two to four years running your own studies end to end.</li>
+<li>A method you can defend — sample, protocol, analysis, and the limits of each.</li>
+<li>Field comfort: homes, shop floors, hospitals, vehicles, wherever the behaviour actually is.</li>
+<li>Note-taking and synthesis discipline under time pressure.</li>
+</ul></div>
+<div class="jd__block"><h4 class="jd__h">Nice to have</h4><ul class="jd__list">
+<li>Quantitative chops — survey design, basic statistics, behavioural analytics.</li>
+<li>Working fluency in an Indian language beyond English and Hindi.</li>
+</ul></div></template>
+        <a class="btn btn--ghost job__cta" href="index.html#contact" data-sheet-open="job">Apply now</a>
+      </article>
+      <article class="job" data-cats="business">
+        <div class="job__body">
+          <h3 class="job__t">Business Analyst</h3>
+          <p class="job__p">Bridge product, design and business priorities with structured analysis and storytelling.</p>
+          <p class="job__meta">Remote / Hybrid <span aria-hidden="true">·</span> 2–4 years</p>
+        </div>
+        <template class="jd__src" data-fn="Business &amp; Marketing"><p class="jd__lead">You sit between what the client's business needs, what their users do, and what the team can build — and you keep those three honest with each other.</p>
+<div class="jd__block"><h4 class="jd__h">What you'll do</h4><ul class="jd__list">
+<li>Turn a vague brief into a scoped, sequenced problem statement.</li>
+<li>Model current-state processes and quantify where the cost and friction actually sit.</li>
+<li>Build the business case that lets a design recommendation survive a budget review.</li>
+<li>Define success measures before the work starts, and track them after it ships.</li>
+<li>Support proposals and pitches with structured analysis.</li>
+</ul></div>
+<div class="jd__block"><h4 class="jd__h">What you'll bring</h4><ul class="jd__list">
+<li>Two to four years in analysis, consulting or product operations.</li>
+<li>Genuine comfort with numbers — and with saying what they do not prove.</li>
+<li>Process modelling and requirements documentation that other people can use.</li>
+<li>Storytelling: the analysis is worthless if the room does not follow it.</li>
+</ul></div>
+<div class="jd__block"><h4 class="jd__h">Nice to have</h4><ul class="jd__list">
+<li>SQL or a BI tool you actually use rather than list.</li>
+<li>Experience inside a design or research practice.</li>
+</ul></div></template>
+        <a class="btn btn--ghost job__cta" href="index.html#contact" data-sheet-open="job">Apply now</a>
+      </article>
+      <article class="job" data-cats="writing">
+        <div class="job__body">
+          <h3 class="job__t">UX Writer</h3>
+          <p class="job__p">Create clear, consistent product language that reduces friction and improves confidence.</p>
+          <p class="job__meta">Remote / Hybrid <span aria-hidden="true">·</span> 2–3 years</p>
+        </div>
+        <template class="jd__src" data-fn="UX Writing"><p class="jd__lead">You write the words in the product — the labels, the errors, the empty states, the moments where someone is about to give up. Fewer, clearer words, chosen on evidence.</p>
+<div class="jd__block"><h4 class="jd__h">What you'll do</h4><ul class="jd__list">
+<li>Write and edit product copy across flows, in the file, alongside the designer.</li>
+<li>Build and hold a voice and terminology system for each client.</li>
+<li>Rewrite the errors and confirmations nobody budgeted for — usually the highest-value work.</li>
+<li>Test copy with real users and revise on what you observe, not on preference.</li>
+<li>Write for translation and for low-literacy and low-bandwidth contexts.</li>
+</ul></div>
+<div class="jd__block"><h4 class="jd__h">What you'll bring</h4><ul class="jd__list">
+<li>Two to three years writing for interfaces, with before-and-after examples.</li>
+<li>Ruthlessness about word count, and a reason for every one you keep.</li>
+<li>Working knowledge of accessibility and plain-language standards.</li>
+<li>The temperament to have your sentences edited in public, in critique.</li>
+</ul></div>
+<div class="jd__block"><h4 class="jd__h">Nice to have</h4><ul class="jd__list">
+<li>Content design for Indian-language products.</li>
+<li>Experience defining a terminology glossary across a large product suite.</li>
+</ul></div></template>
+        <a class="btn btn--ghost job__cta" href="index.html#contact" data-sheet-open="job">Apply now</a>
+      </article>
+      <article class="job" data-cats="hr">
+        <div class="job__body">
+          <h3 class="job__t">People Operations Associate</h3>
+          <p class="job__p">Help shape hiring, onboarding and team experience with empathy and operational rigour.</p>
+          <p class="job__meta">Remote / Hybrid <span aria-hidden="true">·</span> 1–3 years</p>
+        </div>
+        <template class="jd__src" data-fn="HR"><p class="jd__lead">You look after the experience of working here — hiring, joining, and the rituals that keep a studio of this size warm as it grows. Operational rigour with actual empathy behind it.</p>
+<div class="jd__block"><h4 class="jd__h">What you'll do</h4><ul class="jd__list">
+<li>Run hiring end to end: sourcing, scheduling, candidate communication, offers.</li>
+<li>Own onboarding so a new joiner is useful and comfortable inside their first fortnight.</li>
+<li>Keep people records, leave and payroll inputs accurate and on time.</li>
+<li>Organise the studio's rituals — Friday insights, showcases, hackdays, internships.</li>
+<li>Notice when something is not working for someone, and raise it.</li>
+</ul></div>
+<div class="jd__block"><h4 class="jd__h">What you'll bring</h4><ul class="jd__list">
+<li>One to three years in people operations, recruitment coordination or office management.</li>
+<li>Genuine care for candidate experience, including for the people we do not hire.</li>
+<li>Organisation you can prove — nothing dropped, nothing left unanswered.</li>
+<li>Discretion. You will hold things people told you in confidence.</li>
+</ul></div>
+<div class="jd__block"><h4 class="jd__h">Nice to have</h4><ul class="jd__list">
+<li>Experience in a studio, agency or consultancy.</li>
+<li>Familiarity with Indian statutory compliance basics.</li>
+</ul></div></template>
+        <a class="btn btn--ghost job__cta" href="index.html#contact" data-sheet-open="job">Apply now</a>
+      </article>
+    </div>
+    <nav class="pager" id="jobPager" aria-label="Job listing pages"></nav>
+    <p class="jobs__empty" id="jobsEmpty" hidden>No open roles matching <span data-empty-term>this function</span> right now. <a href="index.html#contact">Send us your work anyway</a> — we keep good people in mind.</p>
+  </section>
+
+  <section class="cs develop" id="process">
+    <header class="secthead" data-drift>
+      <span class="secthead__over">How we hire</span>
+      <h2 class="secthead__h">The application process</h2>
+      <p class="secthead__p">Designed to be transparent and candidate-friendly. Not just an evaluation — a two-way conversation.</p>
+    </header>
+    <!-- Steps 02-04 are AUTHORED. The reference's stepper only ever exposes the
+         description of the active step, so only 01 came with copy; the client
+         asked for the rest to be written on 2026-08-13. They describe a hiring
+         process and set expectations for candidates, so they need sign-off — see
+         PRODUCT.md. -->
+    <div class="vtabs" data-vtabs>
+      <div class="vtabs__list" role="tablist" aria-label="Stages of the application process" aria-orientation="vertical">
+        <button class="vtab is-on" type="button" role="tab"
+                id="vt-01" aria-controls="vp-01" aria-selected="true" tabindex="0">
+          <span class="vtab__t">Getting to know you</span>
+        </button>
+        <button class="vtab" type="button" role="tab"
+                id="vt-02" aria-controls="vp-02" aria-selected="false" tabindex="-1">
+          <span class="vtab__t">Take-home task</span>
+        </button>
+        <button class="vtab" type="button" role="tab"
+                id="vt-03" aria-controls="vp-03" aria-selected="false" tabindex="-1">
+          <span class="vtab__t">A chat</span>
+        </button>
+        <button class="vtab" type="button" role="tab"
+                id="vt-04" aria-controls="vp-04" aria-selected="false" tabindex="-1">
+          <span class="vtab__t">Valuable feedback</span>
+        </button>
+      </div>
+      <div class="vtabs__panels">
+        <div class="vpanel" role="tabpanel" id="vp-01" aria-labelledby="vt-01">
+          <span class="vpanel__k">Step 01</span>
+          <h3 class="vpanel__h">Getting to know you</h3>
+          <p class="vpanel__p">We start with your story, skills and ambitions. This first step helps us understand what motivates you, and where your strengths can create the most impact.</p>
+          <p class="vpanel__p">No task, no whiteboard. A conversation about the work you have done, the work you want to do next, and whether the two point in the same direction as the roles we have open.</p>
+        </div>
+        <div class="vpanel" role="tabpanel" id="vp-02" aria-labelledby="vt-02" hidden>
+          <span class="vpanel__k">Step 02</span>
+          <h3 class="vpanel__h">Take-home task</h3>
+          <p class="vpanel__p">A short, realistic problem drawn from the kind of work we actually do. Not a trick question, and not a free deliverable for a live client project.</p>
+          <p class="vpanel__p">We tell you upfront roughly how long it should take, and you fit it around your week rather than a countdown. What we read is how you frame the problem and what you chose to leave out — not only the artefact at the end.</p>
+        </div>
+        <div class="vpanel" role="tabpanel" id="vp-03" aria-labelledby="vt-03" hidden>
+          <span class="vpanel__k">Step 03</span>
+          <h3 class="vpanel__h">A chat</h3>
+          <p class="vpanel__p">A conversation with the people you would actually sit beside, not a panel you have never met.</p>
+          <p class="vpanel__p">We walk through your task together and talk about how you think when the brief is unclear. Half the time belongs to your questions — about the team, the projects, or anything you need in order to decide about us.</p>
+        </div>
+        <div class="vpanel" role="tabpanel" id="vp-04" aria-labelledby="vt-04" hidden>
+          <span class="vpanel__k">Step 04</span>
+          <h3 class="vpanel__h">Valuable feedback</h3>
+          <p class="vpanel__p">Whatever the outcome, you hear back with something you can use.</p>
+          <p class="vpanel__p">We tell you what stood out, where we saw gaps, and how we reached the decision. Interviewing takes real effort, and being left without a straight answer is the part of hiring candidates tell us they find hardest.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+</article>
+
+<!-- ============================ SIGN-UP ============================ -->
+<!-- THERE IS NO LIST BEHIND THIS FORM YET. It is built properly — real label,
+     real email input, real validation — but it does not pretend to succeed: the
+     submit handler says plainly that sign-ups are not connected and points at
+     the contact section. A subscribe box that swallows an address while showing
+     a tick is worse than no box at all. Give the form an action and delete the
+     handler's early return when a list exists. See PRODUCT.md. -->
+<section class="frame sec sec--pitch">
+  <div class="pitch">
+    <h2 class="pitch__h develop">Stay ahead with <em>career updates</em></h2>
+    <p class="pitch__p develop" data-delay="1">Get updates on new openings, team stories and learning opportunities from Peepal Design.</p>
+
+    <form class="signup develop" data-signup data-delay="2" action="index.html#contact" method="get" novalidate>
+      <label class="vh" for="signupEmail">Email address</label>
+      <input class="signup__in" id="signupEmail" name="email" type="email"
+             placeholder="Email address" autocomplete="email" required
+             aria-describedby="signupMsg">
+      <button class="btn btn--mark signup__go" type="submit">Subscribe</button>
+      <p class="signup__msg" id="signupMsg" role="status" aria-live="polite"></p>
+    </form>
+  </div>
+</section>
+
+</main>
+
+<!-- ===================== JOB SHEET (modal) =====================
+     One sheet, filled on open from the clicked role's <template class="jd__src">.
+     The detail copy is AUTHORED, not from Careers.pdf — that file carries only
+     the one-line summary already shown in the list. Needs sign-off before
+     launch, same as the application steps in section 03.
+     The CV drop zone accepts and validates a real file but sends nothing:
+     there is no endpoint behind it. It says so on submit rather than showing a
+     tick and dropping someone's application. -->
+<div class="sheet" data-sheet="job" hidden>
+  <div class="sheet__scrim" data-sheet-close></div>
+  <div class="sheet__panel" role="dialog" aria-modal="true" aria-labelledby="jobSheetH">
+
+    <div class="sheet__head">
+      <div>
+        <p class="sheet__over" data-job-fn>Open role</p>
+        <h2 class="sheet__h" id="jobSheetH" data-job-title>Role</h2>
+        <p class="jd__meta" data-job-meta></p>
+      </div>
+      <button class="sheet__x" type="button" data-sheet-close data-sheet-focus aria-label="Close">
+        <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2 2l12 12M14 2L2 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+
+    <div class="sheet__panels">
+      <div class="jd">
+        <div class="jd__body" data-job-body></div>
+
+        <aside class="jd__apply">
+          <h3 class="jd__applyh">Apply for this role</h3>
+          <form class="fields fields--apply" data-apply novalidate>
+            <label class="fld"><span class="fld__l">Your name <span class="req">*</span></span>
+              <input class="fld__i" name="name" type="text" autocomplete="name" required></label>
+            <label class="fld"><span class="fld__l">Email <span class="req">*</span></span>
+              <input class="fld__i" name="email" type="email" autocomplete="email" required></label>
+            <label class="fld"><span class="fld__l">Portfolio or LinkedIn</span>
+              <input class="fld__i" name="portfolio" type="url" inputmode="url" placeholder="https://"></label>
+
+            <div class="fld">
+              <span class="fld__l" id="cvLabel">Your CV <span class="req">*</span></span>
+              <div class="drop" data-drop>
+                <input class="drop__in" id="jobCv" name="cv" type="file"
+                       accept=".pdf,.doc,.docx,application/pdf" aria-labelledby="cvLabel" required>
+                <label class="drop__face" for="jobCv">
+                  <svg class="drop__ico" viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M12 16V4m0 0L7.5 8.5M12 4l4.5 4.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M4 15v3.5A1.5 1.5 0 0 0 5.5 20h13a1.5 1.5 0 0 0 1.5-1.5V15" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                  </svg>
+                  <span class="drop__t">Drop your CV here, or <span class="drop__link">browse</span></span>
+                  <span class="drop__n">PDF or Word &middot; up to 8&nbsp;MB</span>
+                </label>
+                <p class="drop__got" hidden>
+                  <span class="drop__name" data-drop-name></span>
+                  <button class="drop__x" type="button" data-drop-clear>Remove</button>
+                </p>
+              </div>
+            </div>
+
+            <label class="fld"><span class="fld__l">Anything you want us to read first?</span>
+              <textarea class="fld__i" name="note" rows="3"
+                placeholder="A project you are proud of, or why this role."></textarea></label>
+
+            <div class="fields__act">
+              <button class="btn btn--mark" type="submit">Submit application</button>
+            </div>
+            <p class="fields__msg" role="status" aria-live="polite"></p>
+          </form>
+        </aside>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ============================ FOOTER ============================ -->
+<footer class="foot">
+  <div class="foot__grid">
+    <div class="foot__brand">
+      <a class="logo logo--foot" href="index.html" aria-label="Peepal Design home">
+        <img class="logo__mark" src="assets/brand/logomark.svg" alt="" width="24" height="24"
+             onerror="this.onerror=null;this.src='assets/brand/logomark.png'">
+        <span class="logo__word">peepaldesign</span>
+      </a>
+      <p>A research-first UX studio. Part of Bridged Global — a worldwide network of UX designers and design specialists. Founded 2016. Mumbai, India.</p>
+      <div class="foot__social">
+        <a href="#top" aria-label="LinkedIn"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4.5 7.5h2.6V16H4.5zM5.8 3.4a1.6 1.6 0 1 1 0 3.2 1.6 1.6 0 0 1 0-3.2ZM9.3 7.5h2.5v1.2a2.8 2.8 0 0 1 2.5-1.4c2 0 3.2 1.3 3.2 3.7V16h-2.6v-4.4c0-1.2-.4-1.9-1.4-1.9-1 0-1.6.7-1.6 1.9V16H9.3Z" fill="currentColor"/></svg></a>
+        <a href="#top" aria-label="X"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 4h3.2l3.1 4.3L13.9 4H16l-4.6 5.6L16.4 16h-3.2l-3.4-4.6L5.9 16H4l4.9-6L4 4Z" fill="currentColor"/></svg></a>
+        <a href="#top" aria-label="Instagram"><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="3.5" y="3.5" width="13" height="13" rx="4" fill="none" stroke="currentColor" stroke-width="1.4"/><circle cx="10" cy="10" r="3.2" fill="none" stroke="currentColor" stroke-width="1.4"/><circle cx="14" cy="6" r="1" fill="currentColor"/></svg></a>
+        <a href="#top" aria-label="Behance"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M2 5h4.6c1.8 0 2.9.8 2.9 2.2 0 1-.5 1.6-1.3 1.9 1 .3 1.7 1 1.7 2.2 0 1.7-1.3 2.7-3.3 2.7H2Zm2 3.4h2.2c.7 0 1.2-.3 1.2-.9s-.4-.9-1.2-.9H4Zm0 4h2.4c.9 0 1.4-.4 1.4-1s-.5-1-1.4-1H4ZM12 5.6h4.6V7H12ZM14.4 8.2c2 0 3.3 1.4 3.3 3.5v.5h-4.8c.1.9.7 1.4 1.6 1.4.7 0 1.1-.2 1.4-.7h1.7c-.4 1.4-1.6 2.2-3.1 2.2-2 0-3.4-1.4-3.4-3.4s1.4-3.5 3.3-3.5Zm-1.5 2.8h3c-.1-.8-.7-1.3-1.5-1.3s-1.4.5-1.5 1.3Z" fill="currentColor"/></svg></a>
+      </div>
+    </div>
+
+    <nav class="foot__col" aria-label="Services">
+      <span class="foot__code">SERVICES</span>
+      <a href="#services">User Research</a>
+      <a href="#services">UX Design</a>
+      <a href="#services">LEGO® Serious Play</a>
+      <a href="#services">UX Training</a>
+      <a href="#services">UX Audit</a>
+    </nav>
+
+    <nav class="foot__col" aria-label="Company">
+      <span class="foot__code">COMPANY</span>
+      <a href="#global">About Us</a>
+      <a href="#services">Services</a>
+      <a href="#work">Work</a>
+      <a href="#services">Training</a>
+      <a href="blog.html">Insights &amp; Blog</a>
+      <a href="careers.html" aria-current="page">Careers</a>
+      <a href="#contact">Contact Us</a>
+    </nav>
+
+    <nav class="foot__col" aria-label="Global family">
+      <span class="foot__code">GLOBAL FAMILY</span>
+      <a href="https://boldinsight.com/" target="_blank" rel="noopener">Bold Insight</a>
+      <a href="https://www.uintent.com/" target="_blank" rel="noopener">uintent</a>
+      <a href="https://uism.co.jp/" target="_blank" rel="noopener">UIsm</a>
+      <a href="https://www.xplusx.net/" target="_blank" rel="noopener">XPLUSX</a>
+    </nav>
+  </div>
+
+  <div class="foot__bar">
+    <span>© 2024 Peepal Design — User Experience Design Consulting Pvt. Ltd.</span>
+    <span class="foot__legal"><a href="#top">Privacy Policy</a><a href="#top">Terms of Use</a></span>
+  </div>
+</footer>
+
+<!-- A real anchor, so the page still returns to the top with JavaScript off;
+     the script only decides when the plate is visible. -->
+<a class="totop" id="toTop" href="#top" aria-label="Back to top">
+  <svg class="totop__glyph" viewBox="0 0 14 14" fill="none" stroke="currentColor"
+       stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    <path d="M2.4 2.4h9.2"/>
+    <g class="totop__arrow"><path d="M7 12.6V5.6"/><path d="M3.6 9 7 5.6 10.4 9"/></g>
+  </svg>
+  <span class="totop__code" aria-hidden="true">Top</span>
+</a>
+
+<script src="assets/js/main.js?v=218"></script>
+</body>
+</html>

@@ -1,0 +1,859 @@
+<!doctype html>
+<html lang="en" class="no-js compact design-leaders">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Design Leaders Masterclass — Peepal Design</title>
+<meta name="description" content="A 13-week international programme for UX, CX and service design team leaders. Seven modules across the six dimensions of design maturity, built on the UXalliance framework.">
+<meta name="theme-color" content="#0B0B0C">
+<link rel="stylesheet" href="assets/css/contact-sheet.css?v=301">
+<script>document.documentElement.className = document.documentElement.className.replace('no-js','js');</script>
+</head>
+<body>
+<!--
+  TRAINING — Design Leaders Masterclass. Structure, components and motion are
+  taken wholesale from training-researchops.html at the client's request: the
+  crumb, .cs__head, the .csnav--open row that takes a band only once stuck, the
+  .secthead three-part headers, the section drift, the expanding .panel, the
+  .duo pairing, and the pitch fold.
+
+  Copy is the client's own, transcribed from "Design Leaders Masterclass.pdf".
+  That reference has the same font-encoding fault as the other two, breaking
+  words into "M odule" and "organi z ation", so every line is retyped rather
+  than pasted, and British spellings are used to match the rest of the site.
+
+  Boxes are kept deliberately few — the client asked for that specifically. Only
+  the agenda panel and the two image frames are enclosed; the facts, the audience
+  list, the outcomes and the trainer roster are all unframed.
+
+  TWO THINGS OMITTED, both in PRODUCT.md. The reference dates the programme
+  "September - December 2024", which is nearly two years past; the module months
+  are kept because they are relative, the stale year is not shown. And its
+  "Upcoming sessions" block lists UX-PM Level 1 and 2 dates in Quebec, which
+  belong to a different programme and are not reproduced here.
+
+  No cursor loupe. That flourish belongs to the home hero alone.
+-->
+
+<a class="skip" href="#nutshell">Skip to the programme</a>
+
+<div class="bgwash" id="bgWash" aria-hidden="true"></div>
+<div class="grain" aria-hidden="true"></div>
+
+<!-- ============================ NAV ============================ -->
+<header class="nav" id="nav">
+  <div class="nav__inner">
+    <a class="logo" href="index.html" aria-label="Peepal Design home">
+      <!-- Artwork lives at assets/brand/logomark.svg — swap that file, not this markup. -->
+      <img class="logo__mark" src="assets/brand/logomark.svg" alt="" width="26" height="26"
+           onerror="this.onerror=null;this.src='assets/brand/logomark.png'">
+      <span class="logo__word">peepaldesign</span>
+    </a>
+
+    <nav class="nav__menu" aria-label="Primary">
+      <div class="nav__item nav__item--mega has-menu">
+        <button class="nav__link" aria-expanded="false" aria-controls="m-services">Our Services<svg class="caret" viewBox="0 0 10 6" aria-hidden="true"><path d="M1 1l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg></button>
+        <!-- Headings, item lists and promo copy are all client-supplied.
+             "UX Benchmarking - UX Index" was originally given under two
+             columns; the client removed the Value Added copy on 2026-08-12, so
+             it now appears once, under User Research Services. -->
+        <div class="dropdown dropdown--panel dropdown--panel-wide" id="m-services" hidden>
+          <div class="mega">
+            <div class="mega__col">
+              <span class="mega__head">User Research Services</span>
+              <a class="megaitem megaitem--compact" href="service-quantitative-qualitative-research.html">
+                <span class="megaitem__dot" aria-hidden="true"></span>
+                <span class="megaitem__body"><span class="megaitem__title">Quantitative and Qualitative research</span></span>
+                <svg class="megaitem__arrow" viewBox="0 0 16 10" aria-hidden="true"><path d="M0 5h14M10 1l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </a>
+              <a class="megaitem megaitem--compact" href="service-usability-testing.html">
+                <span class="megaitem__dot" aria-hidden="true"></span>
+                <span class="megaitem__body"><span class="megaitem__title">Usability Testing</span></span>
+                <svg class="megaitem__arrow" viewBox="0 0 16 10" aria-hidden="true"><path d="M0 5h14M10 1l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </a>
+              <a class="megaitem megaitem--compact" href="service-ux-benchmarking.html">
+                <span class="megaitem__dot" aria-hidden="true"></span>
+                <span class="megaitem__body"><span class="megaitem__title">UX Benchmarking - UX Index</span></span>
+                <svg class="megaitem__arrow" viewBox="0 0 16 10" aria-hidden="true"><path d="M0 5h14M10 1l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </a>
+              <a class="megaitem megaitem--compact" href="service-ai-opportunity-mapping.html">
+                <span class="megaitem__dot" aria-hidden="true"></span>
+                <span class="megaitem__body"><span class="megaitem__title">AI Opportunity Mapping</span></span>
+                <svg class="megaitem__arrow" viewBox="0 0 16 10" aria-hidden="true"><path d="M0 5h14M10 1l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </a>
+            </div>
+            <div class="mega__col">
+              <span class="mega__head">Design Services</span>
+              <a class="megaitem megaitem--compact" href="service-ux-ui-design.html">
+                <span class="megaitem__dot" aria-hidden="true"></span>
+                <span class="megaitem__body"><span class="megaitem__title">UX-UI Design</span></span>
+                <svg class="megaitem__arrow" viewBox="0 0 16 10" aria-hidden="true"><path d="M0 5h14M10 1l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </a>
+              <a class="megaitem megaitem--compact" href="service-service-design.html">
+                <span class="megaitem__dot" aria-hidden="true"></span>
+                <span class="megaitem__body"><span class="megaitem__title">Service Design</span></span>
+                <svg class="megaitem__arrow" viewBox="0 0 16 10" aria-hidden="true"><path d="M0 5h14M10 1l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </a>
+              <a class="megaitem megaitem--compact" href="service-ux-for-ai-product.html">
+                <span class="megaitem__dot" aria-hidden="true"></span>
+                <span class="megaitem__body"><span class="megaitem__title">UX for AI Product</span></span>
+                <svg class="megaitem__arrow" viewBox="0 0 16 10" aria-hidden="true"><path d="M0 5h14M10 1l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </a>
+              <a class="megaitem megaitem--compact" href="service-conversational-ai-ux.html">
+                <span class="megaitem__dot" aria-hidden="true"></span>
+                <span class="megaitem__body"><span class="megaitem__title">Conversational AI - UX Design</span></span>
+                <svg class="megaitem__arrow" viewBox="0 0 16 10" aria-hidden="true"><path d="M0 5h14M10 1l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </a>
+              <a class="megaitem megaitem--compact" href="service-ai-product-prototyping.html">
+                <span class="megaitem__dot" aria-hidden="true"></span>
+                <span class="megaitem__body"><span class="megaitem__title">AI Product Prototyping</span></span>
+                <svg class="megaitem__arrow" viewBox="0 0 16 10" aria-hidden="true"><path d="M0 5h14M10 1l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </a>
+              <a class="megaitem megaitem--compact" href="service-design-accessibility.html">
+                <span class="megaitem__dot" aria-hidden="true"></span>
+                <span class="megaitem__body"><span class="megaitem__title">Design for Accessibility</span></span>
+                <svg class="megaitem__arrow" viewBox="0 0 16 10" aria-hidden="true"><path d="M0 5h14M10 1l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </a>
+              <a class="megaitem megaitem--compact" href="service-design-systems.html">
+                <span class="megaitem__dot" aria-hidden="true"></span>
+                <span class="megaitem__body"><span class="megaitem__title">Design Systems</span></span>
+                <svg class="megaitem__arrow" viewBox="0 0 16 10" aria-hidden="true"><path d="M0 5h14M10 1l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </a>
+              <a class="megaitem megaitem--compact" href="service-data-visualisation.html">
+                <span class="megaitem__dot" aria-hidden="true"></span>
+                <span class="megaitem__body"><span class="megaitem__title">Data Visualisation</span></span>
+                <svg class="megaitem__arrow" viewBox="0 0 16 10" aria-hidden="true"><path d="M0 5h14M10 1l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </a>
+            </div>
+            <div class="mega__col">
+              <span class="mega__head">Value Added Services</span>
+              <a class="megaitem megaitem--compact" href="service-ux-team-augmentation.html">
+                <span class="megaitem__dot" aria-hidden="true"></span>
+                <span class="megaitem__body"><span class="megaitem__title">UX Team Augmentation</span></span>
+                <svg class="megaitem__arrow" viewBox="0 0 16 10" aria-hidden="true"><path d="M0 5h14M10 1l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </a>
+              <a class="megaitem megaitem--compact" href="service-design-thinking-workshop.html">
+                <span class="megaitem__dot" aria-hidden="true"></span>
+                <span class="megaitem__body"><span class="megaitem__title">Design Thinking Workshop</span></span>
+                <svg class="megaitem__arrow" viewBox="0 0 16 10" aria-hidden="true"><path d="M0 5h14M10 1l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </a>
+              <a class="megaitem megaitem--compact" href="service-ux-audit.html">
+                <span class="megaitem__dot" aria-hidden="true"></span>
+                <span class="megaitem__body"><span class="megaitem__title">UX Audit</span></span>
+                <svg class="megaitem__arrow" viewBox="0 0 16 10" aria-hidden="true"><path d="M0 5h14M10 1l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </a>
+            </div>
+            <a class="mega__promo" href="index.html#services">
+              <img src="assets/img/services/research.jpg?v=2" alt="" width="896" height="1200"
+                   loading="lazy" decoding="async">
+              <span class="mega__promo-body">
+                <span class="mega__promo-title">Research that reveals what users actually need</span>
+                <span class="learn">Explore<svg viewBox="0 0 16 10" aria-hidden="true"><path d="M0 5h14M10 1l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+              </span>
+            </a>
+          </div>
+        </div>
+      </div>
+      <div class="nav__item"><a class="nav__link" href="portfolio.html">Portfolio</a></div>
+      <div class="nav__item nav__item--mega has-menu">
+        <button class="nav__link" aria-expanded="false" aria-controls="m-training">Trainings<svg class="caret" viewBox="0 0 10 6" aria-hidden="true"><path d="M1 1l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg></button>
+        <!-- Programme names, one-line descriptions and promo copy are all taken
+             from the client's reference. The reference shows the first item
+             pre-highlighted; that is rendered as a hover state rather than a
+             default, since a menu should not arrive with a row already picked. -->
+        <div class="dropdown dropdown--panel" id="m-training" hidden>
+          <div class="mega mega--list">
+            <div class="mega__list">
+              <a class="megaitem" href="training-uxpm.html">
+                <span class="megaitem__dot" aria-hidden="true"></span>
+                <span class="megaitem__body">
+                  <span class="megaitem__title">UX-PM level 1-2-3</span>
+                  <span class="megaitem__desc">For product managers</span>
+                </span>
+                <svg class="megaitem__arrow" viewBox="0 0 16 10" aria-hidden="true"><path d="M0 5h14M10 1l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </a>
+              <a class="megaitem" href="training-researchops.html">
+                <span class="megaitem__dot" aria-hidden="true"></span>
+                <span class="megaitem__body">
+                  <span class="megaitem__title">Research Ops</span>
+                  <span class="megaitem__desc">Scale your research practice</span>
+                </span>
+                <svg class="megaitem__arrow" viewBox="0 0 16 10" aria-hidden="true"><path d="M0 5h14M10 1l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </a>
+              <a class="megaitem is-here" aria-current="page" href="training-design-leaders.html">
+                <span class="megaitem__dot" aria-hidden="true"></span>
+                <span class="megaitem__body">
+                  <span class="megaitem__title">Design Leaders Masterclass</span>
+                  <span class="megaitem__desc">Lead with design thinking</span>
+                </span>
+                <svg class="megaitem__arrow" viewBox="0 0 16 10" aria-hidden="true"><path d="M0 5h14M10 1l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </a>
+              <a class="megaitem" href="index.html#services">
+                <span class="megaitem__dot" aria-hidden="true"></span>
+                <span class="megaitem__body">
+                  <span class="megaitem__title">UX Maturity Model</span>
+                  <span class="megaitem__desc">Assess &amp; elevate your org</span>
+                </span>
+                <svg class="megaitem__arrow" viewBox="0 0 16 10" aria-hidden="true"><path d="M0 5h14M10 1l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </a>
+            </div>
+            <a class="mega__promo" href="index.html#services">
+              <img src="assets/img/services/training.jpg?v=2" alt="" width="896" height="1200"
+                   loading="lazy" decoding="async">
+              <span class="mega__promo-body">
+                <span class="mega__promo-title">Build PM skills grounded in UX</span>
+                <span class="learn">Explore<svg viewBox="0 0 16 10" aria-hidden="true"><path d="M0 5h14M10 1l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+              </span>
+            </a>
+          </div>
+        </div>
+      </div>
+      <div class="nav__item nav__item--mega has-menu">
+        <button class="nav__link" aria-expanded="false" aria-controls="m-story">Our Story<svg class="caret" viewBox="0 0 10 6" aria-hidden="true"><path d="M1 1l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg></button>
+        <!-- Labels, descriptions and promo copy from the client's reference.
+             "Blogs" points at blog.html as of 2026-08-13. -->
+        <div class="dropdown dropdown--panel" id="m-story" hidden>
+          <div class="mega mega--list">
+            <div class="mega__list">
+              <a class="megaitem" href="our-journey.html">
+                <span class="megaitem__dot" aria-hidden="true"></span>
+                <span class="megaitem__body">
+                  <span class="megaitem__title">Our Journey</span>
+                  <span class="megaitem__desc">18 years of design</span>
+                </span>
+                <svg class="megaitem__arrow" viewBox="0 0 16 10" aria-hidden="true"><path d="M0 5h14M10 1l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </a>
+              <a class="megaitem" href="our-global-family.html">
+                <span class="megaitem__dot" aria-hidden="true"></span>
+                <span class="megaitem__body">
+                  <span class="megaitem__title">Our Global Family</span>
+                  <span class="megaitem__desc">Meet the team</span>
+                </span>
+                <svg class="megaitem__arrow" viewBox="0 0 16 10" aria-hidden="true"><path d="M0 5h14M10 1l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </a>
+              <a class="megaitem" href="careers.html">
+                <span class="megaitem__dot" aria-hidden="true"></span>
+                <span class="megaitem__body">
+                  <span class="megaitem__title">Careers</span>
+                  <span class="megaitem__desc">Join us</span>
+                </span>
+                <svg class="megaitem__arrow" viewBox="0 0 16 10" aria-hidden="true"><path d="M0 5h14M10 1l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </a>
+              <a class="megaitem" href="blog.html">
+                <span class="megaitem__dot" aria-hidden="true"></span>
+                <span class="megaitem__body">
+                  <span class="megaitem__title">Blogs</span>
+                  <span class="megaitem__desc">Insights &amp; thinking</span>
+                </span>
+                <svg class="megaitem__arrow" viewBox="0 0 16 10" aria-hidden="true"><path d="M0 5h14M10 1l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </a>
+            </div>
+            <a class="mega__promo" href="index.html#global">
+              <img src="assets/img/services/design.jpg?v=2" alt="" width="896" height="1200"
+                   loading="lazy" decoding="async">
+              <span class="mega__promo-body">
+                <span class="mega__promo-title">From pixels to AI — our story</span>
+                <span class="learn">Explore<svg viewBox="0 0 16 10" aria-hidden="true"><path d="M0 5h14M10 1l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+              </span>
+            </a>
+          </div>
+        </div>
+      </div>
+    </nav>
+
+    <a class="btn btn--mark nav__cta" href="index.html#contact">Get in touch</a>
+
+    <button class="burger" id="burger" aria-expanded="false" aria-controls="mobileMenu" aria-label="Open menu">
+      <span></span><span></span>
+    </button>
+  </div>
+</header>
+<div class="nav__progress" id="navProgress" aria-hidden="true"></div>
+
+<div class="mobilemenu" id="mobileMenu" hidden>
+  <a class="mm__link" href="portfolio.html">Portfolio</a>
+  <div class="mm__group">
+    <button class="mm__toggle" type="button" aria-expanded="false" aria-controls="mm-services">Our Services<svg class="mm__chev" viewBox="0 0 10 6" aria-hidden="true"><path d="M1 1l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg></button>
+    <div class="mm__panel" id="mm-services" hidden>
+    <span class="mm__head">User Research Services</span>
+    <a class="mm__sub" href="service-quantitative-qualitative-research.html"><span class="mm__subt">Quantitative and Qualitative research</span></a>
+    <a class="mm__sub" href="service-usability-testing.html"><span class="mm__subt">Usability Testing</span></a>
+    <a class="mm__sub" href="service-ux-benchmarking.html"><span class="mm__subt">UX Benchmarking - UX Index</span></a>
+    <a class="mm__sub" href="service-ai-opportunity-mapping.html"><span class="mm__subt">AI Opportunity Mapping</span></a>
+    <span class="mm__head">Design Services</span>
+    <a class="mm__sub" href="service-ux-ui-design.html"><span class="mm__subt">UX-UI Design</span></a>
+    <a class="mm__sub" href="service-service-design.html"><span class="mm__subt">Service Design</span></a>
+    <a class="mm__sub" href="service-ux-for-ai-product.html"><span class="mm__subt">UX for AI Product</span></a>
+    <a class="mm__sub" href="service-conversational-ai-ux.html"><span class="mm__subt">Conversational AI - UX Design</span></a>
+    <a class="mm__sub" href="service-ai-product-prototyping.html"><span class="mm__subt">AI Product Prototyping</span></a>
+    <a class="mm__sub" href="service-design-accessibility.html"><span class="mm__subt">Design for Accessibility</span></a>
+    <a class="mm__sub" href="service-design-systems.html"><span class="mm__subt">Design Systems</span></a>
+    <a class="mm__sub" href="service-data-visualisation.html"><span class="mm__subt">Data Visualisation</span></a>
+    <span class="mm__head">Value Added Services</span>
+    <a class="mm__sub" href="service-ux-team-augmentation.html"><span class="mm__subt">UX Team Augmentation</span></a>
+    <a class="mm__sub" href="service-design-thinking-workshop.html"><span class="mm__subt">Design Thinking Workshop</span></a>
+    <a class="mm__sub" href="service-ux-audit.html"><span class="mm__subt">UX Audit</span></a>
+    </div>
+  </div>
+  <div class="mm__group">
+    <button class="mm__toggle" type="button" aria-expanded="false" aria-controls="mm-training">Trainings<svg class="mm__chev" viewBox="0 0 10 6" aria-hidden="true"><path d="M1 1l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg></button>
+    <div class="mm__panel" id="mm-training" hidden>
+    <a class="mm__sub" href="training-uxpm.html"><span class="mm__subt">UX-PM level 1-2-3</span><span class="mm__subd">For product managers</span></a>
+    <a class="mm__sub is-here" aria-current="page" href="training-researchops.html"><span class="mm__subt">Research Ops</span><span class="mm__subd">Scale your research practice</span></a>
+    <a class="mm__sub is-here" aria-current="page" href="training-design-leaders.html"><span class="mm__subt">Design Leaders Masterclass</span><span class="mm__subd">Lead with design thinking</span></a>
+    <a class="mm__sub" href="index.html#services"><span class="mm__subt">UX Maturity Model</span><span class="mm__subd">Assess &amp; elevate your org</span></a>
+    </div>
+  </div>
+  <div class="mm__group">
+    <button class="mm__toggle" type="button" aria-expanded="false" aria-controls="mm-story">Our Story<svg class="mm__chev" viewBox="0 0 10 6" aria-hidden="true"><path d="M1 1l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg></button>
+    <div class="mm__panel" id="mm-story" hidden>
+    <a class="mm__sub" href="our-journey.html"><span class="mm__subt">Our Journey</span><span class="mm__subd">18 years of design</span></a>
+    <a class="mm__sub" href="our-global-family.html"><span class="mm__subt">Our Global Family</span><span class="mm__subd">Meet the team</span></a>
+    <a class="mm__sub" href="careers.html"><span class="mm__subt">Careers</span><span class="mm__subd">Join us</span></a>
+    <a class="mm__sub" href="blog.html"><span class="mm__subt">Blogs</span><span class="mm__subd">Insights &amp; thinking</span></a>
+    </div>
+  </div>
+  <a class="mm__link" href="index.html#faq">FAQ</a>
+  <a class="btn btn--mark mm__cta" href="index.html#contact">Get in touch</a>
+</div>
+
+<main id="top">
+
+<article class="frame sec sec--case">
+  <nav class="cs__crumb" aria-label="Breadcrumb">
+    <a href="index.html">Home</a> <span aria-hidden="true">/</span>
+    <a href="index.html#services">Trainings</a> <span aria-hidden="true">/</span>
+    <span aria-current="page">Design Leaders Masterclass</span>
+  </nav>
+
+  <header class="cs__head">
+    <h1 class="cs__title develop">Design Leaders Masterclass <em>International programme for UX, CX and SD team leaders</em></h1>
+    <ul class="ticks ticks--lead develop" data-delay="1">
+      <li>Thirteen weeks and seven modules, <strong>built on the UXalliance Design Maturity Model</strong>.</li>
+      <li>Live sessions for questions and case studies, <strong>with self-paced video and reading between them</strong>.</li>
+      <li>A small international cohort, <strong>taught by people who run design organisations themselves</strong>.</li>
+    </ul>
+    <div class="cs__acts develop" data-delay="2">
+      <a class="btn btn--mark" href="index.html#contact">Enquire</a>
+    </div>
+    <dl class="specs specs--strip develop" data-delay="3">
+      <div class="specs__row"><dt>Format</dt><dd>Live sessions and self-paced modules</dd></div>
+      <div class="specs__row"><dt>Length</dt><dd>13 weeks, 7 modules</dd></div>
+      <div class="specs__row"><dt>Live time</dt><dd>45 hours — Q&amp;A and case studies</dd></div>
+      <div class="specs__row"><dt>Self-paced</dt><dd>18 hours — video and articles</dd></div>
+      <div class="specs__row"><dt>Group size</dt><dd>8–12 seats</dd></div>
+      <div class="specs__row"><dt>Language</dt><dd>English</dd></div>
+      <div class="specs__row"><dt>Price</dt><dd>$2,850</dd></div>
+    </dl>
+  </header>
+
+  <figure class="cs__hero cs__hero--full develop" data-delay="3">
+    <img src="assets/img/training/DLM.jpeg" alt="Design leaders in a boardroom discussion, with a screen behind them showing a global design leadership network map and strategy framework." width="1376" height="768" decoding="async">
+  </figure>
+
+  <nav class="csnav csnav--open" id="csNav" aria-label="Sections of this programme">
+    <ul class="csnav__row">
+      <li><a class="csnav__tab" href="#nutshell">Overview</a></li>
+      <li><a class="csnav__tab" href="#agenda">Curriculum</a></li>
+      <li><a class="csnav__tab" href="#audience">Audience</a></li>
+      <li><a class="csnav__tab" href="#gains">Outcomes</a></li>
+      <li><a class="csnav__tab" href="#voices">Voices</a></li>
+      <li><a class="csnav__tab" href="#trainers">Faculty</a></li>
+    </ul>
+  </nav>
+
+  <section class="cs cs--band develop" id="nutshell">
+    <header class="secthead" data-drift>
+      <span class="secthead__over">Overview</span>
+      <h2 class="secthead__h">The masterclass in a nutshell</h2>
+      <p class="secthead__p">What the programme is, who runs it, and what it is built on.</p>
+    </header>
+    <div class="facts facts--grid">
+      <div class="fact">
+        <span class="fact__ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="7.5" r="3.6"/><path d="M5 20c0-3.6 3.1-6.5 7-6.5s7 2.9 7 6.5"/><path d="M12 1.5v1.6M17.5 3.6l-1 1.3M6.5 3.6l1 1.3"/></svg></span>
+        <span class="fact__t">Leadership, not craft</span>
+        <p class="fact__p">Leadership within Product Design, UX and CX — the work of running the function.</p>
+      </div>
+      <div class="fact">
+        <span class="fact__ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9.5h18M9 9.5V20"/></svg></span>
+        <span class="fact__t">The UXalliance framework</span>
+        <p class="fact__p">Built on the UXalliance Design Maturity Model and its six dimensions.</p>
+      </div>
+      <div class="fact">
+        <span class="fact__ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="9" r="3"/><circle cx="16" cy="9" r="3"/><path d="M2.5 19c0-2.8 2.4-5 5.5-5M21.5 19c0-2.8-2.4-5-5.5-5"/></svg></span>
+        <span class="fact__t">Led by leaders, for leaders</span>
+        <p class="fact__p">Every trainer runs a design organisation of their own.</p>
+      </div>
+      <div class="fact">
+        <span class="fact__ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3c2.6 2.6 2.6 15 0 18-2.6-3-2.6-15.4 0-18z"/></svg></span>
+        <span class="fact__t">An international room</span>
+        <p class="fact__p">Trainers and participants from several countries and markets.</p>
+      </div>
+      <div class="fact">
+        <span class="fact__ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="9.5" r="5.5"/><path d="M8.6 14.3 7 21.2l5-2.5 5 2.5-1.6-6.9"/></svg></span>
+        <span class="fact__t">Certified</span>
+        <p class="fact__p">Certificate sponsored by UXalliance.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="cs develop" id="agenda">
+    <div class="panel" data-expand>
+      <header class="secthead" data-drift>
+        <span class="secthead__over">Curriculum</span>
+        <h2 class="secthead__h">Training agenda</h2>
+        <p class="secthead__p">What you will learn. Seven modules run September to December — open one to see the question it answers.</p>
+      </header>
+      <div class="qalist qalist--num" data-qa-group>
+      <div class="qa qa--mod" id="module-1">
+        <button class="qa__q" aria-expanded="false">
+          <span class="qa__num" aria-hidden="true">1</span>
+          <span class="qa__lead">
+            <span class="qa__t">Introduction to Design Maturity &amp; Research Management</span>
+            <span class="qa__when">September</span>
+          </span><svg class="qa__x" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2v12M2 8h12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+        </button>
+        <div class="qa__a"><div>
+          <p class="qa__q-lead">How do you collect, organise and use customer knowledge?</p>
+          <ul class="ticks ticks--tight">
+            <li>Introduction to design maturity.</li>
+            <li>How to combine research results from different sources.</li>
+            <li>How to construct ready-made method sets for various project situations.</li>
+            <li>How to improve the effectiveness and impact of research by developing ResearchOps.</li>
+            <li>How to build communication rules between UX/CX/SD research and the business.</li>
+          </ul>
+          <p class="qa__hours">4 hours live sessions &middot; 4 hours self-paced content</p>
+        </div></div>
+      </div>
+      <div class="qa qa--mod" id="module-2">
+        <button class="qa__q" aria-expanded="false">
+          <span class="qa__num" aria-hidden="true">2</span>
+          <span class="qa__lead">
+            <span class="qa__t">Design Management</span>
+            <span class="qa__when">September</span>
+          </span><svg class="qa__x" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2v12M2 8h12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+        </button>
+        <div class="qa__a"><div>
+          <p class="qa__q-lead">How do you improve service and product design processes?</p>
+          <ul class="ticks ticks--tight">
+            <li>How to formulate an effective design brief.</li>
+            <li>How to build and validate concepts of services, and of changes to services.</li>
+            <li>How to use prototypes appropriately.</li>
+            <li>How to build a set of resources, practices and repositories for better design management — DesignOps.</li>
+            <li>How to properly involve different design roles and stakeholders at the right stages of a project.</li>
+          </ul>
+          <p class="qa__hours">4 hours live sessions &middot; 3 hours self-paced content</p>
+        </div></div>
+      </div>
+      <div class="qa qa--mod" id="module-3">
+        <button class="qa__q" aria-expanded="false">
+          <span class="qa__num" aria-hidden="true">3</span>
+          <span class="qa__lead">
+            <span class="qa__t">People</span>
+            <span class="qa__when">October</span>
+          </span><svg class="qa__x" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2v12M2 8h12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+        </button>
+        <div class="qa__a"><div>
+          <p class="qa__q-lead">How do you match skills and responsibilities across a team, and foster cooperation?</p>
+          <ul class="ticks ticks--tight">
+            <li>How to manage roles, skills and cooperation rules.</li>
+            <li>How to plan a system of career paths for designers, researchers and other UX specialists.</li>
+            <li>How to build motivation, responsibility and alignment among designers.</li>
+            <li>Whether the way UX/CX/SD teams work can build employee experience across the whole organisation.</li>
+            <li>How to improve practices around cooperation and feedback.</li>
+          </ul>
+          <p class="qa__hours">4 hours live sessions &middot; 3 hours self-paced content</p>
+        </div></div>
+      </div>
+      <div class="qa qa--mod" id="module-4">
+        <button class="qa__q" aria-expanded="false">
+          <span class="qa__num" aria-hidden="true">4</span>
+          <span class="qa__lead">
+            <span class="qa__t">Culture</span>
+            <span class="qa__when">October</span>
+          </span><svg class="qa__x" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2v12M2 8h12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+        </button>
+        <div class="qa__a"><div>
+          <p class="qa__q-lead">How do you make sure your organisation’s culture supports design?</p>
+          <ul class="ticks ticks--tight">
+            <li>What tactics to use to convince stakeholders.</li>
+            <li>What design transformation means alongside the organisation’s other transformations — Agile, Lean, digital.</li>
+            <li>How to inspire and strengthen customer-centric initiatives among employees.</li>
+            <li>How to build commitment step by step, from the board and senior managers down.</li>
+          </ul>
+          <p class="qa__hours">4 hours live sessions &middot; 3 hours self-paced content</p>
+        </div></div>
+      </div>
+      <div class="qa qa--mod" id="module-5">
+        <button class="qa__q" aria-expanded="false">
+          <span class="qa__num" aria-hidden="true">5</span>
+          <span class="qa__lead">
+            <span class="qa__t">Metrics</span>
+            <span class="qa__when">November</span>
+          </span><svg class="qa__x" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2v12M2 8h12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+        </button>
+        <div class="qa__a"><div>
+          <p class="qa__q-lead">How do you estimate and measure the value of design?</p>
+          <ul class="ticks ticks--tight">
+            <li>How to describe the impact our work will have on the lives of our audiences.</li>
+            <li>How to define indicators of success.</li>
+            <li>How to choose business metrics that help observe and prove change.</li>
+            <li>What tools to implement to measure user experience more effectively.</li>
+          </ul>
+          <p class="qa__hours">4 hours live sessions &middot; 3 hours self-paced content</p>
+        </div></div>
+      </div>
+      <div class="qa qa--mod" id="module-6">
+        <button class="qa__q" aria-expanded="false">
+          <span class="qa__num" aria-hidden="true">6</span>
+          <span class="qa__lead">
+            <span class="qa__t">Strategy</span>
+            <span class="qa__when">November</span>
+          </span><svg class="qa__x" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2v12M2 8h12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+        </button>
+        <div class="qa__a"><div>
+          <p class="qa__q-lead">How do you include design in the company’s strategy?</p>
+          <ul class="ticks ticks--tight">
+            <li>How to help integrate UX/CX/SD goals into the company’s strategy, vision and mission.</li>
+            <li>How to systematically help implement the UX/CX/SD strategy.</li>
+            <li>What to propose for organisational structure and the relationships between teams.</li>
+          </ul>
+          <p class="qa__hours">4 hours live sessions &middot; 3 hours self-paced content</p>
+        </div></div>
+      </div>
+      <div class="qa qa--mod" id="module-7">
+        <button class="qa__q" aria-expanded="false">
+          <span class="qa__num" aria-hidden="true">7</span>
+          <span class="qa__lead">
+            <span class="qa__t">Design leadership</span>
+            <span class="qa__when">December</span>
+          </span><svg class="qa__x" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2v12M2 8h12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+        </button>
+        <div class="qa__a"><div>
+          <p class="qa__q-lead">How do you combine the six dimensions of design maturity into one system?</p>
+          <ul class="ticks ticks--tight">
+            <li>The role and career path of a design leader.</li>
+            <li>Key leadership skills.</li>
+            <li>Trends and predictions.</li>
+            <li>Course summary.</li>
+          </ul>
+          <p class="qa__hours">3 hours live sessions</p>
+        </div></div>
+      </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="cs cs--band develop" id="audience">
+    <header class="secthead" data-drift>
+      <span class="secthead__over">Audience</span>
+      <h2 class="secthead__h">Participant profile</h2>
+      <p class="secthead__p">The programme is written for people already leading, or about to.</p>
+    </header>
+    <div class="split">
+      <div class="split__col split__col--flat">
+        <span class="split__lead">This programme is for you if</span>
+        <ul class="ticks">
+          <li>You are a UX, CX or service design team leader.</li>
+          <li>You are just starting a leadership role, or your team is growing.</li>
+          <li>You want to improve your team’s dynamics and its relationships with other teams.</li>
+          <li>You want to attract and retain the most talented designers, researchers and strategists.</li>
+          <li>You are looking for ways to increase the maturity of design in your organisation.</li>
+          <li>You have completed the UX-PM Certification and are looking for what comes next.</li>
+        </ul>
+      </div>
+      <figure class="split__fig">
+        <div class="shotframe">
+          <img class="shotframe__img" src="assets/img/training/dlm-cohort.jpg"
+               alt="Design leaders in a workshop session"
+               width="1200" height="900" loading="lazy" decoding="async"
+               onerror="this.remove()">
+          <span class="shotframe__wait" aria-hidden="true">
+            <em>Cohort photography</em>
+            assets/img/training/dlm-cohort.jpg
+          </span>
+        </div>
+      </figure>
+    </div>
+  </section>
+
+  <section class="cs develop" id="gains">
+    <header class="secthead" data-drift>
+      <span class="secthead__over">Outcomes</span>
+      <h2 class="secthead__h">What you gain by taking part</h2>
+      <p class="secthead__p">The programme is aimed at three levels at once — you, the team you run, and the organisation around it.</p>
+    </header>
+    <div class="gains">
+      <div class="gain">
+        <h3 class="gain__t">Your competencies</h3>
+        <ul class="ticks ticks--tight">
+          <li>You develop the UX/CX/SD area in your organisation, and your own career, deliberately.</li>
+          <li>You build the team and the practices so that UX delivers business results and a good working culture.</li>
+          <li>You test your daily challenges against the view of other leaders.</li>
+          <li>You stay in touch with trainers and participants, supporting each other in building design maturity.</li>
+        </ul>
+      </div>
+      <div class="gain">
+        <h3 class="gain__t">Your team</h3>
+        <ul class="ticks ticks--tight">
+          <li>You create a working environment that attracts and keeps specialists and experts.</li>
+          <li>You improve collaboration and feedback practices.</li>
+          <li>You build motivation, accountability and alignment among designers.</li>
+        </ul>
+      </div>
+      <div class="gain">
+        <h3 class="gain__t">Your organisation</h3>
+        <ul class="ticks ticks--tight">
+          <li>You set a long-term strategy for UX/CX/SD transformation.</li>
+          <li>You analyse your organisation’s design maturity across six dimensions, then plan to raise it.</li>
+          <li>You order your organisation’s UX/CX/SD goals with knowledge gained from experts.</li>
+          <li>Seeing the perspective of people in other positions, you get a broader picture of what your company has built — and improve it.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section class="cs cs--bleed develop" id="voices">
+    <header class="secthead secthead--reel" data-drift>
+      <div>
+        <span class="secthead__over">Voices</span>
+        <h2 class="secthead__h">What past participants say</h2>
+        <p class="secthead__p">Four leaders who have taken the programme, in their own words.</p>
+      </div>
+      <div class="reel__nav">
+        <button class="reel__btn" type="button" data-dir="-1" aria-label="Previous testimonial" aria-controls="reelTrack">
+          <svg viewBox="0 0 16 12" aria-hidden="true"><path d="M15 6H1M6 1 1 6l5 5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+        <button class="reel__btn" type="button" data-dir="1" aria-label="Next testimonial" aria-controls="reelTrack">
+          <svg viewBox="0 0 16 12" aria-hidden="true"><path d="M1 6h14M10 1l5 5-5 5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- The home page's reel, reused whole. Its module keys on #reelTrack and
+         clones the set either side to loop one way, so nothing here is new
+         behaviour — only the content. No star ratings and no company logos: the
+         source carries neither, and inventing either would be a fabrication
+         attached to four named, real people. -->
+    <div class="reel">
+      <div class="reel__track" id="reelTrack" aria-live="polite">
+        <div class="reel__group" role="group" aria-roledescription="slide" aria-label="Testimonial 1 of 4">
+          <figure class="voice voice--quote">
+            <span class="voice__frameno" aria-hidden="true">P &middot; 01</span>
+            <svg class="voice__q" viewBox="0 0 48 32" aria-hidden="true"><path d="M4 30c-2-9 0-19 9-27M20 30c-2-9 0-19 9-27" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round"/></svg>
+            <blockquote>The programme meets the real challenges facing every modern design team in technology companies. Many real-life examples and inspiring case studies — after each meeting I was able to apply what I had learned, or was inspired enough to test an approach in my organization. The group of participants was not random; the diversity of companies and specialties made for great discussions.</blockquote>
+            <figcaption>
+              <span class="voice__who"><span class="voice__name">Michał Kolasa</span><span class="voice__role">Sr. Director of Product Design, Chili Piper</span></span>
+            </figcaption>
+          </figure>
+        </div>
+        <div class="reel__group" role="group" aria-roledescription="slide" aria-label="Testimonial 2 of 4">
+          <figure class="voice voice--quote">
+            <span class="voice__frameno" aria-hidden="true">P &middot; 02</span>
+            <svg class="voice__q" viewBox="0 0 48 32" aria-hidden="true"><path d="M4 30c-2-9 0-19 9-27M20 30c-2-9 0-19 9-27" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round"/></svg>
+            <blockquote>As a beginner UX team leader I got a huge dose of knowledge, delivered in a very accessible way. It let me sort out all the areas I am now putting into practice, with a head full of inspiration and knowledge from more experienced participants. It would have been much harder to step into my new role without it.</blockquote>
+            <figcaption>
+              <span class="voice__who"><span class="voice__name">Katarzyna Leśniok</span><span class="voice__role">UX Team Leader, Skyrise.tech</span></span>
+            </figcaption>
+          </figure>
+        </div>
+        <div class="reel__group" role="group" aria-roledescription="slide" aria-label="Testimonial 3 of 4">
+          <figure class="voice voice--quote">
+            <span class="voice__frameno" aria-hidden="true">P &middot; 03</span>
+            <svg class="voice__q" viewBox="0 0 48 32" aria-hidden="true"><path d="M4 30c-2-9 0-19 9-27M20 30c-2-9 0-19 9-27" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round"/></svg>
+            <blockquote>I can recommend it to anyone who goes beyond operations and starts to look at design as an area of related and interacting elements — research management, design, people, culture. Examples from life, sharing of experience, workshop exercises. I return to the material regularly and keep discovering new things in it. 10/10.</blockquote>
+            <figcaption>
+              <span class="voice__who"><span class="voice__name">Katarzyna Popławska</span><span class="voice__role">Senior Product Designer, EcoVadis</span></span>
+            </figcaption>
+          </figure>
+        </div>
+        <div class="reel__group" role="group" aria-roledescription="slide" aria-label="Testimonial 4 of 4">
+          <figure class="voice voice--quote">
+            <span class="voice__frameno" aria-hidden="true">P &middot; 04</span>
+            <svg class="voice__q" viewBox="0 0 48 32" aria-hidden="true"><path d="M4 30c-2-9 0-19 9-27M20 30c-2-9 0-19 9-27" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round"/></svg>
+            <blockquote>A certified, substantive programme over three months, with an original case-study approach. A large portion of knowledge on spreading UX methodology across six areas of an organization — an absolute compass. And the chance to meet trainers from around the world.</blockquote>
+            <figcaption>
+              <span class="voice__who"><span class="voice__name">Marcin Błaszczak</span><span class="voice__role">Senior Graphic Designer, Unum</span></span>
+            </figcaption>
+          </figure>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="cs cs--band develop" id="trainers">
+    <header class="secthead" data-drift>
+      <span class="secthead__over">Faculty</span>
+      <h2 class="secthead__h">Meet the trainers</h2>
+      <p class="secthead__p">Six practitioners from the UXalliance network, each running a design organisation of their own.</p>
+    </header>
+    <div class="crew">
+      <figure class="crew__m">
+        <div class="crew__shot">
+          <img class="crew__img" src="assets/img/training/trainers/wojciech-chojnacki.jpg" alt="Wojciech Chojnacki"
+               width="624" height="624" loading="lazy" decoding="async"
+               onerror="this.remove()">
+          <span class="crew__mono" aria-hidden="true">WC</span>
+        </div>
+        <figcaption class="crew__cap">
+          <span class="crew__name">Wojciech Chojnacki</span>
+          <span class="crew__role">Strategy Director, Symetria UX</span>
+          <span class="crew__where">Poland</span>
+          <span class="crew__cred">Co-creator of the UX-PM Certification and the UXalliance Design Maturity Model.</span>
+        </figcaption>
+      </figure>
+      <figure class="crew__m">
+        <div class="crew__shot">
+          <img class="crew__img" src="assets/img/training/trainers/daniel-torres.png" alt="Daniel Torres"
+               width="624" height="624" loading="lazy" decoding="async"
+               onerror="this.remove()">
+          <span class="crew__mono" aria-hidden="true">DT</span>
+        </div>
+        <figcaption class="crew__cap">
+          <span class="crew__name">Daniel Torres</span>
+          <span class="crew__role">CEO &amp; Founder, Torresburriel Estudio</span>
+          <span class="crew__where">Spain</span>
+          <span class="crew__cred">Twenty years in UX fieldwork; author of <em>Usability: Stop Suffering</em>.</span>
+        </figcaption>
+      </figure>
+      <figure class="crew__m">
+        <div class="crew__shot">
+          <img class="crew__img" src="assets/img/training/trainers/rajesh-ghodke.jpg" alt="Rajesh Ghodke"
+               width="624" height="624" loading="lazy" decoding="async"
+               onerror="this.remove()">
+          <span class="crew__mono" aria-hidden="true">RG</span>
+        </div>
+        <figcaption class="crew__cap">
+          <span class="crew__name">Rajesh Ghodke</span>
+          <span class="crew__role">Head of Design, Peepal Design</span>
+          <span class="crew__where">India</span>
+          <span class="crew__cred">Led UX at Philips Design and TP Vision; iF Award winner.</span>
+        </figcaption>
+      </figure>
+      <figure class="crew__m">
+        <div class="crew__shot">
+          <img class="crew__img" src="assets/img/training/trainers/stefano-zanini.jpg" alt="Stefano Zanini"
+               width="624" height="624" loading="lazy" decoding="async"
+               onerror="this.remove()">
+          <span class="crew__mono" aria-hidden="true">SZ</span>
+        </div>
+        <figcaption class="crew__cap">
+          <span class="crew__name">Stefano Zanini</span>
+          <span class="crew__role">Senior Consultant &amp; Training Lead, Assist Digital</span>
+          <span class="crew__where">Italy</span>
+          <span class="crew__cred">User research, user-centred design and innovation workshops.</span>
+        </figcaption>
+      </figure>
+      <figure class="crew__m">
+        <div class="crew__shot">
+          <img class="crew__img" src="assets/img/training/trainers/florian-egger.png" alt="Florian Egger"
+               width="624" height="624" loading="lazy" decoding="async"
+               onerror="this.remove()">
+          <span class="crew__mono" aria-hidden="true">FE</span>
+        </div>
+        <figcaption class="crew__cap">
+          <span class="crew__name">Florian Egger, PhD</span>
+          <span class="crew__role">Managing Director, Telono UX</span>
+          <span class="crew__where">Switzerland</span>
+          <span class="crew__cred">Founded Telono in 2005; PhD in Human-Computer Interaction, Eindhoven.</span>
+        </figcaption>
+      </figure>
+      <figure class="crew__m">
+        <div class="crew__shot">
+          <img class="crew__img" src="assets/img/training/trainers/joelle-stemp.png" alt="Joelle Stemp"
+               width="624" height="624" loading="lazy" decoding="async"
+               onerror="this.remove()">
+          <span class="crew__mono" aria-hidden="true">JS</span>
+        </div>
+        <figcaption class="crew__cap">
+          <span class="crew__name">Joelle Stemp</span>
+          <span class="crew__role">Managing Director &amp; Founder, Yu Centrik</span>
+          <span class="crew__where">Canada</span>
+          <span class="crew__cred">Founded Yu Centrik in 2003; teaches all three UX-PM levels.</span>
+        </figcaption>
+      </figure>
+    </div>
+  </section>
+</article>
+
+<!-- ============================ CTA ============================ -->
+<section class="frame sec sec--pitch">
+  <div class="pitch">
+    <h2 class="pitch__h develop">Lead the design function,<br><em>not just the work</em></h2>
+    <p class="pitch__p develop" data-delay="1">Eight to twelve seats a cohort. Tell us your role and your timeline and we will confirm the next intake.</p>
+    <div class="pitch__cta develop" data-delay="2">
+      <a class="btn btn--mark" href="index.html#contact">Contact us to register</a>
+      <a class="btn btn--ghost" href="https://ux-pm.com" target="_blank" rel="noopener noreferrer">See upcoming sessions<svg class="btn__ext" viewBox="0 0 12 12" aria-hidden="true"><path d="M5 7 10.5 1.5M6.75 1.5h3.75v3.75M9 7.75v2.75H1.5V3h2.75" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="vh"> (opens in a new tab)</span></a>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<!-- ============================ FOOTER ============================ -->
+<footer class="foot">
+  <div class="foot__grid">
+    <div class="foot__brand">
+      <a class="logo logo--foot" href="index.html" aria-label="Peepal Design home">
+        <img class="logo__mark" src="assets/brand/logomark.svg" alt="" width="24" height="24"
+             onerror="this.onerror=null;this.src='assets/brand/logomark.png'">
+        <span class="logo__word">peepaldesign</span>
+      </a>
+      <p>A research-first UX studio. Part of Bridged Global — a worldwide network of UX designers and design specialists. Founded 2016. Mumbai, India.</p>
+      <div class="foot__social">
+        <a href="#top" aria-label="LinkedIn"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4.5 7.5h2.6V16H4.5zM5.8 3.4a1.6 1.6 0 1 1 0 3.2 1.6 1.6 0 0 1 0-3.2ZM9.3 7.5h2.5v1.2a2.8 2.8 0 0 1 2.5-1.4c2 0 3.2 1.3 3.2 3.7V16h-2.6v-4.4c0-1.2-.4-1.9-1.4-1.9-1 0-1.6.7-1.6 1.9V16H9.3Z" fill="currentColor"/></svg></a>
+        <a href="#top" aria-label="X"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 4h3.2l3.1 4.3L13.9 4H16l-4.6 5.6L16.4 16h-3.2l-3.4-4.6L5.9 16H4l4.9-6L4 4Z" fill="currentColor"/></svg></a>
+        <a href="#top" aria-label="Instagram"><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="3.5" y="3.5" width="13" height="13" rx="4" fill="none" stroke="currentColor" stroke-width="1.4"/><circle cx="10" cy="10" r="3.2" fill="none" stroke="currentColor" stroke-width="1.4"/><circle cx="14" cy="6" r="1" fill="currentColor"/></svg></a>
+        <a href="#top" aria-label="Behance"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M2 5h4.6c1.8 0 2.9.8 2.9 2.2 0 1-.5 1.6-1.3 1.9 1 .3 1.7 1 1.7 2.2 0 1.7-1.3 2.7-3.3 2.7H2Zm2 3.4h2.2c.7 0 1.2-.3 1.2-.9s-.4-.9-1.2-.9H4Zm0 4h2.4c.9 0 1.4-.4 1.4-1s-.5-1-1.4-1H4ZM12 5.6h4.6V7H12ZM14.4 8.2c2 0 3.3 1.4 3.3 3.5v.5h-4.8c.1.9.7 1.4 1.6 1.4.7 0 1.1-.2 1.4-.7h1.7c-.4 1.4-1.6 2.2-3.1 2.2-2 0-3.4-1.4-3.4-3.4s1.4-3.5 3.3-3.5Zm-1.5 2.8h3c-.1-.8-.7-1.3-1.5-1.3s-1.4.5-1.5 1.3Z" fill="currentColor"/></svg></a>
+      </div>
+    </div>
+
+    <nav class="foot__col" aria-label="Services">
+      <span class="foot__code">SERVICES</span>
+      <a href="#services">User Research</a>
+      <a href="#services">UX Design</a>
+      <a href="#services">LEGO® Serious Play</a>
+      <a href="#services">UX Training</a>
+      <a href="#services">UX Audit</a>
+    </nav>
+
+    <nav class="foot__col" aria-label="Company">
+      <span class="foot__code">COMPANY</span>
+      <a href="#global">About Us</a>
+      <a href="#services">Services</a>
+      <a href="#work">Work</a>
+      <a href="#services">Training</a>
+      <a href="blog.html">Insights &amp; Blog</a>
+      <a href="careers.html">Careers</a>
+      <a href="#contact">Contact Us</a>
+    </nav>
+
+    <nav class="foot__col" aria-label="Global family">
+      <span class="foot__code">GLOBAL FAMILY</span>
+      <a href="https://boldinsight.com/" target="_blank" rel="noopener">Bold Insight</a>
+      <a href="https://www.uintent.com/" target="_blank" rel="noopener">uintent</a>
+      <a href="https://uism.co.jp/" target="_blank" rel="noopener">UIsm</a>
+      <a href="https://www.xplusx.net/" target="_blank" rel="noopener">XPLUSX</a>
+    </nav>
+  </div>
+
+  <div class="foot__bar">
+    <span>© 2024 Peepal Design — User Experience Design Consulting Pvt. Ltd.</span>
+    <span class="foot__legal"><a href="#top">Privacy Policy</a><a href="#top">Terms of Use</a></span>
+  </div>
+</footer>
+
+<!-- A real anchor, so the page still returns to the top with JavaScript off;
+     the script only decides when the plate is visible. -->
+<a class="totop" id="toTop" href="#top" aria-label="Back to top">
+  <svg class="totop__glyph" viewBox="0 0 14 14" fill="none" stroke="currentColor"
+       stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    <path d="M2.4 2.4h9.2"/>
+    <g class="totop__arrow"><path d="M7 12.6V5.6"/><path d="M3.6 9 7 5.6 10.4 9"/></g>
+  </svg>
+  <span class="totop__code" aria-hidden="true">Top</span>
+</a>
+
+<script src="assets/js/main.js?v=218"></script>
+</body>
+</html>

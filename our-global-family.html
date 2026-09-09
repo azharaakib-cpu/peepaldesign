@@ -1,0 +1,506 @@
+<!doctype html>
+<html lang="en" class="no-js">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Our Global Family — Peepal Design</title>
+<meta name="description" content="Peepal Design and ReSight Global together form a research and design network across seven office cities and thirty-plus research markets.">
+<meta name="theme-color" content="#0B0B0C">
+<link rel="stylesheet" href="assets/css/contact-sheet.css?v=301">
+<script>document.documentElement.className = document.documentElement.className.replace('no-js','js');</script>
+</head>
+<body>
+<!--
+  OUR STORY — Our Global Family. On the UX-PM page's template at the client's
+  request: the crumb, .cs__head and .cs blocks, with the
+  .lvl cards, here carrying the seven office cities. The home page's map plate
+  stood here briefly on 2026-08-13 and was reverted to the cards. Every section leads with the
+  three-part .secthead — overline, heading, description — also at their request.
+
+  Copy is the client's own, transcribed from "Our Global Family (Resight
+  Global).pdf"; same font-encoding fault as every other reference, so retyped.
+
+  ONE BLOCK OMITTED. The reference carries a stray "What we believe / The
+  principles that never changed." heading with nothing under it — boilerplate
+  left over from the Our Journey template it shares. Those principles already
+  have a home on our-journey.html, so it is not repeated here.
+
+  The counter band reuses the home page's EXPOSURE COUNTER module via #counter,
+  and keeps the true figures as its markup text so they read correctly with
+  JavaScript off.
+
+  Its city list disagrees with the footer's Global Family column and with the
+  home page map. Nothing is reconciled here; see PRODUCT.md.
+
+  No cursor loupe. That flourish belongs to the home hero alone.
+-->
+
+<a class="skip" href="#network">Skip to the network</a>
+
+<div class="bgwash" id="bgWash" aria-hidden="true"></div>
+<div class="grain" aria-hidden="true"></div>
+
+<!-- ============================ NAV ============================ -->
+<header class="nav" id="nav">
+  <div class="nav__inner">
+    <a class="logo" href="index.html" aria-label="Peepal Design home">
+      <!-- Artwork lives at assets/brand/logomark.svg — swap that file, not this markup. -->
+      <img class="logo__mark" src="assets/brand/logomark.svg" alt="" width="26" height="26"
+           onerror="this.onerror=null;this.src='assets/brand/logomark.png'">
+      <span class="logo__word">peepaldesign</span>
+    </a>
+
+    <nav class="nav__menu" aria-label="Primary">
+      <div class="nav__item nav__item--mega has-menu">
+        <button class="nav__link" aria-expanded="false" aria-controls="m-services">Our Services<svg class="caret" viewBox="0 0 10 6" aria-hidden="true"><path d="M1 1l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg></button>
+        <!-- Headings, item lists and promo copy are all client-supplied.
+             "UX Benchmarking - UX Index" was originally given under two
+             columns; the client removed the Value Added copy on 2026-08-12, so
+             it now appears once, under User Research Services. -->
+        <div class="dropdown dropdown--panel dropdown--panel-wide" id="m-services" hidden>
+          <div class="mega">
+            <div class="mega__col">
+              <span class="mega__head">User Research Services</span>
+              <a class="megaitem megaitem--compact" href="service-quantitative-qualitative-research.html">
+                <span class="megaitem__dot" aria-hidden="true"></span>
+                <span class="megaitem__body"><span class="megaitem__title">Quantitative and Qualitative research</span></span>
+                <svg class="megaitem__arrow" viewBox="0 0 16 10" aria-hidden="true"><path d="M0 5h14M10 1l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </a>
+              <a class="megaitem megaitem--compact" href="service-usability-testing.html">
+                <span class="megaitem__dot" aria-hidden="true"></span>
+                <span class="megaitem__body"><span class="megaitem__title">Usability Testing</span></span>
+                <svg class="megaitem__arrow" viewBox="0 0 16 10" aria-hidden="true"><path d="M0 5h14M10 1l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </a>
+              <a class="megaitem megaitem--compact" href="service-ux-benchmarking.html">
+                <span class="megaitem__dot" aria-hidden="true"></span>
+                <span class="megaitem__body"><span class="megaitem__title">UX Benchmarking - UX Index</span></span>
+                <svg class="megaitem__arrow" viewBox="0 0 16 10" aria-hidden="true"><path d="M0 5h14M10 1l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </a>
+              <a class="megaitem megaitem--compact" href="service-ai-opportunity-mapping.html">
+                <span class="megaitem__dot" aria-hidden="true"></span>
+                <span class="megaitem__body"><span class="megaitem__title">AI Opportunity Mapping</span></span>
+                <svg class="megaitem__arrow" viewBox="0 0 16 10" aria-hidden="true"><path d="M0 5h14M10 1l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </a>
+            </div>
+            <div class="mega__col">
+              <span class="mega__head">Design Services</span>
+              <a class="megaitem megaitem--compact" href="service-ux-ui-design.html">
+                <span class="megaitem__dot" aria-hidden="true"></span>
+                <span class="megaitem__body"><span class="megaitem__title">UX-UI Design</span></span>
+                <svg class="megaitem__arrow" viewBox="0 0 16 10" aria-hidden="true"><path d="M0 5h14M10 1l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </a>
+              <a class="megaitem megaitem--compact" href="service-service-design.html">
+                <span class="megaitem__dot" aria-hidden="true"></span>
+                <span class="megaitem__body"><span class="megaitem__title">Service Design</span></span>
+                <svg class="megaitem__arrow" viewBox="0 0 16 10" aria-hidden="true"><path d="M0 5h14M10 1l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </a>
+              <a class="megaitem megaitem--compact" href="service-ux-for-ai-product.html">
+                <span class="megaitem__dot" aria-hidden="true"></span>
+                <span class="megaitem__body"><span class="megaitem__title">UX for AI Product</span></span>
+                <svg class="megaitem__arrow" viewBox="0 0 16 10" aria-hidden="true"><path d="M0 5h14M10 1l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </a>
+              <a class="megaitem megaitem--compact" href="service-conversational-ai-ux.html">
+                <span class="megaitem__dot" aria-hidden="true"></span>
+                <span class="megaitem__body"><span class="megaitem__title">Conversational AI - UX Design</span></span>
+                <svg class="megaitem__arrow" viewBox="0 0 16 10" aria-hidden="true"><path d="M0 5h14M10 1l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </a>
+              <a class="megaitem megaitem--compact" href="service-ai-product-prototyping.html">
+                <span class="megaitem__dot" aria-hidden="true"></span>
+                <span class="megaitem__body"><span class="megaitem__title">AI Product Prototyping</span></span>
+                <svg class="megaitem__arrow" viewBox="0 0 16 10" aria-hidden="true"><path d="M0 5h14M10 1l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </a>
+              <a class="megaitem megaitem--compact" href="service-design-accessibility.html">
+                <span class="megaitem__dot" aria-hidden="true"></span>
+                <span class="megaitem__body"><span class="megaitem__title">Design for Accessibility</span></span>
+                <svg class="megaitem__arrow" viewBox="0 0 16 10" aria-hidden="true"><path d="M0 5h14M10 1l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </a>
+              <a class="megaitem megaitem--compact" href="service-design-systems.html">
+                <span class="megaitem__dot" aria-hidden="true"></span>
+                <span class="megaitem__body"><span class="megaitem__title">Design Systems</span></span>
+                <svg class="megaitem__arrow" viewBox="0 0 16 10" aria-hidden="true"><path d="M0 5h14M10 1l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </a>
+              <a class="megaitem megaitem--compact" href="service-data-visualisation.html">
+                <span class="megaitem__dot" aria-hidden="true"></span>
+                <span class="megaitem__body"><span class="megaitem__title">Data Visualisation</span></span>
+                <svg class="megaitem__arrow" viewBox="0 0 16 10" aria-hidden="true"><path d="M0 5h14M10 1l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </a>
+            </div>
+            <div class="mega__col">
+              <span class="mega__head">Value Added Services</span>
+              <a class="megaitem megaitem--compact" href="service-ux-team-augmentation.html">
+                <span class="megaitem__dot" aria-hidden="true"></span>
+                <span class="megaitem__body"><span class="megaitem__title">UX Team Augmentation</span></span>
+                <svg class="megaitem__arrow" viewBox="0 0 16 10" aria-hidden="true"><path d="M0 5h14M10 1l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </a>
+              <a class="megaitem megaitem--compact" href="service-design-thinking-workshop.html">
+                <span class="megaitem__dot" aria-hidden="true"></span>
+                <span class="megaitem__body"><span class="megaitem__title">Design Thinking Workshop</span></span>
+                <svg class="megaitem__arrow" viewBox="0 0 16 10" aria-hidden="true"><path d="M0 5h14M10 1l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </a>
+              <a class="megaitem megaitem--compact" href="service-ux-audit.html">
+                <span class="megaitem__dot" aria-hidden="true"></span>
+                <span class="megaitem__body"><span class="megaitem__title">UX Audit</span></span>
+                <svg class="megaitem__arrow" viewBox="0 0 16 10" aria-hidden="true"><path d="M0 5h14M10 1l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </a>
+            </div>
+            <a class="mega__promo" href="index.html#services">
+              <img src="assets/img/services/research.jpg?v=2" alt="" width="896" height="1200"
+                   loading="lazy" decoding="async">
+              <span class="mega__promo-body">
+                <span class="mega__promo-title">Research that reveals what users actually need</span>
+                <span class="learn">Explore<svg viewBox="0 0 16 10" aria-hidden="true"><path d="M0 5h14M10 1l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+              </span>
+            </a>
+          </div>
+        </div>
+      </div>
+      <div class="nav__item"><a class="nav__link" href="portfolio.html">Portfolio</a></div>
+      <div class="nav__item nav__item--mega has-menu">
+        <button class="nav__link" aria-expanded="false" aria-controls="m-training">Trainings<svg class="caret" viewBox="0 0 10 6" aria-hidden="true"><path d="M1 1l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg></button>
+        <!-- Programme names, one-line descriptions and promo copy are all taken
+             from the client's reference. The reference shows the first item
+             pre-highlighted; that is rendered as a hover state rather than a
+             default, since a menu should not arrive with a row already picked. -->
+        <div class="dropdown dropdown--panel" id="m-training" hidden>
+          <div class="mega mega--list">
+            <div class="mega__list">
+              <a class="megaitem" href="training-uxpm.html">
+                <span class="megaitem__dot" aria-hidden="true"></span>
+                <span class="megaitem__body">
+                  <span class="megaitem__title">UX-PM level 1-2-3</span>
+                  <span class="megaitem__desc">For product managers</span>
+                </span>
+                <svg class="megaitem__arrow" viewBox="0 0 16 10" aria-hidden="true"><path d="M0 5h14M10 1l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </a>
+              <a class="megaitem" href="training-researchops.html">
+                <span class="megaitem__dot" aria-hidden="true"></span>
+                <span class="megaitem__body">
+                  <span class="megaitem__title">Research Ops</span>
+                  <span class="megaitem__desc">Scale your research practice</span>
+                </span>
+                <svg class="megaitem__arrow" viewBox="0 0 16 10" aria-hidden="true"><path d="M0 5h14M10 1l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </a>
+              <a class="megaitem" href="training-design-leaders.html">
+                <span class="megaitem__dot" aria-hidden="true"></span>
+                <span class="megaitem__body">
+                  <span class="megaitem__title">Design Leaders Masterclass</span>
+                  <span class="megaitem__desc">Lead with design thinking</span>
+                </span>
+                <svg class="megaitem__arrow" viewBox="0 0 16 10" aria-hidden="true"><path d="M0 5h14M10 1l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </a>
+              <a class="megaitem" href="index.html#services">
+                <span class="megaitem__dot" aria-hidden="true"></span>
+                <span class="megaitem__body">
+                  <span class="megaitem__title">UX Maturity Model</span>
+                  <span class="megaitem__desc">Assess &amp; elevate your org</span>
+                </span>
+                <svg class="megaitem__arrow" viewBox="0 0 16 10" aria-hidden="true"><path d="M0 5h14M10 1l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </a>
+            </div>
+            <a class="mega__promo" href="index.html#services">
+              <img src="assets/img/services/training.jpg?v=2" alt="" width="896" height="1200"
+                   loading="lazy" decoding="async">
+              <span class="mega__promo-body">
+                <span class="mega__promo-title">Build PM skills grounded in UX</span>
+                <span class="learn">Explore<svg viewBox="0 0 16 10" aria-hidden="true"><path d="M0 5h14M10 1l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+              </span>
+            </a>
+          </div>
+        </div>
+      </div>
+      <div class="nav__item nav__item--mega has-menu">
+        <button class="nav__link" aria-expanded="false" aria-controls="m-story">Our Story<svg class="caret" viewBox="0 0 10 6" aria-hidden="true"><path d="M1 1l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg></button>
+        <!-- Labels, descriptions and promo copy from the client's reference.
+             "Blogs" points at blog.html as of 2026-08-13. -->
+        <div class="dropdown dropdown--panel" id="m-story" hidden>
+          <div class="mega mega--list">
+            <div class="mega__list">
+              <a class="megaitem" href="our-journey.html">
+                <span class="megaitem__dot" aria-hidden="true"></span>
+                <span class="megaitem__body">
+                  <span class="megaitem__title">Our Journey</span>
+                  <span class="megaitem__desc">18 years of design</span>
+                </span>
+                <svg class="megaitem__arrow" viewBox="0 0 16 10" aria-hidden="true"><path d="M0 5h14M10 1l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </a>
+              <a class="megaitem is-here" aria-current="page" href="our-global-family.html">
+                <span class="megaitem__dot" aria-hidden="true"></span>
+                <span class="megaitem__body">
+                  <span class="megaitem__title">Our Global Family</span>
+                  <span class="megaitem__desc">Meet the team</span>
+                </span>
+                <svg class="megaitem__arrow" viewBox="0 0 16 10" aria-hidden="true"><path d="M0 5h14M10 1l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </a>
+              <a class="megaitem" href="careers.html">
+                <span class="megaitem__dot" aria-hidden="true"></span>
+                <span class="megaitem__body">
+                  <span class="megaitem__title">Careers</span>
+                  <span class="megaitem__desc">Join us</span>
+                </span>
+                <svg class="megaitem__arrow" viewBox="0 0 16 10" aria-hidden="true"><path d="M0 5h14M10 1l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </a>
+              <a class="megaitem" href="blog.html">
+                <span class="megaitem__dot" aria-hidden="true"></span>
+                <span class="megaitem__body">
+                  <span class="megaitem__title">Blogs</span>
+                  <span class="megaitem__desc">Insights &amp; thinking</span>
+                </span>
+                <svg class="megaitem__arrow" viewBox="0 0 16 10" aria-hidden="true"><path d="M0 5h14M10 1l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </a>
+            </div>
+            <a class="mega__promo" href="index.html#global">
+              <img src="assets/img/services/design.jpg?v=2" alt="" width="896" height="1200"
+                   loading="lazy" decoding="async">
+              <span class="mega__promo-body">
+                <span class="mega__promo-title">From pixels to AI — our story</span>
+                <span class="learn">Explore<svg viewBox="0 0 16 10" aria-hidden="true"><path d="M0 5h14M10 1l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+              </span>
+            </a>
+          </div>
+        </div>
+      </div>
+    </nav>
+
+    <a class="btn btn--mark nav__cta" href="index.html#contact">Get in touch</a>
+
+    <button class="burger" id="burger" aria-expanded="false" aria-controls="mobileMenu" aria-label="Open menu">
+      <span></span><span></span>
+    </button>
+  </div>
+</header>
+<div class="nav__progress" id="navProgress" aria-hidden="true"></div>
+
+<div class="mobilemenu" id="mobileMenu" hidden>
+  <a class="mm__link" href="portfolio.html">Portfolio</a>
+  <div class="mm__group">
+    <button class="mm__toggle" type="button" aria-expanded="false" aria-controls="mm-services">Our Services<svg class="mm__chev" viewBox="0 0 10 6" aria-hidden="true"><path d="M1 1l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg></button>
+    <div class="mm__panel" id="mm-services" hidden>
+    <span class="mm__head">User Research Services</span>
+    <a class="mm__sub" href="service-quantitative-qualitative-research.html"><span class="mm__subt">Quantitative and Qualitative research</span></a>
+    <a class="mm__sub" href="service-usability-testing.html"><span class="mm__subt">Usability Testing</span></a>
+    <a class="mm__sub" href="service-ux-benchmarking.html"><span class="mm__subt">UX Benchmarking - UX Index</span></a>
+    <a class="mm__sub" href="service-ai-opportunity-mapping.html"><span class="mm__subt">AI Opportunity Mapping</span></a>
+    <span class="mm__head">Design Services</span>
+    <a class="mm__sub" href="service-ux-ui-design.html"><span class="mm__subt">UX-UI Design</span></a>
+    <a class="mm__sub" href="service-service-design.html"><span class="mm__subt">Service Design</span></a>
+    <a class="mm__sub" href="service-ux-for-ai-product.html"><span class="mm__subt">UX for AI Product</span></a>
+    <a class="mm__sub" href="service-conversational-ai-ux.html"><span class="mm__subt">Conversational AI - UX Design</span></a>
+    <a class="mm__sub" href="service-ai-product-prototyping.html"><span class="mm__subt">AI Product Prototyping</span></a>
+    <a class="mm__sub" href="service-design-accessibility.html"><span class="mm__subt">Design for Accessibility</span></a>
+    <a class="mm__sub" href="service-design-systems.html"><span class="mm__subt">Design Systems</span></a>
+    <a class="mm__sub" href="service-data-visualisation.html"><span class="mm__subt">Data Visualisation</span></a>
+    <span class="mm__head">Value Added Services</span>
+    <a class="mm__sub" href="service-ux-team-augmentation.html"><span class="mm__subt">UX Team Augmentation</span></a>
+    <a class="mm__sub" href="service-design-thinking-workshop.html"><span class="mm__subt">Design Thinking Workshop</span></a>
+    <a class="mm__sub" href="service-ux-audit.html"><span class="mm__subt">UX Audit</span></a>
+    </div>
+  </div>
+  <div class="mm__group">
+    <button class="mm__toggle" type="button" aria-expanded="false" aria-controls="mm-training">Trainings<svg class="mm__chev" viewBox="0 0 10 6" aria-hidden="true"><path d="M1 1l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg></button>
+    <div class="mm__panel" id="mm-training" hidden>
+    <a class="mm__sub" href="training-uxpm.html"><span class="mm__subt">UX-PM level 1-2-3</span><span class="mm__subd">For product managers</span></a>
+    <a class="mm__sub" href="training-researchops.html"><span class="mm__subt">Research Ops</span><span class="mm__subd">Scale your research practice</span></a>
+    <a class="mm__sub" href="training-design-leaders.html"><span class="mm__subt">Design Leaders Masterclass</span><span class="mm__subd">Lead with design thinking</span></a>
+    <a class="mm__sub" href="index.html#services"><span class="mm__subt">UX Maturity Model</span><span class="mm__subd">Assess &amp; elevate your org</span></a>
+    </div>
+  </div>
+  <div class="mm__group">
+    <button class="mm__toggle" type="button" aria-expanded="false" aria-controls="mm-story">Our Story<svg class="mm__chev" viewBox="0 0 10 6" aria-hidden="true"><path d="M1 1l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg></button>
+    <div class="mm__panel" id="mm-story" hidden>
+    <a class="mm__sub" href="our-journey.html"><span class="mm__subt">Our Journey</span><span class="mm__subd">18 years of design</span></a>
+    <a class="mm__sub is-here" aria-current="page" href="our-global-family.html"><span class="mm__subt">Our Global Family</span><span class="mm__subd">Meet the team</span></a>
+    <a class="mm__sub" href="careers.html"><span class="mm__subt">Careers</span><span class="mm__subd">Join us</span></a>
+    <a class="mm__sub" href="blog.html"><span class="mm__subt">Blogs</span><span class="mm__subd">Insights &amp; thinking</span></a>
+    </div>
+  </div>
+  <a class="mm__link" href="index.html#faq">FAQ</a>
+  <a class="btn btn--mark mm__cta" href="index.html#contact">Get in touch</a>
+</div>
+
+<main id="top">
+
+<article class="frame sec sec--case">
+  <nav class="cs__crumb" aria-label="Breadcrumb">
+    <a href="index.html">Home</a> <span aria-hidden="true">/</span>
+    <a href="index.html#global">Our Story</a> <span aria-hidden="true">/</span>
+    <span aria-current="page">Our Global Family</span>
+  </nav>
+
+  <header class="cs__head">
+    <h1 class="cs__title develop">One team. <em>Every timezone.</em></h1>
+    <p class="cs__intro develop" data-delay="1">Peepal Design and ReSight Global together form a research and design network spanning seven cities and 30+ markets — giving clients local insight at global scale.</p>
+  </header>
+
+  <figure class="bleed">
+    <img class="bleed__img" src="assets/img/ourstory/globalreach.jpg"
+         alt="World map marking Peepal Design's global network partners — Bold Insight in North America, uintent in Europe, Uism in Japan, XPLUSX in Southeast Asia, and Peepal Design in India."
+         width="1903" height="647" loading="lazy" decoding="async">
+  </figure>
+
+  <section class="cs develop" id="network">
+    <header class="secthead" data-drift>
+      <span class="secthead__over">The network</span>
+      <h2 class="secthead__h">ReSight Global</h2>
+      <p class="secthead__p">Our research delivery partner and extended talent network.</p>
+    </header>
+    <div class="cs__body">
+      <p>ReSight Global gives us reach into 30+ markets without compromising the rigour Peepal is known for. When a project needs local-language research, in-person ethnography in a new geography, or rapid multi-country fieldwork, ReSight makes it possible.</p>
+    </div>
+    <div class="chips">
+      <span class="chip">Global fieldwork</span>
+      <span class="chip">Multilingual research</span>
+      <span class="chip">Ethnographic studies</span>
+      <span class="chip">Diary studies</span>
+      <span class="chip">Market expansion research</span>
+    </div>
+  </section>
+
+  <section class="cs develop" id="cities">
+    <header class="secthead" data-drift>
+      <span class="secthead__over">Locations</span>
+      <h2 class="secthead__h">Seven cities, one standard of work</h2>
+      <p class="secthead__p">We are different. We are a global user experience (UX) and human factors research organization whose leadership is based upon decades of friendship and experience building globally-recognized UX research agencies in North America, Europe, and Asia. ReSight Global companies have offices in eight countries, but we have established research partners all over the world.</p>
+    </header>
+    <div class="lvls lvls--2up">
+      <article class="lvl">
+        <img class="lvl__logo" src="assets/img/ourstory/Peepaldesignlogo.webp" alt="" width="205" height="50" loading="lazy" decoding="async" onerror="this.remove()">
+        <h3 class="lvl__title">Bangalore</h3>
+        <p class="lvl__body">Our founding home and largest studio — where research meets craft every day.</p>
+        <a class="lvl__more" href="index.html">Visit website</a>
+      </article>
+      <article class="lvl">
+        <img class="lvl__logo" src="assets/img/ourstory/Peepaldesignlogo.webp" alt="" width="205" height="50" loading="lazy" decoding="async" onerror="this.remove()">
+        <h3 class="lvl__title">Pune</h3>
+        <p class="lvl__body">Fast-moving product design and AI interface work for Indian and global clients.</p>
+        <a class="lvl__more" href="index.html">Visit website</a>
+      </article>
+      <article class="lvl">
+        <img class="lvl__logo" src="assets/img/ourstory/Bold-Insight_logo.webp" alt="" width="205" height="50" loading="lazy" decoding="async" onerror="this.remove()">
+        <h3 class="lvl__title">London</h3>
+        <p class="lvl__body">Our UK hub, managing relationships with clients across Britain and Northern Europe.</p>
+        <a class="lvl__more" href="https://boldinsight.com/" target="_blank" rel="noopener noreferrer">Visit website<svg viewBox="0 0 12 12" aria-hidden="true"><path d="M5 7 10.5 1.5M6.75 1.5h3.75v3.75M9 7.75v2.75H1.5V3h2.75" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="vh"> (opens in a new tab)</span></a>
+      </article>
+      <article class="lvl">
+        <img class="lvl__logo" src="assets/img/ourstory/Bold-Insight_logo.webp" alt="" width="205" height="50" loading="lazy" decoding="async" onerror="this.remove()">
+        <h3 class="lvl__title">Chicago</h3>
+        <p class="lvl__body">Serving US-based product teams and multinationals running AI transformation programmes.</p>
+        <a class="lvl__more" href="https://boldinsight.com/" target="_blank" rel="noopener noreferrer">Visit website<svg viewBox="0 0 12 12" aria-hidden="true"><path d="M5 7 10.5 1.5M6.75 1.5h3.75v3.75M9 7.75v2.75H1.5V3h2.75" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="vh"> (opens in a new tab)</span></a>
+      </article>
+      <article class="lvl">
+        <img class="lvl__logo" src="assets/img/ourstory/uintentlogo.webp" alt="" width="205" height="50" loading="lazy" decoding="async" onerror="this.remove()">
+        <h3 class="lvl__title">Hamburg</h3>
+        <p class="lvl__body">Bringing research-led design to DACH-region enterprise clients.</p>
+        <a class="lvl__more" href="https://www.uintent.com/" target="_blank" rel="noopener noreferrer">Visit website<svg viewBox="0 0 12 12" aria-hidden="true"><path d="M5 7 10.5 1.5M6.75 1.5h3.75v3.75M9 7.75v2.75H1.5V3h2.75" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="vh"> (opens in a new tab)</span></a>
+      </article>
+      <article class="lvl">
+        <img class="lvl__logo" src="assets/img/ourstory/uismlogo.webp" alt="" width="205" height="50" loading="lazy" decoding="async" onerror="this.remove()">
+        <h3 class="lvl__title">Tokyo</h3>
+        <p class="lvl__body">Culturally grounded research and design for Japanese and pan-Asian markets.</p>
+        <a class="lvl__more" href="https://uism.co.jp/" target="_blank" rel="noopener noreferrer">Visit website<svg viewBox="0 0 12 12" aria-hidden="true"><path d="M5 7 10.5 1.5M6.75 1.5h3.75v3.75M9 7.75v2.75H1.5V3h2.75" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="vh"> (opens in a new tab)</span></a>
+      </article>
+      <article class="lvl">
+        <img class="lvl__logo" src="assets/img/ourstory/xplusxlogo.webp" alt="" width="205" height="50" loading="lazy" decoding="async" onerror="this.remove()">
+        <h3 class="lvl__title">Singapore</h3>
+        <p class="lvl__body">Bridging the fast-growing SEA tech ecosystem with world-class UX practice.</p>
+        <a class="lvl__more" href="https://www.xplusx.net/" target="_blank" rel="noopener noreferrer">Visit website<svg viewBox="0 0 12 12" aria-hidden="true"><path d="M5 7 10.5 1.5M6.75 1.5h3.75v3.75M9 7.75v2.75H1.5V3h2.75" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="vh"> (opens in a new tab)</span></a>
+      </article>
+    </div>
+  </section>
+
+  <section class="cs develop" id="beyond">
+    <header class="secthead" data-drift>
+      <span class="secthead__over">Reach</span>
+      <h2 class="secthead__h">Need research beyond our seven cities?</h2>
+      <p class="secthead__p">The network extends well past the places we keep an office.</p>
+    </header>
+    <div class="cs__body">
+      <p>Through ReSight Global we field research in 30+ markets — from Brazil to South Korea, Nigeria to the UAE. The same rigorous methodology, delivered locally.</p>
+    </div>
+    <div class="cs__acts">
+      <a class="btn btn--ghost" href="index.html#contact">Talk to us about global research</a>
+      <a class="btn btn--ghost" href="https://resightglobal.com" target="_blank" rel="noopener noreferrer">Visit ReSight Global<svg class="btn__ext" viewBox="0 0 12 12" aria-hidden="true"><path d="M5 7 10.5 1.5M6.75 1.5h3.75v3.75M9 7.75v2.75H1.5V3h2.75" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="vh"> (opens in a new tab)</span></a>
+    </div>
+  </section>
+</article>
+
+<!-- ============================ CTA ============================ -->
+<section class="frame sec sec--pitch">
+  <div class="pitch">
+    <h2 class="pitch__h develop">Global reach. Local depth.<br><em>Human always.</em></h2>
+    <p class="pitch__p develop" data-delay="1">Whether your users are in Bangalore or Boston, Lagos or London — we have the people, the network and the methodology to understand them.</p>
+    <div class="pitch__cta develop" data-delay="2">
+      <a class="btn btn--mark" href="index.html#contact">Book a free strategy call</a>
+      <a class="btn btn--ghost" href="portfolio.html">See our work</a>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<!-- ============================ FOOTER ============================ -->
+<footer class="foot">
+  <div class="foot__grid">
+    <div class="foot__brand">
+      <a class="logo logo--foot" href="index.html" aria-label="Peepal Design home">
+        <img class="logo__mark" src="assets/brand/logomark.svg" alt="" width="24" height="24"
+             onerror="this.onerror=null;this.src='assets/brand/logomark.png'">
+        <span class="logo__word">peepaldesign</span>
+      </a>
+      <p>A research-first UX studio. Part of Bridged Global — a worldwide network of UX designers and design specialists. Founded 2016. Mumbai, India.</p>
+      <div class="foot__social">
+        <a href="#top" aria-label="LinkedIn"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4.5 7.5h2.6V16H4.5zM5.8 3.4a1.6 1.6 0 1 1 0 3.2 1.6 1.6 0 0 1 0-3.2ZM9.3 7.5h2.5v1.2a2.8 2.8 0 0 1 2.5-1.4c2 0 3.2 1.3 3.2 3.7V16h-2.6v-4.4c0-1.2-.4-1.9-1.4-1.9-1 0-1.6.7-1.6 1.9V16H9.3Z" fill="currentColor"/></svg></a>
+        <a href="#top" aria-label="X"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 4h3.2l3.1 4.3L13.9 4H16l-4.6 5.6L16.4 16h-3.2l-3.4-4.6L5.9 16H4l4.9-6L4 4Z" fill="currentColor"/></svg></a>
+        <a href="#top" aria-label="Instagram"><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="3.5" y="3.5" width="13" height="13" rx="4" fill="none" stroke="currentColor" stroke-width="1.4"/><circle cx="10" cy="10" r="3.2" fill="none" stroke="currentColor" stroke-width="1.4"/><circle cx="14" cy="6" r="1" fill="currentColor"/></svg></a>
+        <a href="#top" aria-label="Behance"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M2 5h4.6c1.8 0 2.9.8 2.9 2.2 0 1-.5 1.6-1.3 1.9 1 .3 1.7 1 1.7 2.2 0 1.7-1.3 2.7-3.3 2.7H2Zm2 3.4h2.2c.7 0 1.2-.3 1.2-.9s-.4-.9-1.2-.9H4Zm0 4h2.4c.9 0 1.4-.4 1.4-1s-.5-1-1.4-1H4ZM12 5.6h4.6V7H12ZM14.4 8.2c2 0 3.3 1.4 3.3 3.5v.5h-4.8c.1.9.7 1.4 1.6 1.4.7 0 1.1-.2 1.4-.7h1.7c-.4 1.4-1.6 2.2-3.1 2.2-2 0-3.4-1.4-3.4-3.4s1.4-3.5 3.3-3.5Zm-1.5 2.8h3c-.1-.8-.7-1.3-1.5-1.3s-1.4.5-1.5 1.3Z" fill="currentColor"/></svg></a>
+      </div>
+    </div>
+
+    <nav class="foot__col" aria-label="Services">
+      <span class="foot__code">SERVICES</span>
+      <a href="#services">User Research</a>
+      <a href="#services">UX Design</a>
+      <a href="#services">LEGO® Serious Play</a>
+      <a href="#services">UX Training</a>
+      <a href="#services">UX Audit</a>
+    </nav>
+
+    <nav class="foot__col" aria-label="Company">
+      <span class="foot__code">COMPANY</span>
+      <a href="#global">About Us</a>
+      <a href="#services">Services</a>
+      <a href="#work">Work</a>
+      <a href="#services">Training</a>
+      <a href="blog.html">Insights &amp; Blog</a>
+      <a href="careers.html">Careers</a>
+      <a href="#contact">Contact Us</a>
+    </nav>
+
+    <nav class="foot__col" aria-label="Global family">
+      <span class="foot__code">GLOBAL FAMILY</span>
+      <a href="https://boldinsight.com/" target="_blank" rel="noopener">Bold Insight</a>
+      <a href="https://www.uintent.com/" target="_blank" rel="noopener">uintent</a>
+      <a href="https://uism.co.jp/" target="_blank" rel="noopener">UIsm</a>
+      <a href="https://www.xplusx.net/" target="_blank" rel="noopener">XPLUSX</a>
+    </nav>
+  </div>
+
+  <div class="foot__bar">
+    <span>© 2024 Peepal Design — User Experience Design Consulting Pvt. Ltd.</span>
+    <span class="foot__legal"><a href="#top">Privacy Policy</a><a href="#top">Terms of Use</a></span>
+  </div>
+</footer>
+
+<!-- A real anchor, so the page still returns to the top with JavaScript off;
+     the script only decides when the plate is visible. -->
+<a class="totop" id="toTop" href="#top" aria-label="Back to top">
+  <svg class="totop__glyph" viewBox="0 0 14 14" fill="none" stroke="currentColor"
+       stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    <path d="M2.4 2.4h9.2"/>
+    <g class="totop__arrow"><path d="M7 12.6V5.6"/><path d="M3.6 9 7 5.6 10.4 9"/></g>
+  </svg>
+  <span class="totop__code" aria-hidden="true">Top</span>
+</a>
+
+<script src="assets/js/main.js?v=218"></script>
+</body>
+</html>

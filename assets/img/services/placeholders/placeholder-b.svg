@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 225" width="400" height="225" role="img" aria-label="">
+  <defs>
+    <linearGradient id="phbBg" x1="100%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#173b40"/>
+      <stop offset="100%" stop-color="#0f1719"/>
+    </linearGradient>
+    <radialGradient id="phbBloom" cx="28%" cy="70%" r="80%">
+      <stop offset="0%" stop-color="#1CB4C6" stop-opacity=".7"/>
+      <stop offset="100%" stop-color="#1CB4C6" stop-opacity="0"/>
+    </radialGradient>
+    <pattern id="phbDots" width="16" height="16" patternUnits="userSpaceOnUse">
+      <circle cx="1.5" cy="1.5" r="1.5" fill="#F4F3F0" fill-opacity=".22"/>
+    </pattern>
+  </defs>
+  <rect width="400" height="225" fill="url(#phbBg)"/>
+  <rect width="400" height="225" fill="url(#phbBloom)"/>
+  <rect width="400" height="225" fill="url(#phbDots)"/>
+  <path d="M164 100
+           C 180 82, 216 81, 234 98
+           C 253 116, 254 148, 233 166
+           C 213 184, 179 183, 162 163
+           C 146 145, 147 118, 164 100 Z"
+        fill="none" stroke="#1CB4C6" stroke-width="2.4" stroke-linecap="round"/>
+  <path d="M104 56 L119 71" stroke="#FF850B" stroke-width="2.4" stroke-linecap="round"/>
+  <circle cx="124" cy="76" r="3" fill="#FF850B"/>
+</svg>
