@@ -6,6 +6,7 @@ import type {Adapter, Observation, VariantStates, VariantStyle} from './types.ts
 import {AdapterError} from './types.ts';
 import {EGRESS_CHROMIUM_ARGS, startEgressProxy} from './egress.ts';
 import type {EgressResolver} from './egress.ts';
+import type {PageRecord, SavedStyle, SiteMemory} from './site-memory.ts';
 
 export type UrlAdapterOptions = {
   maxPages?: number; viewports?: number[]; timeoutMs?: number;
@@ -14,6 +15,11 @@ export type UrlAdapterOptions = {
   // Resolves and vets each host for the egress proxy, which pins the browser to those addresses.
   // Without it the browser resolves names itself and only the per-request check applies.
   egress?: EgressResolver;
+  // Saved websites: reuse pages already read and continue an unfinished crawl.
+  memory?: SiteMemory;
+  // Most pages kept for one site across imports. Once reached, imports reuse the saved pages
+  // without reading more (sites with hundreds of similar pages would otherwise never settle).
+  maxSitePages?: number;
 };
 
 // Runs inside the page. Kept as a string so the server build needs no DOM types.
@@ -166,7 +172,7 @@ export function describeVariants(kind: string, styles: Look[]) {
   return {variants: variantStyles.map(v => v.name), variantStyles};
 }
 
-type CollectedStyle = {count: number; style: VariantStyle; html: string; text: string; ref: string; disabled?: boolean; captured?: boolean; states?: VariantStates; screenshot?: string};
+type CollectedStyle = SavedStyle;
 // At most this many variants per extraction get forced states and a screenshot (each takes a few round trips).
 export const CAPTURE_LIMIT = 48;
 const STATE_FIELDS = ['background', 'color', 'border', 'radius', 'shadow', 'outline', 'opacity', 'textDecoration'] as const;
@@ -236,115 +242,154 @@ export function sameSection(start: URL, link: URL): boolean {
 }
 
 export function createUrlAdapter(options: UrlAdapterOptions): Adapter {
-  const {maxPages = 8, viewports = [1440, 768, 375], timeoutMs = 20_000, allowUrl, egress} = options;
-  return async ({uri}, {signal, progress}) => {
-    let playwright: typeof import('playwright');
-    try { playwright = await import('playwright'); }
-    catch { throw new AdapterError('Website rendering needs Playwright on the server (npm install playwright && npx playwright install chromium).'); }
+  const {maxPages = 8, maxSitePages = 24, viewports = [1440, 768, 375], timeoutMs = 20_000, allowUrl, egress, memory} = options;
+  return async ({uri}, {signal, progress, refresh}) => {
     const start = new URL(uri);
     if (!(await allowUrl(start))) throw new AdapterError('Only public HTTPS websites can be rendered.');
 
-    const proxy = egress ? await startEgressProxy({resolve: egress}) : null;
-    const browser = await playwright.chromium.launch({headless: true, args: ['--disable-dev-shm-usage', ...(proxy ? EGRESS_CHROMIUM_ARGS : [])], ...(proxy ? {proxy: proxy.launchProxy} : {})})
-      .catch(async error => { await proxy?.close(); throw error; });
-    const abort = () => { void browser.close(); };
-    signal.addEventListener('abort', abort, {once: true});
-    const observations: Observation[] = [], failed: {locator: string; reason: string}[] = [], themes = new Set<string>(['light']);
-    const queue = [start.href], seen = new Set<string>(), selectors = new Set<string>();
+    // A saved site is reused and its crawl continued, unless a fresh read was asked for.
+    const saved = memory && !refresh ? await memory.load(start.href) : null;
+    const records: PageRecord[] = [...(saved?.pages ?? [])], reused = records.length;
+    const queue = saved ? [...saved.state.queue] : [start.href], seen = new Set<string>(saved?.state.seen ?? []);
+    const failed: {locator: string; reason: string}[] = saved ? [...saved.state.failed] : [];
+    const startedAt = saved?.state.startedAt ?? new Date().toISOString();
+    const full = records.length >= maxSitePages;
+    if (saved && records.length) await progress?.(`reusing ${records.length} saved page${records.length === 1 ? '' : 's'} (first read ${saved.state.startedAt.slice(0, 10)})` +
+      (full ? `; that is the most kept for one site, so no more are read` : queue.length ? `; continuing with ${queue.length} page${queue.length === 1 ? '' : 's'} not read yet` : '; nothing left to read'));
+
+    const observations: Observation[] = [], themes = new Set<string>(['light']), selectors = new Set<string>();
     const components = new Map<string, {count: number; classes: Set<string>; html: string; locator: string; named: boolean; styles: Map<string, CollectedStyle>}>();
-    let fetched = 0;
+    const apply = (record: PageRecord) => {
+      observations.push(...record.observations);
+      if (record.dark) themes.add('dark');
+      for (const selector of record.selectors) selectors.add(selector);
+      for (const [kind, c] of Object.entries(record.components)) {
+        const entry = components.get(kind) ?? {count: 0, classes: new Set<string>(), html: c.html, locator: record.landed, named: c.named, styles: new Map()};
+        entry.count += c.count; c.classes.forEach(cls => entry.classes.add(cls)); components.set(kind, entry);
+        for (const [key, v] of Object.entries(c.styles)) { const seenStyle = entry.styles.get(key); if (seenStyle) seenStyle.count += v.count; else entry.styles.set(key, {...v}); }
+      }
+    };
+    records.forEach(apply);
+    const enqueue = async (links: string[]) => {
+      for (const link of links) if (!seen.has(link) && !queue.includes(link) && sameSection(start, new URL(link)) && await allowUrl(new URL(link))) queue.push(link);
+      queue.sort((a, b) => sharedPrefix(start, new URL(b)) - sharedPrefix(start, new URL(a)));
+    };
+    const remember = async () => memory?.saveState(start.href, {version: '', start: '', startedAt, updatedAt: '', done: records.map(r => r.url), seen: [...seen], queue, failed});
+
+    let browser: import('playwright').Browser | null = null, proxy: Awaited<ReturnType<typeof startEgressProxy>> | null = null, context: import('playwright').BrowserContext | null = null;
+    const abort = () => { void browser?.close(); };
+    signal.addEventListener('abort', abort, {once: true});
+    let readNow = 0;
     const captureBudget = {left: CAPTURE_LIMIT};
     try {
-      const context = await browser.newContext({acceptDownloads: false, javaScriptEnabled: true, serviceWorkers: 'block', userAgent: 'GapScan/1.0 (design-system extraction)'});
-      await context.route('**/*', async route => {
-        let url: URL;
-        try { url = new URL(route.request().url()); } catch { return route.abort(); }
-        if (url.protocol === 'data:' || url.protocol === 'blob:') return route.continue();
-        if (['media', 'websocket', 'eventsource'].includes(route.request().resourceType()) || !(await allowUrl(url))) return route.abort();
-        return route.continue();
-      });
-      while (queue.length && fetched < maxPages) {
+      // Pages are read in queue order; the page being read stays queued until it is saved, so a stop
+      // at any moment loses nothing. The page budget applies to new pages in this run.
+      while (queue.length && readNow < maxPages && records.length < maxSitePages) {
         signal.throwIfAborted();
-        const href = queue.shift()!;
-        if (seen.has(href)) continue;
-        seen.add(href);
+        const href = queue[0]!;
+        if (seen.has(href)) { queue.shift(); continue; }
+        if (!context) {
+          let playwright: typeof import('playwright');
+          try { playwright = await import('playwright'); }
+          catch { throw new AdapterError('Website rendering needs Playwright on the server (npm install playwright && npx playwright install chromium).'); }
+          proxy = egress ? await startEgressProxy({resolve: egress}) : null;
+          browser = await playwright.chromium.launch({headless: true, args: ['--disable-dev-shm-usage', ...(proxy ? EGRESS_CHROMIUM_ARGS : [])], ...(proxy ? {proxy: proxy.launchProxy} : {})});
+          context = await browser.newContext({acceptDownloads: false, javaScriptEnabled: true, serviceWorkers: 'block', userAgent: 'GapScan/1.0 (design-system extraction)'});
+          await context.route('**/*', async route => {
+            let url: URL;
+            try { url = new URL(route.request().url()); } catch { return route.abort(); }
+            if (url.protocol === 'data:' || url.protocol === 'blob:') return route.continue();
+            if (['media', 'websocket', 'eventsource'].includes(route.request().resourceType()) || !(await allowUrl(url))) return route.abort();
+            return route.continue();
+          });
+        }
         const page = await context.newPage();
-        let skippedDuplicate = false;
+        let record: PageRecord | null = null;
         try {
-          // The first page is read at every viewport and in dark mode; later pages at desktop width only.
-          const passes = fetched === 0 ? [...viewports.map(width => ({width, scheme: 'light' as const})), {width: viewports[0]!, scheme: 'dark' as const}] : [{width: viewports[0]!, scheme: 'light' as const}];
-          for (const pass of passes) {
-            await page.setViewportSize({width: pass.width, height: 900});
-            await page.emulateMedia({colorScheme: pass.scheme});
-            if (pass === passes[0]) {
-              const response = await page.goto(href, {waitUntil: 'domcontentloaded', timeout: timeoutMs});
-              if (!response || response.status() >= 400) throw new Error(`HTTP ${response?.status() ?? 'error'}`);
-              if (!(await allowUrl(new URL(page.url())))) throw new Error('Redirected to a non-public address.');
-              const landed = page.url().split('#')[0]!;
-              if (landed !== href && seen.has(landed)) { skippedDuplicate = true; break; }
-              seen.add(landed);
-              await page.waitForLoadState('networkidle', {timeout: 5000}).catch(() => undefined);
-              // Freeze transitions so a theme or viewport switch is measured at its end state, not mid-fade.
-              await page.addStyleTag({content: '*,*::before,*::after{transition:none!important;animation:none!important}'}).catch(() => undefined);
-            } else await page.waitForTimeout(300);
-            const data = await page.evaluate(COLLECT) as Collected, locator = `${page.url()} @${pass.width}px${pass.scheme === 'dark' ? ' dark' : ''}`;
-            if (pass.scheme === 'dark') {
-              // Only record dark mode when the page actually changes colours for it.
-              const lightValues = new Set(observations.filter(o => o.type === 'color' && o.locator.startsWith(page.url())).map(o => o.type === 'color' ? o.value : ''));
-              if (Object.values(data.colors).some(c => !lightValues.has(c.value))) themes.add('dark'); else continue;
-            }
-            const channel = 'observed_css' as const, rendered = true;
-            for (const c of Object.values(data.colors)) observations.push({type: 'color', channel, rendered, value: c.value, property: c.property, selector: c.selector, count: c.count, locator});
-            for (const f of Object.values(data.fonts)) observations.push({type: 'font', channel, rendered, family: f.family, size: f.size, weight: f.weight, lineHeight: f.lineHeight, selector: f.selector, count: f.count, locator});
-            for (const [value, {count}] of Object.entries(data.spacing)) observations.push({type: 'spacing', channel, value, count, locator});
-            for (const [value, {count}] of Object.entries(data.radius)) observations.push({type: 'radius', channel, value, count, locator});
-            for (const [value, {count}] of Object.entries(data.shadow)) observations.push({type: 'shadow', channel, value, count, locator});
-            for (const p of Object.values(data.pairs)) observations.push({type: 'contrast', channel, rendered, foreground: p.foreground, background: p.background, selector: p.selector, large: p.large, count: p.count, locator});
-            if (pass === passes[0]) {
-              for (const [name, value] of Object.entries(data.vars)) if (value) observations.push({type: 'token', channel, path: name, value, locator: `${page.url()} :root`});
-              for (const selector of data.selectors) selectors.add(selector);
-              // States and screenshots for looks not seen on an earlier page (desktop, light).
-              if (pass.width === viewports[0] && pass.scheme === 'light' && captureBudget.left > 0) {
-                const fresh = Object.entries(data.components).flatMap(([kind, c]) => Object.entries(c.styles).filter(([key]) => !components.get(kind)?.styles.has(key)).map(([, v]) => v));
-                const captured = await captureVariants(page, fresh.filter(v => !v.disabled).slice(0, captureBudget.left)).catch(() => new Map<string, {states: VariantStates; screenshot?: string}>());
-                captureBudget.left -= captured.size;
-                for (const v of fresh) { const got = captured.get(v.ref); if (got) Object.assign(v, got, {captured: true}); }
-              }
-              for (const [kind, c] of Object.entries(data.components)) {
-                const entry = components.get(kind) ?? {count: 0, classes: new Set<string>(), html: c.html, locator: page.url(), named: c.named, styles: new Map()};
-                entry.count += c.count; c.classes.forEach(cls => entry.classes.add(cls)); components.set(kind, entry);
-                for (const [key, v] of Object.entries(c.styles)) { const seenStyle = entry.styles.get(key); if (seenStyle) seenStyle.count += v.count; else entry.styles.set(key, {...v}); }
-              }
-              for (const link of data.links) if (!seen.has(link) && !queue.includes(link) && sameSection(start, new URL(link)) && await allowUrl(new URL(link))) queue.push(link);
-              queue.sort((a, b) => sharedPrefix(start, new URL(b)) - sharedPrefix(start, new URL(a)));
-            }
-          }
-          if (skippedDuplicate) continue;   // a redirect landed on a page already read
-          fetched++;
-          await progress?.(`rendered ${page.url()} (${fetched}/${maxPages})`);
+          record = await readPage(page, href, records.length === 0);
+          if (record) {
+            seen.add(href); seen.add(record.landed);
+            records.push(record); apply(record); readNow++;
+            await memory?.savePage(start.href, record);
+            await enqueue(record.links);
+            await progress?.(`rendered ${record.landed} (${readNow}/${maxPages} new${records.length > readNow ? `, ${records.length} in all` : ''})`);
+          } else seen.add(href);   // a redirect landed on a page already read
         } catch (error) {
           if (signal.aborted) throw error;
+          seen.add(href);
           failed.push({locator: href, reason: error instanceof Error ? error.message.split('\n')[0]! : 'Page failed to render.'});
         } finally { await page.close().catch(() => undefined); }
+        if (queue[0] === href) queue.shift();
+        await remember();
       }
-      for (const [kind, c] of components) {
-        // Structural wrappers (PageWrapper, ContentContainer…) are layout plumbing, not components.
-        if (c.named && STRUCTURAL.test(kind)) continue;
-        const looks = [...c.styles.values()], {variants, variantStyles} = describeVariants(kind, looks);
-        // Captured states are evidence of a visible change; without a capture, matching stylesheet rules are the fallback.
-        const seenStates = new Set(variantStyles.flatMap(v => Object.keys(('states' in v && v.states) || {})));
-        // Disabled can't be forced, so a :disabled rule stays evidence for it.
-        const ruled = statesFor(kind, [...c.classes], [...selectors]);
-        const states = looks.some(l => l.captured) ? [...new Set([...seenStates, ...ruled.filter(st => st === 'disabled')])] : [...new Set([...ruled, ...seenStates])];
-        observations.push({type: 'component', channel: 'observed_css', name: c.named ? title(kind) : kind, html: c.html, states,
-          variants, variantStyles, locator: c.locator, raw: `${c.count} instances; classes ${[...c.classes].slice(0, 8).join(' ')}`});
-      }
+      if (!readNow && memory) await remember();
     } finally {
       signal.removeEventListener('abort', abort);
-      await browser.close().catch(() => undefined);
+      await browser?.close().catch(() => undefined);
       await proxy?.close();
     }
-    if (!fetched) throw new AdapterError(`The website could not be rendered: ${failed[0]?.reason ?? 'no pages loaded'}.`);
-    return {observations, fetched, failed, budgetHit: queue.length > 0, viewports: [...viewports].sort((a, b) => a - b), themes: [...themes]};
+
+    // Renders one page (every viewport and dark mode for the first page, desktop for the rest) into a record.
+    async function readPage(page: import('playwright').Page, href: string, first: boolean): Promise<PageRecord | null> {
+      const passes = first ? [...viewports.map(width => ({width, scheme: 'light' as const})), {width: viewports[0]!, scheme: 'dark' as const}] : [{width: viewports[0]!, scheme: 'light' as const}];
+      const record: PageRecord = {url: href, landed: href, readAt: new Date().toISOString(), dark: false, observations: [], components: {}, selectors: [], links: []};
+      for (const pass of passes) {
+        await page.setViewportSize({width: pass.width, height: 900});
+        await page.emulateMedia({colorScheme: pass.scheme});
+        if (pass === passes[0]) {
+          const response = await page.goto(href, {waitUntil: 'domcontentloaded', timeout: timeoutMs});
+          if (!response || response.status() >= 400) throw new Error(`HTTP ${response?.status() ?? 'error'}`);
+          if (!(await allowUrl(new URL(page.url())))) throw new Error('Redirected to a non-public address.');
+          record.landed = page.url().split('#')[0]!;
+          if (record.landed !== href && seen.has(record.landed)) return null;
+          await page.waitForLoadState('networkidle', {timeout: 5000}).catch(() => undefined);
+          // Freeze transitions so a theme or viewport switch is measured at its end state, not mid-fade.
+          await page.addStyleTag({content: '*,*::before,*::after{transition:none!important;animation:none!important}'}).catch(() => undefined);
+        } else await page.waitForTimeout(300);
+        const data = await page.evaluate(COLLECT) as Collected, locator = `${page.url()} @${pass.width}px${pass.scheme === 'dark' ? ' dark' : ''}`;
+        if (pass.scheme === 'dark') {
+          // Only record dark mode when the page actually changes colours for it.
+          const lightValues = new Set(record.observations.flatMap(o => o.type === 'color' ? [o.value] : []));
+          if (Object.values(data.colors).some(c => !lightValues.has(c.value))) record.dark = true; else continue;
+        }
+        const channel = 'observed_css' as const, rendered = true, out = record.observations;
+        for (const c of Object.values(data.colors)) out.push({type: 'color', channel, rendered, value: c.value, property: c.property, selector: c.selector, count: c.count, locator});
+        for (const f of Object.values(data.fonts)) out.push({type: 'font', channel, rendered, family: f.family, size: f.size, weight: f.weight, lineHeight: f.lineHeight, selector: f.selector, count: f.count, locator});
+        for (const [value, {count}] of Object.entries(data.spacing)) out.push({type: 'spacing', channel, value, count, locator});
+        for (const [value, {count}] of Object.entries(data.radius)) out.push({type: 'radius', channel, value, count, locator});
+        for (const [value, {count}] of Object.entries(data.shadow)) out.push({type: 'shadow', channel, value, count, locator});
+        for (const p of Object.values(data.pairs)) out.push({type: 'contrast', channel, rendered, foreground: p.foreground, background: p.background, selector: p.selector, large: p.large, count: p.count, locator});
+        if (pass === passes[0]) {
+          for (const [name, value] of Object.entries(data.vars)) if (value) out.push({type: 'token', channel, path: name, value, locator: `${page.url()} :root`});
+          record.selectors = data.selectors;
+          record.links = data.links;
+          // States and screenshots for looks no earlier page (saved or new) already has.
+          if (captureBudget.left > 0) {
+            const fresh = Object.entries(data.components).flatMap(([kind, c]) => Object.entries(c.styles).filter(([key]) => !components.get(kind)?.styles.has(key)).map(([, v]) => v));
+            const captured = await captureVariants(page, fresh.filter(v => !v.disabled).slice(0, captureBudget.left)).catch(() => new Map<string, {states: VariantStates; screenshot?: string}>());
+            captureBudget.left -= captured.size;
+            for (const v of fresh) { const got = captured.get(v.ref); if (got) Object.assign(v, got, {captured: true}); }
+          }
+          record.components = data.components;
+        }
+      }
+      return record;
+    }
+
+    for (const [kind, c] of components) {
+      // Structural wrappers (PageWrapper, ContentContainer…) are layout plumbing, not components.
+      if (c.named && STRUCTURAL.test(kind)) continue;
+      const looks = [...c.styles.values()], {variants, variantStyles} = describeVariants(kind, looks);
+      // Captured states are evidence of a visible change; without a capture, matching stylesheet rules are the fallback.
+      const seenStates = new Set(variantStyles.flatMap(v => Object.keys(('states' in v && v.states) || {})));
+      // Disabled can't be forced, so a :disabled rule stays evidence for it.
+      const ruled = statesFor(kind, [...c.classes], [...selectors]);
+      const states = looks.some(l => l.captured) ? [...new Set([...seenStates, ...ruled.filter(st => st === 'disabled')])] : [...new Set([...ruled, ...seenStates])];
+      observations.push({type: 'component', channel: 'observed_css', name: c.named ? title(kind) : kind, html: c.html, states,
+        variants, variantStyles, locator: c.locator, raw: `${c.count} instances; classes ${[...c.classes].slice(0, 8).join(' ')}`});
+    }
+    if (!records.length) throw new AdapterError(`The website could not be rendered: ${failed[0]?.reason ?? 'no pages loaded'}.`);
+    return {observations, fetched: records.length, failed, budgetHit: queue.length > 0, viewports: [...viewports].sort((a, b) => a - b), themes: [...themes],
+      ...(reused ? {reused} : {})};
   };
 }

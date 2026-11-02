@@ -47,7 +47,7 @@ export function accessRules(store: Store): Record<string, Rule> {
   return {
     'GET /health': pub, 'GET /healthz': pub, 'GET /': pub, 'GET /app/*': pub,
     'POST /v1/auth/link': pub, 'POST /v1/auth/session': pub, 'GET /v1/auth/me': pub, 'POST /v1/auth/logout': pub,
-    'GET /v1/library': user, 'GET /v1/library/:id': user, 'GET /v1/templates': user, 'POST /v1/projects': user, 'GET /v1/projects': user,
+    'GET /v1/library': user, 'GET /v1/saved-sites': user, 'GET /v1/library/:id': user, 'GET /v1/templates': user, 'POST /v1/projects': user, 'GET /v1/projects': user,
     'GET /v1/projects/:id': viaProject, 'POST /v1/projects/:id/sources': viaProject, 'POST /v1/projects/:id/extractions': viaProject,
     'POST /v1/projects/:id/usage': viaProject, 'GET /v1/projects/:id/usage': viaProject, 'GET /v1/projects/:id/members': viaProject,
     'POST /v1/projects/:id/members': {access: 'owner', project: async r => param(r)}, 'DELETE /v1/projects/:id/members/:userId': {access: 'owner', project: async r => param(r)},

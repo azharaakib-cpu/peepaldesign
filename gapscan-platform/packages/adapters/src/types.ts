@@ -26,13 +26,15 @@ export type VariantStyle = {background: string; color: string; border: string; r
 export type VariantStates = Partial<Record<'hover' | 'focus-visible' | 'active' | 'disabled', Partial<VariantStyle>>>;
 
 export type AdapterInput = {assetId: string; name: string; uri: string; bytes: Uint8Array};
-export type AdapterContext = {signal: AbortSignal; fetch?: typeof fetch; progress?: (message: string) => Promise<void> | void};
+// `refresh` asks adapters that keep saved copies (websites) to read the source again.
+export type AdapterContext = {signal: AbortSignal; fetch?: typeof fetch; progress?: (message: string) => Promise<void> | void; refresh?: boolean};
 export type AdapterResult = {
   observations: Observation[];
   fetched: number;                                   // pages, slides, files or nodes actually read
   failed: {locator: string; reason: string}[];
   budgetHit: boolean;
   viewports?: number[]; themes?: string[];
+  reused?: number;                                   // saved pages reused instead of read again
 };
 export type Adapter = (input: AdapterInput, context: AdapterContext) => Promise<AdapterResult>;
 

@@ -41,3 +41,18 @@ test('an extraction reads as a design-system page, and exports to Figma only on 
     assert.equal(JSON.parse(archive.read('gapscan-importer/manifest.json').toString()).networkAccess.allowedDomains[0], 'none', 'the plugin fetches nothing');
   } finally { await app.close(); await infra.close(); await rm(dataDir, {recursive: true, force: true}); }
 });
+
+test('saved websites can be looked up, and an extraction can ask to read them again', async () => {
+  const dataDir = await mkdtemp(join(tmpdir(), 'gapscan-saved-'));
+  const infra = await createInfra({...configFromEnv({}), dataDir});
+  const app = buildApp({infra});
+  try {
+    assert.equal((await app.inject({method: 'GET', url: '/v1/saved-sites?url=http://localhost:3000/'})).statusCode, 400, 'only public https addresses');
+    assert.deepEqual(JSON.parse((await app.inject({method: 'GET', url: '/v1/saved-sites?url=https://example.com/'})).body), {url: 'https://example.com/', saved: null});
+    const project = JSON.parse((await app.inject({method: 'POST', url: '/v1/projects', payload: {name: 'Acme'}})).body);
+    await app.inject({method: 'POST', url: `/v1/projects/${project.id}/sources`, payload: {kind: 'code', name: 'a.css', content: '.btn{color:#000}'}});
+    const {jobId} = JSON.parse((await app.inject({method: 'POST', url: `/v1/projects/${project.id}/extractions`, payload: {refresh: true}})).body);
+    assert.deepEqual((await infra.store.getJob(jobId))?.payload, {refresh: true});
+    await infra.queue.idle();
+  } finally { await app.close(); await infra.close(); await rm(dataDir, {recursive: true, force: true}); }
+});

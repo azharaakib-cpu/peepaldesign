@@ -61,7 +61,7 @@ review the result, then compare it against a reference system.
 | `POST /v1/projects` `{name}` | Create a project |
 | `GET /v1/projects/:id` | Project with its sources |
 | `POST /v1/projects/:id/sources` | `{kind:"url", uri}` (website, or Figma when the host is figma.com), `{kind:"file", name, base64}` (.pptx, .docx, .pdf, .zip, CSS/SCSS/JSON/HTML; 40 MB) or `{kind:"code", name, content}`. Nothing is fetched or parsed at intake. |
-| `POST /v1/projects/:id/extractions` | Starts an `extract` job → `202 {jobId, events}` |
+| `POST /v1/projects/:id/extractions` `{refresh?}` | Starts an `extract` job → `202 {jobId, events}`; `refresh: true` reads saved websites again |
 | `GET /v1/jobs/:id` | Job status, result id or error |
 | `GET /v1/jobs/:id/events` | Server-sent events. Send `Last-Event-ID` (or `?after=`) to resume; the stream ends after `complete`, `failed` or `cancelled`. |
 | `DELETE /v1/jobs/:id` | Cancel a queued or running job |
@@ -109,7 +109,9 @@ review the result, then compare it against a reference system.
 | `GAPSCAN_PUBLIC_URL` | unset | The address people open (`https://gapscan.example.com`). Used for sign-in links, the cross-site check and the `Secure` cookie flag. |
 | `GAPSCAN_MAIL` | `log` locally, `smtp` hosted | `smtp` with `GAPSCAN_SMTP_URL` (for example `smtps://user:pass@smtp.postmarkapp.com:465`) and `GAPSCAN_MAIL_FROM`. `log` prints links to the server console and is refused when hosted. |
 | `GAPSCAN_AUTH_DOMAINS` | unset (anyone) | Comma-separated email domains that can create an account. Others can still sign in once an owner invites them. |
-| `GAPSCAN_MAX_PAGES` | `8` | Pages rendered per website source |
+| `GAPSCAN_MAX_PAGES` | `8` | New pages rendered per website per extraction |
+| `GAPSCAN_SITE_MAX_PAGES` | `24` | Most pages kept for one website across extractions; once reached, extractions reuse them without reading the site |
+| `GAPSCAN_SITE_MAX_AGE_DAYS` | `30` | Saved websites older than this are read again |
 | `GAPSCAN_FIGMA_TOKEN` | unset | Personal access token for reading Figma files. Without it, Figma links are recorded as "not connected". Variables need a Figma plan with REST variable access; otherwise styles and usage are read. |
 | `GAPSCAN_LEGACY_ENGINE` | `../gapscan/engine/` | The prototype extractor, still used for component inventories in code |
 
@@ -159,6 +161,15 @@ and existing component sets are left alone. When the site's typeface isn't insta
 styles use a similar sans and say so.
 
 ## How a website is read
+
+**Saved websites.** Every page is saved as soon as it is read, with the crawl's progress (pages
+read, pages still queued, pages that failed). Importing the same site again reuses the saved
+pages without visiting them and continues with the pages not read yet, up to 8 new pages per
+extraction and 24 in all; after that an extraction reuses the saved pages in about a second.
+A read that stops early (cancelled, page budget, restart) continues from the page it was on.
+Saved sites older than 30 days, or saved by an older version of the reader, are read again;
+"Read saved websites again" on the intake page forces a fresh read. `GET /v1/saved-sites?url=`
+reports what is saved. Saved pages live in the blob store (local files or S3) under `sites/`.
 
 Pages are rendered in headless Chromium at 1440, 768 and 375px and in dark mode
 (dark mode is recorded only when the page actually changes). The crawl stays on

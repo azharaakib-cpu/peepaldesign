@@ -8,7 +8,7 @@ import {z} from 'zod';
 import {ExtractedDesignSystem, TERMINAL_JOB_STATUSES} from '@gapscan/schema';
 import type {JobEvent, JobType} from '@gapscan/schema';
 import type {Infra, JobHandler} from '@gapscan/infra';
-import {createUrlAdapter, figmaFileKey, writeZip} from '@gapscan/adapters';
+import {createSiteMemory, createUrlAdapter, figmaFileKey, SITE_MEMORY_MAX_AGE_DAYS, writeZip} from '@gapscan/adapters';
 import type {Adapter} from '@gapscan/adapters';
 import {listReferences, loadReference} from '@gapscan/library';
 import {planningTotals} from '@gapscan/estimate';
@@ -52,8 +52,10 @@ export function buildApp({infra, handlers = {}, logger = false, heartbeatMs = HE
   const {store, blobs, bus, queue} = infra;
   // Every page and sub-request the browser makes must pass the same public-URL check as intake.
   // Each extraction gets a fresh guard, so DNS answers are cached for one job only.
+  // Websites already read are kept (pages plus crawl progress) and reused or continued on the next import.
+  const siteMemory = createSiteMemory(blobs, {maxAgeDays: Number(process.env.GAPSCAN_SITE_MAX_AGE_DAYS) || SITE_MEMORY_MAX_AGE_DAYS});
   const urlAdapter: Adapter = (input, context) =>
-    createUrlAdapter({allowUrl: createUrlGuard(lookupAll), egress: createPinnedResolver(lookupAll), maxPages: Number(process.env.GAPSCAN_MAX_PAGES) || 8})(input, context);
+    createUrlAdapter({allowUrl: createUrlGuard(lookupAll), egress: createPinnedResolver(lookupAll), maxPages: Number(process.env.GAPSCAN_MAX_PAGES) || 8, maxSitePages: Number(process.env.GAPSCAN_SITE_MAX_PAGES) || 24, memory: siteMemory})(input, context);
   queue.register('extract', handlers.extract ?? createExtractHandler({store, blobs, urlAdapter}));
   queue.register('gapscan', handlers.gapscan ?? createGapScanHandler({store, blobs}));
   queue.register('render', handlers.render ?? createRenderHandler({store, blobs}));
@@ -102,6 +104,15 @@ export function buildApp({infra, handlers = {}, logger = false, heartbeatMs = HE
     const project = await store.createProject(body.name);
     if (request.user) await store.setMember(project.id, request.user.id, 'owner');
     return reply.code(201).send(project);
+  });
+
+  // What's saved for a website: pages read, pages still queued, when it was first read.
+  app.get('/v1/saved-sites', async (request, reply) => {
+    const url = String((request.query as {url?: string}).url ?? '');
+    let parsed: URL;
+    try { parsed = publicUrl(url); } catch { return fail(reply, 400, 'Give a public https:// address.'); }
+    const saved = await siteMemory.info(parsed.href), limit = Number(process.env.GAPSCAN_SITE_MAX_PAGES) || 24;
+    return {url: parsed.href, saved: saved ? {...saved, limit, full: saved.pages >= limit} : null};
   });
 
   app.get('/v1/projects/:id', async (request, reply) => {
@@ -153,7 +164,9 @@ export function buildApp({infra, handlers = {}, logger = false, heartbeatMs = HE
     const {id: projectId} = IdParams.parse(request.params);
     if (!await store.getProject(projectId)) return fail(reply, 404, 'Project not found.');
     if (!(await store.listSources(projectId)).length) return fail(reply, 400, 'Add at least one source before extracting.');
-    const job = await store.createJob({type: 'extract', projectId, payload: {}});
+    // `refresh` reads saved websites again instead of reusing and continuing them.
+    const refresh = (request.body as {refresh?: unknown} | undefined)?.refresh === true;
+    const job = await store.createJob({type: 'extract', projectId, payload: refresh ? {refresh} : {}});
     await queue.enqueue(job);
     return reply.code(202).header('location', `/v1/jobs/${job.id}`).send({jobId: job.id, events: `/v1/jobs/${job.id}/events`});
   });

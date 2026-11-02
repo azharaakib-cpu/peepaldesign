@@ -11,6 +11,8 @@ export type {CodeAdapterOptions} from './code.ts';
 export {CAPTURE_LIMIT, createUrlAdapter, describeVariants, sameSection, sharedPrefix, styleChanges} from './url.ts';
 export type {UrlAdapterOptions} from './url.ts';
 export {startEgressProxy, EGRESS_CHROMIUM_ARGS} from './egress.ts';
+export {createSiteMemory, siteKey, SITE_MEMORY_VERSION, SITE_MEMORY_MAX_AGE_DAYS} from './site-memory.ts';
+export type {KeyValueStore, PageRecord, SiteMemory, SiteState} from './site-memory.ts';
 export type {EgressProxy, EgressResolver} from './egress.ts';
 export {componentApis, customElementApi, typescriptObservations} from './typescript.ts';
 export type {ComponentApi} from './typescript.ts';

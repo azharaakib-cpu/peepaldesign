@@ -46,7 +46,7 @@ export function createExtractHandler({store, blobs, stageDelayMs = 0, figmaToken
       try {
         const bytes = source.blobKey ? await blobs.get(source.blobKey) : Buffer.alloc(0);
         if (source.blobKey && !bytes) throw new Error('Stored content is missing.');
-        const context = {signal, progress: (message: string) => progress('collect', index, sources.length, `${label}: ${message}`)};
+        const context = {signal, refresh: job.payload.refresh === true, progress: (message: string) => progress('collect', index, sources.length, `${label}: ${message}`)};
         let result: AdapterResult;
         if (source.kind === 'code' || source.kind === 'markdown' || source.kind === 'zip') {
           const docs = codeDocuments(source, bytes!);
@@ -60,7 +60,7 @@ export function createExtractHandler({store, blobs, stageDelayMs = 0, figmaToken
           result = await adapter({assetId: source.id, name: label, uri: source.uri, bytes: bytes ?? Buffer.alloc(0)}, context);
         }
         results.push({asset: source, result});
-        await progress('collect', index + 1, sources.length, `Read ${label} (${result.observations.length} observations)`);
+        await progress('collect', index + 1, sources.length, `Read ${label} (${result.observations.length} observations${result.reused ? `; ${result.reused} saved page${result.reused === 1 ? '' : 's'} reused` : ''})`);
       } catch (error) {
         if (signal.aborted) throw error;
         const reason = error instanceof Error ? error.message : String(error);
