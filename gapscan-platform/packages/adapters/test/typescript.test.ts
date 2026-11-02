@@ -62,3 +62,21 @@ export default Button;`;
   const html = componentApis(`export interface LinkButtonProps { type?: 'button' | 'submit' } export const LinkButton = (p: LinkButtonProps) => null;`, 'x.tsx')[0];
   assert.deepEqual(html?.variants, [], 'HTML button types are not style variants');
 });
+
+test('web components: one folder is one component, each tag a style, class fields the API', async () => {
+  const {customElementApi} = await import('@gapscan/adapters');
+  const bundle = `declare const buttonBaseClass: any;
+export declare abstract class Button extends buttonBaseClass { disabled: boolean; softDisabled: boolean; href: string; trailingIcon: boolean; private handleClick; protected renderElevation(): void; static styles: unknown; }
+export declare class FilledButton extends Button {}
+export declare class OutlinedButton extends Button {}
+declare global { interface HTMLElementTagNameMap { 'md-filled-button': MdFilledButton; 'md-outlined-button': MdOutlinedButton; 'md-filled-tonal-button': MdFilledTonalButton; } }
+export declare class MdFilledButton extends FilledButton {}
+export declare class MdOutlinedButton extends OutlinedButton {}
+export declare class MdFilledTonalButton extends FilledButton {}`;
+  const api = customElementApi(bundle, 'button.d.ts', 'Button')!;
+  assert.equal(api.name, 'Button');
+  assert.deepEqual(api.variants, ['filled', 'outlined', 'filled-tonal']);
+  assert.deepEqual(api.props.map(p => p.name), ['disabled', 'softDisabled', 'href', 'trailingIcon']);
+  assert.deepEqual(api.states, ['disabled']);
+  assert.equal(customElementApi('export const x = 1;', 'x.d.ts', 'X'), null);
+});

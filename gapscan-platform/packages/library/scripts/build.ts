@@ -4,7 +4,7 @@
 //   node packages/library/scripts/build.ts [reference-id …]
 import {createHash} from 'node:crypto';
 import {writeFile} from 'node:fs/promises';
-import {createCodeAdapter, inferredSpecimen} from '@gapscan/adapters';
+import {createCodeAdapter, customElementApi, inferredSpecimen} from '@gapscan/adapters';
 import {assembleSystem, systemFingerprint} from '@gapscan/extraction';
 import {parseColor, toHex} from '@gapscan/normalize';
 import {ReferenceDS} from '@gapscan/schema';
@@ -19,7 +19,7 @@ const wanted = new Set(process.argv.slice(2));
 for (const ref of REFERENCE_SOURCES.filter(r => !wanted.size || wanted.has(r.id))) {
   const signal = new AbortController().signal, sources: SourceAsset[] = [], results = [], texts: {source: string; prefix: string}[] = [];
   // Expand bundles into one in-memory artifact per component (index.d.ts + same-folder imports + prelude).
-  const bundled: {name: string; text: string; files: {url: string; bytes: Uint8Array}[]}[] = [];
+  const bundled: {name: string; text: string; files: {url: string; bytes: Uint8Array}[]; component?: string}[] = [];
   if (ref.bundles) {
     const get = async (url: string) => { const r = await fetch(url); return r.ok ? new Uint8Array(await r.arrayBuffer()) : null; };
     const prelude = (await Promise.all(ref.bundles.prelude.map(async path => ({url: `${ref.bundles!.base}/${path}`, bytes: await get(`${ref.bundles!.base}/${path}`)})))).filter((f): f is {url: string; bytes: Uint8Array} => f.bytes !== null);
@@ -34,11 +34,40 @@ for (const ref of REFERENCE_SOURCES.filter(r => !wanted.size || wanted.has(r.id)
       bundled.push({name: `${name}.d.ts`, text: files.map(f => new TextDecoder().decode(f.bytes)).join('\n'), files});
     }
   }
+  if (ref.customElements) {
+    const {package: pkg, version, folders} = ref.customElements, base = `https://cdn.jsdelivr.net/npm/${pkg}@${version}`;
+    const listing = await (await fetch(`https://data.jsdelivr.com/v1/packages/npm/${pkg}@${version}?structure=flat`)).json() as {files: {name: string}[]};
+    const all = new Set(listing.files.map(f => f.name));
+    for (const [folder, component] of Object.entries(folders)) {
+      const files: {url: string; bytes: Uint8Array}[] = [], seen = new Set<string>();
+      // Public tag files, then the internal classes they import (two levels covers base classes).
+      let queue = [...all].filter(n => n.startsWith(`/${folder}/`) && n.split('/').length === 3 && n.endsWith('.d.ts') && !/harness/.test(n));
+      for (let depth = 0; depth < 3 && queue.length; depth++) {
+        const next: string[] = [];
+        for (const path of queue) {
+          if (seen.has(path) || !all.has(path)) continue;
+          seen.add(path);
+          const bytes = new Uint8Array(await (await fetch(base + path)).arrayBuffer());
+          files.push({url: base + path, bytes});
+          const dir = path.slice(0, path.lastIndexOf('/'));
+          for (const m of new TextDecoder().decode(bytes).matchAll(/from\s+['"](\.{1,2}\/[\w./-]+)\.js['"]/g)) next.push(new URL(`${m[1]}.d.ts`, `https://x${dir}/`).pathname);
+        }
+        queue = next;
+      }
+      bundled.push({name: `${folder}.d.ts`, text: files.map(f => new TextDecoder().decode(f.bytes)).join('\n'), files, component} as typeof bundled[number]);
+    }
+  }
   for (const bundle of bundled) {
     const bytes = new TextEncoder().encode(bundle.text);
     const asset: SourceAsset = {id: `${ref.id}:${bundle.name}`, projectId: 'library', kind: 'code', uri: bundle.files[0]!.url, label: bundle.name,
       sha256: createHash('sha256').update(bytes).digest('hex'), bytes: bytes.length, budget: {maxPages: bundle.files.length, maxBytes: bytes.length}, createdAt: new Date().toISOString()};
     sources.push(asset);
+    if (bundle.component) {
+      const api = customElementApi(bundle.text, bundle.name, bundle.component);
+      results.push({asset, result: {fetched: bundle.files.length, failed: [], budgetHit: false, observations: api ? [{type: 'component' as const, channel: 'code_tokens' as const, name: bundle.component,
+        variants: [...api.variants, ...api.sizes.map(s => `size=${s}`)], states: api.states, props: api.props.map(p => ({name: p.name, type: p.type, ...(p.values ? {values: p.values} : {})})), locator: bundle.files[0]!.url}] : []}});
+      continue;
+    }
     results.push({asset, result: await createCodeAdapter()({assetId: asset.id, name: bundle.name, uri: asset.uri, bytes}, {signal})});
   }
   for (const artifact of ref.artifacts) {

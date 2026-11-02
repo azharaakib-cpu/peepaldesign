@@ -28,7 +28,7 @@ const SYNONYMS: string[][] = [
   ['primary', 'filled', 'solid', 'contained', 'brand'], ['secondary', 'outline', 'outlined', 'tonal', 'default'], ['tertiary', 'ghost', 'plain', 'text', 'link', 'subtle'],
   ['danger', 'critical', 'destructive', 'error', 'negative'], ['success', 'positive'], ['warning', 'caution'], ['info', 'informational', 'highlight'],
   ['sm', 'small', 'slim', 'compact'], ['md', 'medium', 'default', 'regular'], ['lg', 'large', 'big'], ['xs', 'micro', 'extra small'], ['xl', 'extra large'],
-  ['focus', 'focus visible', 'focused'], ['pressed', 'active'], ['hover', 'hovered'], ['loading', 'busy', 'pending'],
+  ['focus', 'focus visible', 'focused'], ['pressed', 'active'], ['hover', 'hovered'], ['loading', 'busy', 'pending'], ['checked', 'selected', 'on', 'toggled'],
   // Prop names that mean the same thing across libraries.
   ['tone', 'color', 'intent', 'severity', 'status', 'color scheme'], ['kind', 'variant', 'appearance', 'look'], ['left icon', 'start icon', 'icon start', 'leading icon', 'prefix'],
   ['right icon', 'end icon', 'icon end', 'trailing icon', 'suffix'], ['removable', 'on delete', 'deletable', 'dismissible', 'closable', 'on remove'],
@@ -95,8 +95,13 @@ export function diffComponents(source: ComponentObservation, target: ComponentOb
   compare(source.variants.map(v => v.name), target.variants.map(v => v.name), 'variants', 'Style');
   compare(source.sizes, target.sizes, 'sizes', 'Size');
   // States you rely on that the target lacks must be built; states the target adds come with it.
+  // Hover, focus and pressed are styling: a reference read from type declarations cannot show them,
+  // so they are compared only when the reference recorded at least one of them.
+  const INTERACTION = /^(hover|focus|focus-visible|active|pressed)$/;
+  const targetShowsInteraction = target.statesObserved.some(s => INTERACTION.test(s));
   for (const state of source.statesObserved) {
     if (target.statesObserved.some(t => sameOption(state, t))) continue;
+    if (INTERACTION.test(state) && !targetShowsInteraction) continue;
     diffs.push({dimension: REQUIRED_A11Y.has(state) ? 'a11y' : 'states', driver: 'state_missing', summary: `Your ${optionName(state)} state has no equivalent in ${target.canonical}; it must be built or dropped`, before: state});
   }
   for (const state of target.statesObserved) {
@@ -114,7 +119,7 @@ export function diffComponents(source: ComponentObservation, target: ComponentOb
   }
   // Neither side shows keyboard focus: that has to be built, whichever system you use.
   const targetHasFocus = target.statesObserved.some(s => REQUIRED_A11Y.has(s));
-  if (source.a11y.focusVisible === false && !targetHasFocus) diffs.push({dimension: 'a11y', driver: 'a11y_fix', summary: 'Needs a visible keyboard focus style; neither version has one', after: 'focus-visible'});
+  if (source.a11y.focusVisible === false && !targetHasFocus && targetShowsInteraction) diffs.push({dimension: 'a11y', driver: 'a11y_fix', summary: 'Needs a visible keyboard focus style; neither version has one', after: 'focus-visible'});
   return diffs;
 }
 

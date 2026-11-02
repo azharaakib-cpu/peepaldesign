@@ -115,3 +115,40 @@ export function typescriptObservations(source: string, fileName: string): Observ
     props: c.props.map(p => ({name: p.name, type: p.type, ...(p.values ? {values: p.values} : {})})), locator: `${fileName}:${c.line}`, raw: `${c.props.length} props`,
   }));
 }
+
+// Web components (Material Web and similar): a folder of tags such as `md-filled-button`,
+// each a style variant, whose public class properties (including inherited ones) are the API.
+export function customElementApi(source: string, fileName: string, component: string, tagPrefix = 'md-'): ComponentApi | null {
+  const file = ts.createSourceFile(fileName, source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
+  const tags = new Map<string, string>(), classes = new Map<string, {members: ts.ClassElement[]; base?: string}>();
+  const visit = (node: ts.Node) => {
+    if (ts.isInterfaceDeclaration(node) && node.name.text === 'HTMLElementTagNameMap')
+      for (const m of node.members) if (ts.isPropertySignature(m) && m.type) tags.set(m.name.getText(file).replace(/['"]/g, ''), m.type.getText(file));
+    if (ts.isClassDeclaration(node) && node.name) classes.set(node.name.text, {members: [...node.members], ...(node.heritageClauses?.[0]?.types[0] ? {base: node.heritageClauses[0].types[0].expression.getText(file)} : {})});
+    ts.forEachChild(node, visit);
+  };
+  visit(file);
+  if (!tags.size) return null;
+  const isPublic = (m: ts.ClassElement) => !(ts.getCombinedModifierFlags(m as ts.Declaration) & (ts.ModifierFlags.Private | ts.ModifierFlags.Protected | ts.ModifierFlags.Static));
+  const fields = (name: string | undefined, seen = new Set<string>()): ts.PropertyDeclaration[] => {
+    if (!name || seen.has(name) || !classes.has(name)) return [];
+    seen.add(name);
+    const shape = classes.get(name)!;
+    return [...shape.members.filter((m): m is ts.PropertyDeclaration => ts.isPropertyDeclaration(m) && isPublic(m) && ts.isIdentifier(m.name) && !m.name.text.startsWith('_')), ...fields(shape.base, seen)];
+  };
+  const word = component.toLowerCase().replace(/\s+/g, '-');
+  // Tags for parts (`md-list-item`, `md-chip-set`, `md-select-option`, `md-sub-menu`) are anatomy, not styles;
+  // a single remaining tag means the component has no style variants.
+  const singular = word.replace(/s$/, '').replace(/-/g, '-?');
+  const styleTags = [...tags.keys()].filter(t => t.startsWith(tagPrefix) && !/-(item|option|set|group)$|^[a-z]+-sub-|-sub$/.test(t.slice(tagPrefix.length)) && !new RegExp(`^sub-`).test(t.slice(tagPrefix.length)));
+  const names = styleTags.map(t => t.slice(tagPrefix.length).replace(new RegExp(`-?${singular}s?$`), '').replace(/-$/, '') || 'standard');
+  const variants = names.length > 1 ? names : [];
+  const props = [...tags.values()].flatMap(cls => fields(cls)).flatMap(f => {
+    const name = (f.name as ts.Identifier).text;
+    if (NOISE.test(name) || /^(styles|shadowRootOptions|formAssociated)$/.test(name)) return [];
+    const type = f.type?.getText(file).replace(/\s+/g, ' ').slice(0, 160) ?? 'unknown', values = literals(type);
+    return [{name, type, optional: Boolean(f.questionToken), ...(values.length ? {values} : {})}];
+  }).filter((p, i, all) => all.findIndex(q => q.name === p.name) === i);
+  const states = [...new Set(props.filter(p => /boolean/.test(p.type)).flatMap(p => STATE_PROPS[p.name] ?? (p.name === 'softDisabled' ? 'disabled' : p.name === 'hasError' ? 'error' : [])))];
+  return {name: component.replace(/\s+/g, ''), line: 1, props, variants: [...new Set(variants)], sizes: props.find(p => p.name === 'size')?.values ?? [], states};
+}

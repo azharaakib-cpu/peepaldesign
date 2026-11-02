@@ -117,3 +117,12 @@ test('projected previews swap only the reference role colours for yours', async 
   assert.match(projected, /color:#123456/, 'unrelated colours are untouched');
   assert.deepEqual(substitutions.map(s => s.to), ['#0B5FD6', '#0B5FD6']);
 });
+
+test('references read from type declarations never conclude anything about hover or focus styling', () => {
+  const ours = component('s', 'Btn', 'Actions', {variants: ['primary'], states: ['hover', 'focus-visible', 'disabled'], focus: false});
+  const typesOnly = component('t', 'Button', 'Actions', {variants: ['filled', 'text'], states: ['disabled']});
+  const diffs = diffComponents(ours, typesOnly);
+  assert.ok(!diffs.some(d => /hover|focus/.test(d.summary)), diffs.map(d => d.summary).join(' | '));
+  assert.ok(diffs.some(d => d.summary === 'Style “primary” becomes “filled”'));
+  assert.equal(sameOption('checked', 'selected'), 'renamed');
+});
