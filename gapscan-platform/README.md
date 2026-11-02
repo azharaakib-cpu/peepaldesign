@@ -191,9 +191,13 @@ images, gradients or translucent layers is skipped rather than guessed.
   exempt; WebRTC and QUIC can't go around it). That closes DNS rebinding. It is not an
   operating-system sandbox: for untrusted users, also run workers where the network
   has no route to private services.
-- **Component states on websites** come from stylesheet rules for the
-  component's classes (same-origin sheets only); states are not forced at
-  runtime yet, and screenshots of specimens are not captured yet.
+- **Component states on websites** are measured: hover, focus-visible and
+  pressed are forced on a representative of each variant (Chromium DevTools
+  protocol) and only the properties that change are kept; focus is tested only
+  on elements that can take keyboard focus; disabled comes from a disabled
+  instance or a `:disabled` rule. Each variant up to 480×240px is screenshotted
+  at rest once its images load. Up to 48 variants per extraction get states and
+  screenshots.
 - **Image sources** (screenshots, mockups) are accepted but not sampled.
 - **The in-process queue does not survive a restart.** Jobs that were queued or
   running are marked `failed` with `retryable: true` on the next start. The

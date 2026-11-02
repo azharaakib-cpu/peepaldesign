@@ -2,7 +2,7 @@
 // Reads *computed* styles of visible elements at several viewports and in dark
 // mode, CSS custom properties, and repeated interactive structures. Every
 // request is checked against the public-URL policy; downloads are blocked.
-import type {Adapter, Observation, VariantStyle} from './types.ts';
+import type {Adapter, Observation, VariantStates, VariantStyle} from './types.ts';
 import {AdapterError} from './types.ts';
 import {EGRESS_CHROMIUM_ARGS, startEgressProxy} from './egress.ts';
 import type {EgressResolver} from './egress.ts';
@@ -17,7 +17,21 @@ export type UrlAdapterOptions = {
 };
 
 // Runs inside the page. Kept as a string so the server build needs no DOM types.
+// Reads how one element looks. Shared by the collecting pass and the forced-state pass so the
+// two always measure the same properties.
+const STYLE_OF = String.raw`(el => {
+  const cs = getComputedStyle(el), box = el.getBoundingClientRect();
+  const clear = v => !v || v === 'transparent' || /rgba\([^)]*,\s*0\)$/.test(v);
+  const bordered = parseFloat(cs.borderTopWidth) > 0 && !clear(cs.borderTopColor);
+  return {background: clear(cs.backgroundColor) ? 'transparent' : cs.backgroundColor, color: cs.color, border: bordered ? cs.borderTopWidth + ' ' + cs.borderTopColor : 'none',
+    radius: cs.borderTopLeftRadius, fontSize: cs.fontSize, fontWeight: cs.fontWeight, fontFamily: cs.fontFamily.split(',')[0].replace(/['"]/g, '').trim(),
+    paddingY: cs.paddingTop, paddingX: cs.paddingLeft, height: Math.round(box.height) + 'px', width: Math.round(box.width) + 'px', shadow: cs.boxShadow,
+    outline: cs.outlineStyle !== 'none' && parseFloat(cs.outlineWidth) > 0 ? cs.outlineWidth + ' ' + cs.outlineColor + ' ' + cs.outlineOffset : 'none',
+    opacity: cs.opacity, textDecoration: cs.textDecorationLine};
+})`;
+
 const COLLECT = String.raw`(() => {
+  const STYLE_OF = ${STYLE_OF};
   const MAX = 4000, out = {colors: {}, fonts: {}, spacing: {}, radius: {}, shadow: {}, vars: {}, components: {}, selectors: [], pairs: {}};
   const bump = (bucket, key, extra) => { const e = bucket[key] || (bucket[key] = {count: 0, ...extra}); e.count++; return e; };
   const label = el => el.tagName.toLowerCase() + (el.classList[0] ? '.' + el.classList[0] : '') + (el.getAttribute('role') ? '[role=' + el.getAttribute('role') + ']' : '');
@@ -74,12 +88,16 @@ const COLLECT = String.raw`(() => {
       const c = out.components[name] || (out.components[name] = {count: 0, classes: [], html: el.outerHTML.slice(0, 2000), named: name === named, styles: {}});
       c.count++; for (const cls of el.classList) if (c.classes.length < 30 && !c.classes.includes(cls)) c.classes.push(cls);
       // Visual signature: instances that look the same are one variant.
-      const box = el.getBoundingClientRect(), bordered = parseFloat(cs.borderTopWidth) > 0 && !transparent(cs.borderTopColor);
-      const style = {background: transparent(cs.backgroundColor) ? 'transparent' : cs.backgroundColor, color: cs.color, border: bordered ? cs.borderTopWidth + ' ' + cs.borderTopColor : 'none',
-        radius: cs.borderTopLeftRadius, fontSize: cs.fontSize, fontWeight: cs.fontWeight, fontFamily: cs.fontFamily.split(',')[0].replace(/['"]/g, '').trim(),
-        paddingY: cs.paddingTop, paddingX: cs.paddingLeft, height: Math.round(box.height) + 'px', width: Math.round(box.width) + 'px', shadow: cs.boxShadow};
-      const key = [style.background, style.color, style.border, style.radius, style.fontSize, style.fontWeight, style.paddingY, style.paddingX].join('|');
-      const v = c.styles[key] || (Object.keys(c.styles).length < 12 ? (c.styles[key] = {count: 0, style, html: el.outerHTML.slice(0, 1500), text: (el.innerText || el.value || el.placeholder || '').trim().slice(0, 40)}) : null);
+      const style = STYLE_OF(el), disabled = el.disabled === true || el.getAttribute('aria-disabled') === 'true';
+      // Disabled instances are a state of a variant, not a variant of their own.
+      const key = (disabled ? 'disabled|' : '') + [style.background, style.color, style.border, style.radius, style.fontSize, style.fontWeight, style.paddingY, style.paddingX].join('|');
+      let v = c.styles[key];
+      if (!v && Object.keys(c.styles).length < 12) {
+        // The representative element is tagged so states and a screenshot can be taken of it after this pass.
+        const ref = 'gs' + (window.__gapscanRef = (window.__gapscanRef || 0) + 1);
+        el.setAttribute('data-gapscan-ref', ref);
+        v = c.styles[key] = {count: 0, style, disabled, ref, html: el.outerHTML.slice(0, 1500), text: (el.innerText || el.value || el.placeholder || '').trim().slice(0, 40)};
+      }
       if (v) v.count++;
     }
   }
@@ -104,7 +122,7 @@ type Collected = {
   fonts: Record<string, {count: number; family: string; size: string; weight: string; lineHeight: string; selector: string}>;
   spacing: Record<string, {count: number}>; radius: Record<string, {count: number}>; shadow: Record<string, {count: number}>;
   vars: Record<string, string>; selectors: string[]; links: string[]; title: string;
-  components: Record<string, {count: number; classes: string[]; html: string; named: boolean; styles: Record<string, {count: number; style: VariantStyle; html: string; text: string}>}>;
+  components: Record<string, {count: number; classes: string[]; html: string; named: boolean; styles: Record<string, CollectedStyle>}>;
 };
 
 const STRUCTURAL = /(Wrapper|Container|Layout|Inner|Outer|Content|Section|Box|Flex|Spacer|Row|Column|Col|Grid|Page|Root|Main|Body|Holder|Area)s?$/;
@@ -119,8 +137,9 @@ function rgb(value: string): [number, number, number] | null {
 const saturation = (value: string) => { const c = rgb(value); if (!c) return 0; const max = Math.max(...c), min = Math.min(...c); return max === 0 ? 0 : (max - min) / max; };
 const hueOf = (value: string) => { const c = rgb(value); if (!c) return 0; const [r, g, b] = c.map(x => x / 255) as [number, number, number], max = Math.max(r, g, b), d = max - Math.min(r, g, b);
   if (!d) return 0; const h = max === r ? ((g - b) / d) % 6 : max === g ? (b - r) / d + 2 : (r - g) / d + 4; return (h * 60 + 360) % 360; };
-export function describeVariants(kind: string, styles: {count: number; style: VariantStyle; html: string; text: string}[]) {
-  const ranked = [...styles].sort((a, b) => b.count - a.count);
+type Look = {count: number; style: VariantStyle; html: string; text: string; disabled?: boolean; states?: VariantStates; screenshot?: string};
+export function describeVariants(kind: string, styles: Look[]) {
+  const ranked = [...styles].filter(s => !s.disabled).sort((a, b) => b.count - a.count), disabledLooks = styles.filter(s => s.disabled);
   const appearance = (s: VariantStyle) => s.background === 'transparent' ? (s.border !== 'none' ? 'outline' : kind === 'Button' ? 'ghost' : 'plain')
     : saturation(s.background) > 0.25 ? 'filled' : 'neutral';
   const named = new Map<string, (typeof ranked)[number]>();
@@ -135,8 +154,63 @@ export function describeVariants(kind: string, styles: {count: number; style: Va
   const SIZE_NAMES = heights.length === 2 ? ['sm', 'md'] : ['sm', 'md', 'lg', 'xl'];
   const sizes = heights.length >= 2 && heights.length <= 4 ? heights.map((h, i) => ({name: SIZE_NAMES[i]!, height: h})) : [];
   const sizeStyles = sizes.map(size => { const v = ranked.find(r => Math.round(parseFloat(r.style.height) / 4) * 4 === size.height)!; return {name: `size=${size.name}`, style: v.style, count: v.count, html: v.html, text: v.text}; });
-  const variantStyles = [...[...named].slice(0, 6).map(([name, v]) => ({name, style: v.style, count: v.count, html: v.html, text: v.text})), ...sizeStyles];
+  const appearances = [...named].slice(0, 6).map(([name, v]) => ({name, style: v.style, count: v.count, html: v.html, text: v.text,
+    states: {...(v.states ?? {})} as VariantStates, ...(v.screenshot ? {screenshot: v.screenshot} : {})}));
+  // A disabled instance is the disabled state of the appearance it shares a shape with (same radius and height).
+  for (const d of disabledLooks) {
+    const owner = appearances.find(a => a.style.radius === d.style.radius && a.style.height === d.style.height) ?? appearances[0];
+    const changes = owner ? styleChanges(owner.style, d.style) : {};
+    if (owner && Object.keys(changes).length && !owner.states.disabled) owner.states.disabled = changes;
+  }
+  const variantStyles = [...appearances.map(a => Object.keys(a.states).length ? a : (({states: _s, ...rest}) => rest)(a)), ...sizeStyles];
   return {variants: variantStyles.map(v => v.name), variantStyles};
+}
+
+type CollectedStyle = {count: number; style: VariantStyle; html: string; text: string; ref: string; disabled?: boolean; captured?: boolean; states?: VariantStates; screenshot?: string};
+// At most this many variants per extraction get forced states and a screenshot (each takes a few round trips).
+export const CAPTURE_LIMIT = 48;
+const STATE_FIELDS = ['background', 'color', 'border', 'radius', 'shadow', 'outline', 'opacity', 'textDecoration'] as const;
+export function styleChanges(base: VariantStyle, after: VariantStyle): Partial<VariantStyle> {
+  return Object.fromEntries(STATE_FIELDS.filter(f => after[f] !== undefined && after[f] !== base[f]).map(f => [f, after[f]]));
+}
+// Forces :hover, :focus-visible and :active on each tagged element (Chromium DevTools protocol), keeps
+// only what changes, then screenshots the element at rest. Large elements (panels, cards) get no screenshot.
+async function captureVariants(page: import('playwright').Page, looks: CollectedStyle[]) {
+  const out = new Map<string, {states: VariantStates; screenshot?: string}>();
+  if (!looks.length) return out;
+  const cdp = await page.context().newCDPSession(page);
+  try {
+    await cdp.send('DOM.enable'); await cdp.send('CSS.enable');
+    const {root} = await cdp.send('DOM.getDocument', {depth: 0});
+    for (const look of looks) {
+      if (!/^gs\d+$/.test(look.ref)) continue;
+      const selector = `[data-gapscan-ref="${look.ref}"]`;
+      const {nodeId} = await cdp.send('DOM.querySelector', {nodeId: root.nodeId, selector});
+      if (!nodeId) continue;
+      const states: VariantStates = {};
+      // Focus only means something on elements that can take keyboard focus; forcing it on a card
+      // or header just draws the browser's own ring, which says nothing about the site's styling.
+      const focusable = await page.evaluate(`(el => !!el && el.matches('a[href],button,input:not([type=hidden]),select,textarea,summary,[tabindex]:not([tabindex="-1"]),[contenteditable="true"]'))(document.querySelector('${selector}'))`) as boolean;
+      for (const state of (focusable ? ['hover', 'focus-visible', 'active'] : ['hover', 'active']) as ('hover' | 'focus-visible' | 'active')[]) {
+        await cdp.send('CSS.forcePseudoState', {nodeId, forcedPseudoClasses: state === 'focus-visible' ? ['focus', 'focus-visible'] : [state]});
+        const after = await page.evaluate(`(${STYLE_OF})(document.querySelector('${selector}'))`) as VariantStyle;
+        const changes = styleChanges(look.style, after);
+        if (Object.keys(changes).length) states[state] = changes;
+      }
+      await cdp.send('CSS.forcePseudoState', {nodeId, forcedPseudoClasses: []});
+      const width = parseFloat(look.style.width), height = parseFloat(look.style.height);
+      let screenshot: string | undefined;
+      // Images inside the element must have loaded (lazy images otherwise shoot as black boxes).
+      const imagesReady = await page.evaluate(`(async el => { const imgs = el ? [...el.querySelectorAll('img')] : [];
+        el?.scrollIntoView({block: 'center'});
+        await Promise.all(imgs.map(i => i.complete && i.naturalWidth ? 0 : new Promise(r => { i.loading = 'eager'; i.addEventListener('load', r, {once: true}); i.addEventListener('error', r, {once: true}); setTimeout(r, 1500); })));
+        return imgs.every(i => i.complete && i.naturalWidth > 0); })(document.querySelector('${selector}'))`).catch(() => false) as boolean;
+      if (imagesReady && width > 0 && height > 0 && width <= 480 && height <= 240)
+        screenshot = 'data:image/png;base64,' + (await page.locator(selector).first().screenshot({timeout: 3000, animations: 'disabled'}).catch(() => null))?.toString('base64');
+      out.set(look.ref, {states, ...(screenshot && !screenshot.endsWith('undefined') ? {screenshot} : {})});
+    }
+  } finally { await cdp.detach().catch(() => undefined); }
+  return out;
 }
 
 const STATES = ['hover', 'focus-visible', 'focus', 'active', 'disabled'] as const;
@@ -177,8 +251,9 @@ export function createUrlAdapter(options: UrlAdapterOptions): Adapter {
     signal.addEventListener('abort', abort, {once: true});
     const observations: Observation[] = [], failed: {locator: string; reason: string}[] = [], themes = new Set<string>(['light']);
     const queue = [start.href], seen = new Set<string>(), selectors = new Set<string>();
-    const components = new Map<string, {count: number; classes: Set<string>; html: string; locator: string; named: boolean; styles: Map<string, {count: number; style: VariantStyle; html: string; text: string}>}>();
+    const components = new Map<string, {count: number; classes: Set<string>; html: string; locator: string; named: boolean; styles: Map<string, CollectedStyle>}>();
     let fetched = 0;
+    const captureBudget = {left: CAPTURE_LIMIT};
     try {
       const context = await browser.newContext({acceptDownloads: false, javaScriptEnabled: true, serviceWorkers: 'block', userAgent: 'GapScan/1.0 (design-system extraction)'});
       await context.route('**/*', async route => {
@@ -228,6 +303,13 @@ export function createUrlAdapter(options: UrlAdapterOptions): Adapter {
             if (pass === passes[0]) {
               for (const [name, value] of Object.entries(data.vars)) if (value) observations.push({type: 'token', channel, path: name, value, locator: `${page.url()} :root`});
               for (const selector of data.selectors) selectors.add(selector);
+              // States and screenshots for looks not seen on an earlier page (desktop, light).
+              if (pass.width === viewports[0] && pass.scheme === 'light' && captureBudget.left > 0) {
+                const fresh = Object.entries(data.components).flatMap(([kind, c]) => Object.entries(c.styles).filter(([key]) => !components.get(kind)?.styles.has(key)).map(([, v]) => v));
+                const captured = await captureVariants(page, fresh.filter(v => !v.disabled).slice(0, captureBudget.left)).catch(() => new Map<string, {states: VariantStates; screenshot?: string}>());
+                captureBudget.left -= captured.size;
+                for (const v of fresh) { const got = captured.get(v.ref); if (got) Object.assign(v, got, {captured: true}); }
+              }
               for (const [kind, c] of Object.entries(data.components)) {
                 const entry = components.get(kind) ?? {count: 0, classes: new Set<string>(), html: c.html, locator: page.url(), named: c.named, styles: new Map()};
                 entry.count += c.count; c.classes.forEach(cls => entry.classes.add(cls)); components.set(kind, entry);
@@ -248,8 +330,13 @@ export function createUrlAdapter(options: UrlAdapterOptions): Adapter {
       for (const [kind, c] of components) {
         // Structural wrappers (PageWrapper, ContentContainer…) are layout plumbing, not components.
         if (c.named && STRUCTURAL.test(kind)) continue;
-        const {variants, variantStyles} = describeVariants(kind, [...c.styles.values()]);
-        observations.push({type: 'component', channel: 'observed_css', name: c.named ? title(kind) : kind, html: c.html, states: [...statesFor(kind, [...c.classes], [...selectors])],
+        const looks = [...c.styles.values()], {variants, variantStyles} = describeVariants(kind, looks);
+        // Captured states are evidence of a visible change; without a capture, matching stylesheet rules are the fallback.
+        const seenStates = new Set(variantStyles.flatMap(v => Object.keys(('states' in v && v.states) || {})));
+        // Disabled can't be forced, so a :disabled rule stays evidence for it.
+        const ruled = statesFor(kind, [...c.classes], [...selectors]);
+        const states = looks.some(l => l.captured) ? [...new Set([...seenStates, ...ruled.filter(st => st === 'disabled')])] : [...new Set([...ruled, ...seenStates])];
+        observations.push({type: 'component', channel: 'observed_css', name: c.named ? title(kind) : kind, html: c.html, states,
           variants, variantStyles, locator: c.locator, raw: `${c.count} instances; classes ${[...c.classes].slice(0, 8).join(' ')}`});
       }
     } finally {

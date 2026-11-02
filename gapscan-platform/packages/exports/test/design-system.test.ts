@@ -55,3 +55,25 @@ test('the page escapes what it read and draws only validated colours and lengths
   assert.doesNotMatch(html, /<script>|url\(|position:fixed|javascript:/);
   assert.match(html, /background:#005eff/);
 });
+
+test('a state is only what changes, a disabled instance becomes its look’s disabled state, and states render safely', async () => {
+  const {styleChanges} = await import('@gapscan/adapters');
+  const {parseShadows} = await import('@gapscan/exports');
+  const base = {background: 'rgb(255, 255, 255)', color: 'rgb(0, 0, 0)', border: '1px rgb(209, 216, 219)', radius: '999px', fontSize: '14px', fontWeight: '400', fontFamily: 'X',
+    paddingY: '0px', paddingX: '0px', height: '40px', width: '40px', shadow: 'none', outline: 'none', opacity: '1', textDecoration: 'none'};
+  assert.deepEqual(styleChanges(base, {...base, border: '1px rgb(0, 94, 255)', height: '41px'}), {border: '1px rgb(0, 94, 255)'}, 'size changes are not a state');
+  const {variantStyles} = describeVariants('Button', [{count: 9, style: base, html: '', text: ''}, {count: 2, style: {...base, opacity: '0.5'}, html: '', text: '', disabled: true}]);
+  assert.deepEqual(variantStyles.map(v => [v.name, 'states' in v ? v.states : undefined]), [['secondary', {disabled: {opacity: '0.5'}}]]);
+  assert.deepEqual(parseShadows('rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgb(0, 94, 255) 0px 0px 0px 1px inset'), [{x: 0, y: 0, blur: 0, spread: 1, color: '#005eff', inset: true}]);
+
+  const evil = 'red;background:url(https://evil)';
+  const doc = buildDesignSystem(eds([], [{id: 'c', canonical: 'Button', rawNames: ['Button'], category: 'Actions', tier: 'primary', sizes: [], statesObserved: ['hover'], statesMissing: ['focus-visible'],
+    a11y: {focusVisible: false}, instances: 1, evidence: [], confidence: 1,
+    variants: [{name: 'primary', tokenRefs: {...base, background: 'rgb(0, 94, 255)'}, screenshot: 'data:image/png;base64,iVBORw0KGgo=',
+      states: {hover: {background: evil, shadow: `0 0 0 1px ${evil}`, outline: `2px ${evil} 2px`}, 'focus-visible': {outline: '2px rgb(0, 94, 255) 2px'}}}]}]), {}, 'Example');
+  const html = renderDesignSystemHtml(doc);
+  assert.doesNotMatch(html, /url\(|evil/);
+  assert.match(html, /<img src="data:image\/png;base64,iVBORw0KGgo="/);
+  assert.match(html, /outline:2px solid #005eff;outline-offset:2px/, 'the focus ring is drawn');
+  assert.match(html, /No visible style found for: focus-visible/);
+});

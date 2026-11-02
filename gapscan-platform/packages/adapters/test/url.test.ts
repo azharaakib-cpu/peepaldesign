@@ -49,7 +49,10 @@ test('renders pages and reads computed styles, variables, components, dark mode 
     assert.ok(of(result.observations, 'font').some(f => f.size === '32px'));
     assert.ok(of(result.observations, 'radius').some(r => r.value === '4px'));
     const button = of(result.observations, 'component').find(c => c.name === 'Button')!;
-    assert.deepEqual(button.states, ['hover', 'disabled'], 'states come from stylesheet rules for the component classes');
+    assert.deepEqual(button.states, ['hover', 'focus-visible', 'disabled'], 'hover is forced and measured; focus shows the browser ring; disabled comes from its stylesheet rule');
+    const primary = button.variantStyles!.find(v => v.name === 'primary')!;
+    assert.equal(primary.states?.hover?.background, 'rgb(10, 85, 192)', 'the hover look is the measured :hover background');
+    assert.match(primary.screenshot ?? '', /^data:image\/png;base64,/, 'the variant is screenshotted at rest');
     assert.ok(of(result.observations, 'component').some(c => c.name === 'Text field'));
     assert.ok(!fixture.requests.includes('/tracker.gif'), 'private-network requests are blocked by the policy');
   } finally { await fixture.close(); }

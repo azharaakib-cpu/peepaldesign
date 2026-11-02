@@ -48,7 +48,10 @@ export const Tier = z.enum(['primary', 'secondary', 'others']);
 export const ComponentObservation = z.object({
   id, canonical: z.string(), rawNames: z.array(z.string()).min(1),
   category: z.string(), tier: Tier,
-  variants: z.array(z.object({name: z.string(), tokenRefs: z.record(z.string(), z.string()), specimenId: z.string().optional()})),
+  variants: z.array(z.object({name: z.string(), tokenRefs: z.record(z.string(), z.string()), specimenId: z.string().optional(),
+    // Rendered sites: what changes under hover / focus-visible / active / disabled, and a screenshot of the variant at rest.
+    states: z.record(z.string(), z.record(z.string(), z.string())).optional(),
+    screenshot: z.string().regex(/^data:image\/png;base64,[A-Za-z0-9+/=]+$/).max(400_000).optional()})),
   sizes: z.array(z.string()), statesObserved: z.array(z.string()), statesMissing: z.array(z.string()),
   props: z.array(z.object({name: z.string(), type: z.string(), values: z.array(z.string()).optional()})).optional(),
   // Rendered sites: computed styles of a representative instance at each size (height, padding, font size…).

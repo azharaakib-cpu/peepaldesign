@@ -135,18 +135,29 @@ async function buildComponents(plan, vars, styles, target) {
       text.characters = v.label;
       text.name = 'Label';
       text.fills = [solid(v.text, vars)];
+      if (v.underline) text.textDecoration = 'UNDERLINE';
       c.appendChild(text);
+      c.opacity = typeof v.opacity === 'number' ? v.opacity : 1;
+      c.effects = (v.effects || []).map(function (e) {
+        return {type: e.inset ? 'INNER_SHADOW' : 'DROP_SHADOW', color: e.color, offset: {x: e.x, y: e.y}, radius: e.blur, spread: e.spread, visible: true, blendMode: 'NORMAL'};
+      });
       variants.push(c);
     }
     const set = figma.combineAsVariants(variants, target);
     set.name = spec.name;
     set.description = spec.description;
-    set.layoutMode = 'HORIZONTAL';
-    set.itemSpacing = 24;
-    set.paddingLeft = set.paddingRight = set.paddingTop = set.paddingBottom = 24;
-    set.primaryAxisSizingMode = 'AUTO';
-    set.counterAxisSizingMode = 'AUTO';
-    set.counterAxisAlignItems = 'CENTER';
+    // Grid: a row per Style, a column per State (variants stack at 0,0 after combining).
+    const rows = [], columns = [], cells = new Map();
+    for (const comp of set.children) {
+      const props = {};
+      comp.name.split(',').forEach(function (part) { const kv = part.split('='); props[kv[0].trim()] = (kv[1] || '').trim(); });
+      if (rows.indexOf(props.Style) < 0) rows.push(props.Style);
+      if (columns.indexOf(props.State || 'Default') < 0) columns.push(props.State || 'Default');
+      cells.set(comp.id, [rows.indexOf(props.Style), columns.indexOf(props.State || 'Default')]);
+    }
+    const colWidth = Math.max.apply(null, set.children.map(function (n) { return n.width; })) + 32, rowHeight = Math.max.apply(null, set.children.map(function (n) { return n.height; })) + 32;
+    for (const comp of set.children) { const cell = cells.get(comp.id); comp.x = 32 + cell[1] * colWidth; comp.y = 32 + cell[0] * rowHeight; }
+    set.resize(32 + columns.length * colWidth, 32 + rows.length * rowHeight);
     const key = set.addComponentProperty('Label', 'TEXT', spec.variants[0].label);
     for (const comp of set.children) comp.findOne(function (n) { return n.type === 'TEXT'; }).componentPropertyReferences = {characters: key};
     set.x = 100; set.y = y;

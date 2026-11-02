@@ -87,7 +87,7 @@ export function exportTokens(eds: ExtractedDesignSystem, format: ExportFormat, o
 }
 export {planFigmaSync, variableName} from './figma-variables.ts';
 export type {ExistingVariables, SyncChange, SyncPlan} from './figma-variables.ts';
-export {buildDesignSystem, renderDesignSystemHtml} from './design-system.ts';
+export {buildDesignSystem, parseShadows, renderDesignSystemHtml} from './design-system.ts';
 export type {DesignSystemDoc} from './design-system.ts';
 export {buildFigmaPlan, FIGMA_PLAN_FORMAT} from './figma-plan.ts';
 export type {FigmaPlan} from './figma-plan.ts';

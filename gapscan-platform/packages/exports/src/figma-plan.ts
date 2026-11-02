@@ -3,7 +3,7 @@
 // (names, scopes, aliases, which colour a component uses) are made here, where they are
 // tested; the plugin only executes the plan. Nothing is written to Figma by GapScan itself.
 import {parseColor} from '@gapscan/normalize';
-import type {DesignSystemDoc} from './design-system.ts';
+import type {ComponentStyle, DesignSystemDoc} from './design-system.ts';
 
 export const FIGMA_PLAN_FORMAT = 'gapscan-figma/1';
 type Rgba = {r: number; g: number; b: number; a: number};
@@ -17,7 +17,8 @@ export type FigmaPlan = {
   textStyles: {name: string; size: number; weight: number; lineHeight: number | null; description: string}[];
   effectStyles: {name: string; shadows: {x: number; y: number; blur: number; spread: number; color: Rgba; inset: boolean}[]; description: string}[];
   components: {name: string; description: string; variants: {name: string; width: number | null; height: number; paddingX: number | {variable: string}; radius: number | {variable: string};
-    fill: PlanColor | null; stroke: PlanColor | null; strokeWeight: number; text: PlanColor; textStyle: string; label: string}[]}[];
+    fill: PlanColor | null; stroke: PlanColor | null; strokeWeight: number; text: PlanColor; textStyle: string; label: string;
+    effects: {x: number; y: number; blur: number; spread: number; color: Rgba; inset: boolean}[]; opacity: number; underline: boolean}[]}[];
   notes: string[];
 };
 
@@ -69,15 +70,25 @@ export function buildFigmaPlan(doc: DesignSystemDoc): FigmaPlan {
 
   // Components: one component set per component, a variant per appearance. Very tall instances
   // (tiles measured as buttons) are drawn at a usable height and say so in the description.
+  // Components: one set per component, Style × State. States are the ones captured on the site
+  // (hover, focus, pressed, disabled); each variant is that state's real look. Capped at 30 variants.
+  const STATE_NAME: Record<string, string> = {hover: 'Hover', 'focus-visible': 'Focus', active: 'Pressed', disabled: 'Disabled'};
   const components = doc.components.map(c => {
-    const tall = c.variants.some(v => v.style.height > 64);
+    const tall = c.variants.some(v => v.style.height > 64), withStates = c.variants.some(v => v.states?.length);
+    const draw = (v: DesignSystemDoc['components'][number]['variants'][number], style: ComponentStyle, state: string) => ({
+      name: withStates ? `Style=${v.name}, State=${state}` : `Style=${v.name}`, width: /field|input|search/i.test(c.name) ? 280 : null, height: Math.max(24, Math.min(style.height || 40, 64)),
+      paddingX: spaceRef(Math.max(style.paddingX, 12)), radius: radiusRef(style.radius), fill: style.background ? colorRef(style.background, 'FRAME_FILL') : null,
+      stroke: style.border && style.borderWidth ? colorRef(style.border, 'STROKE_COLOR') : null, strokeWeight: style.borderWidth,
+      text: colorRef(style.color ?? doc.colors.roles.find(r => r.role === 'text')?.hex ?? '#000000', 'TEXT_FILL'), textStyle: styleFor(style.fontSize || 14, style.fontWeight),
+      label: (style.label.split('\n')[0] || c.name).slice(0, 32),
+      // A focus outline becomes a ring (a spread shadow), the way Figma components usually draw focus.
+      effects: [...style.shadows.map(sh => ({x: sh.x, y: sh.y, blur: sh.blur, spread: sh.spread, color: rgba(sh.color), inset: sh.inset})),
+        ...(style.outline ? [{x: 0, y: 0, blur: 0, spread: style.outline.width + Math.max(0, style.outline.offset), color: rgba(style.outline.color), inset: false}] : [])],
+      opacity: style.opacity, underline: style.underline});
+    const variants = c.variants.flatMap(v => [draw(v, v.style, 'Default'), ...(v.states ?? []).map(st => draw(v, st.style, STATE_NAME[st.name] ?? st.name))]).slice(0, 30);
     return {name: c.name, description: [`Measured on ${doc.source}.`, tall ? 'Some instances were taller than 64px (tiles or panels); they are drawn at 64px.' : '',
-      c.states.length ? `The site styles these states, not captured here: ${c.states.join(', ')}.` : ''].filter(Boolean).join(' '),
-      variants: c.variants.map(v => ({name: `Style=${v.name}`, width: /field|input|search/i.test(c.name) ? 280 : null, height: Math.max(24, Math.min(v.style.height || 40, 64)),
-        paddingX: spaceRef(Math.max(v.style.paddingX, 12)), radius: radiusRef(v.style.radius), fill: v.style.background ? colorRef(v.style.background, 'FRAME_FILL') : null,
-        stroke: v.style.border && v.style.borderWidth ? colorRef(v.style.border, 'STROKE_COLOR') : null, strokeWeight: v.style.borderWidth,
-        text: colorRef(v.style.color ?? doc.colors.roles.find(r => r.role === 'text')?.hex ?? '#000000', 'TEXT_FILL'), textStyle: styleFor(v.style.fontSize || 14, v.style.fontWeight),
-        label: (v.style.label.split('\n')[0] || c.name).slice(0, 32)}))};
+      withStates ? 'State variants are the hover, focus, pressed and disabled looks captured on the site.' : '',
+      c.missing.length ? `No visible style was found for: ${c.missing.join(', ')}.` : ''].filter(Boolean).join(' '), variants};
   });
   if (doc.typography.families.length) notes.push(`Text styles use ${doc.typography.families[0]} when it is installed for Figma; otherwise the importer falls back to a similar sans and notes it on each style.`);
   return {format: FIGMA_PLAN_FORMAT, name: doc.name, source: doc.source, generatedAt: doc.generatedAt,

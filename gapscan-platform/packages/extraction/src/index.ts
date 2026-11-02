@@ -247,7 +247,10 @@ export function assembleSystem(inputs: readonly AssetResult[], external: readonl
       // Rendered sites record how each variant looks (computed styles of a representative instance).
       variants: (o.variants ?? []).filter(v => !v.startsWith('size=')).map(name => {
         const seen = o.variantStyles?.find(v => v.name === name);
-        return {name, tokenRefs: seen ? {...seen.style, ...(seen.text ? {label: seen.text} : {}), instances: String(seen.count)} : {}};
+        const screenshot = seen?.screenshot && /^data:image\/png;base64,[A-Za-z0-9+/=]+$/.test(seen.screenshot) && seen.screenshot.length <= 400_000 ? seen.screenshot : undefined;
+        return {name, tokenRefs: seen ? {...seen.style, ...(seen.text ? {label: seen.text} : {}), instances: String(seen.count)} : {},
+          ...(seen?.states && Object.keys(seen.states).length ? {states: Object.fromEntries(Object.entries(seen.states).map(([k, v]) => [k, {...v} as Record<string, string>]))} : {}),
+          ...(screenshot ? {screenshot} : {})};
       }),
       sizes: (o.variants ?? []).filter(v => v.startsWith('size=')).map(v => v.slice(5)),
       ...(o.variantStyles?.some(v => v.name.startsWith('size=')) ? {sizeStyles: Object.fromEntries(o.variantStyles.filter(v => v.name.startsWith('size=')).map(v => [v.name.slice(5), {...v.style}]))} : {}),

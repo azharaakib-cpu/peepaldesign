@@ -14,14 +14,16 @@ export type Observation = Base & (
   | {type: 'contrast'; foreground: string; background: string; selector: string; large: boolean; count?: number}
   | {type: 'token'; path: string; value: string; tokenType?: string; description?: string}
   | {type: 'component'; name: string; html?: string; css?: string; states?: string[]; variants?: string[]; props?: {name: string; type: string; values?: string[]}[]; screenshot?: string;
-      variantStyles?: {name: string; style: VariantStyle; count: number; html?: string; text?: string}[]}
+      variantStyles?: {name: string; style: VariantStyle; count: number; html?: string; text?: string; states?: VariantStates; screenshot?: string}[]}
   | {type: 'text'; kind: 'voice' | 'heading' | 'microcopy' | 'rule'; text: string}
   | {type: 'asset'; kind: 'logo' | 'image' | 'font-file'; name: string}
 );
 
 // How one variant of a rendered component actually looks (computed styles of a representative instance).
 export type VariantStyle = {background: string; color: string; border: string; radius: string; fontSize: string; fontWeight: string; fontFamily: string;
-  paddingY: string; paddingX: string; height: string; width: string; shadow: string};
+  paddingY: string; paddingX: string; height: string; width: string; shadow: string; outline?: string; opacity?: string; textDecoration?: string};
+// What changes in a variant's look under :hover, :focus-visible, :active or when disabled (only the changed properties).
+export type VariantStates = Partial<Record<'hover' | 'focus-visible' | 'active' | 'disabled', Partial<VariantStyle>>>;
 
 export type AdapterInput = {assetId: string; name: string; uri: string; bytes: Uint8Array};
 export type AdapterContext = {signal: AbortSignal; fetch?: typeof fetch; progress?: (message: string) => Promise<void> | void};

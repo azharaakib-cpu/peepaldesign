@@ -7,8 +7,11 @@ import type {ExtractedDesignSystem} from '@gapscan/schema';
 
 export type Swatch = {name: string; hex: string; variable?: string};
 export type TextStyle = {name: string; px: number; weight: number; lineHeightPx: number | null; family: string; uses: number};
+export type Shadow = {x: number; y: number; blur: number; spread: number; color: string; inset: boolean};
 export type ComponentStyle = {background: string | null; color: string | null; border: string | null; borderWidth: number; radius: number; fontSize: number; fontWeight: number;
-  paddingY: number; paddingX: number; height: number; label: string};
+  paddingY: number; paddingX: number; height: number; label: string;
+  shadows: Shadow[]; outline: {width: number; color: string; offset: number} | null; underline: boolean; opacity: number};
+export type StateName = 'hover' | 'focus-visible' | 'active' | 'disabled';
 export type DesignSystemDoc = {
   name: string; source: string; generatedAt: string;
   colors: {groups: {name: string; swatches: Swatch[]; declared: boolean}[]; roles: {role: string; hex: string; reason: string}[]};
@@ -16,7 +19,8 @@ export type DesignSystemDoc = {
   spacing: {base: number | null; steps: number[]};
   radius: {name: string; px: number}[];
   shadows: {name: string; value: string}[];
-  components: {name: string; category: string; states: string[]; missing: string[]; variants: {name: string; style: ComponentStyle; uses: number}[]; sizes: {name: string; style: ComponentStyle}[]}[];
+  components: {name: string; category: string; states: string[]; missing: string[];
+    variants: {name: string; style: ComponentStyle; uses: number; states: {name: StateName; style: ComponentStyle}[]; screenshot?: string}[]; sizes: {name: string; style: ComponentStyle}[]}[];
   alsoFound: {name: string; category: string}[];   // components with no visual style of their own (transparent, unbordered)
   notes: string[];
 };
@@ -65,12 +69,27 @@ function declaredColorGroups(eds: ExtractedDesignSystem) {
     ...(other.length ? [{name: 'Other', swatches: other, declared: true}] : [])];
 }
 
+// Box shadows as structured layers (invisible ones dropped), so they can be drawn and exported safely.
+export function parseShadows(value: string | undefined): Shadow[] {
+  if (!value || value === 'none') return [];
+  return value.split(/,(?![^(]*\))/).flatMap(layer => {
+    const colorText = layer.match(/(rgba?|hsla?)\([^)]*\)|#[0-9a-f]{3,8}\b/i)?.[0], color = colorText ? parseColor(colorText) : null;
+    const lengths = layer.replace(/(rgba?|hsla?)\([^)]*\)|#[0-9a-f]+|inset/gi, ' ').trim().split(/\s+/).map(v => px(v.endsWith('px') ? v : `${v}px`));
+    const [x = 0, y = 0, blur = 0, spread = 0] = lengths;
+    return color && color.alpha > 0 && (x || y || blur || spread) ? [{x, y, blur, spread, color: toHex(color), inset: /\binset\b/.test(layer)}] : [];
+  }).slice(0, 4);
+}
 function componentStyle(refs: Record<string, string>): ComponentStyle {
   const border = refs.border && refs.border !== 'none' ? refs.border : '';
+  const outline = refs.outline && refs.outline !== 'none' ? refs.outline.match(/^([\d.]+)px\s+(.+?)\s+(-?[\d.]+)px$/) : null, outlineColor = outline ? hexOf(outline[2]) : null;
   return {background: hexOf(refs.background), color: hexOf(refs.color), border: border ? hexOf(border.replace(/^[\d.]+px\s*/, '')) : null, borderWidth: border ? px(border.split(/\s+/)[0]) : 0,
     radius: Math.min(px(refs.radius) || (refs.radius?.endsWith('%') ? 999 : 0), 999), fontSize: px(refs.fontSize), fontWeight: Number(refs.fontWeight) || 400,
-    paddingY: px(refs.paddingY), paddingX: px(refs.paddingX), height: px(refs.height), label: (refs.label ?? '').slice(0, 40)};
+    paddingY: px(refs.paddingY), paddingX: px(refs.paddingX), height: px(refs.height), label: (refs.label ?? '').slice(0, 40),
+    shadows: parseShadows(refs.shadow), outline: outline && outlineColor ? {width: Number(outline[1]), color: outlineColor, offset: Number(outline[3])} : null,
+    underline: /underline/.test(refs.textDecoration ?? ''), opacity: Number.isFinite(Number(refs.opacity ?? 1)) ? Math.min(1, Math.max(0, Number(refs.opacity ?? 1))) : 1};
 }
+const STATE_ORDER: StateName[] = ['hover', 'focus-visible', 'active', 'disabled'];
+const SCREENSHOT = /^data:image\/png;base64,[A-Za-z0-9+/=]+$/;
 
 export function buildDesignSystem(eds: ExtractedDesignSystem, scales: ScalesLike, name: string): DesignSystemDoc {
   const declared = declaredColorGroups(eds), notes: string[] = [];
@@ -84,7 +103,9 @@ export function buildDesignSystem(eds: ExtractedDesignSystem, scales: ScalesLike
   const styles = (scales.textStyles ?? []).slice(0, 18).map(t => ({name: `${titleCase(roleOf(t.px))} / ${t.px} ${weightName(t.weight)}`, px: t.px, weight: t.weight, lineHeightPx: t.lineHeightPx, family: t.family, uses: t.count}));
   const components = eds.components.filter(c => c.variants.some(v => Object.keys(v.tokenRefs).length) || c.sizes.length).map(c => ({
     name: c.canonical, category: c.category, states: c.statesObserved, missing: c.statesMissing,
-    variants: c.variants.filter(v => Object.keys(v.tokenRefs).length).map(v => ({name: titleCase(v.name), style: componentStyle(v.tokenRefs), uses: Number(v.tokenRefs.instances) || 0})),
+    variants: c.variants.filter(v => Object.keys(v.tokenRefs).length).map(v => ({name: titleCase(v.name), style: componentStyle(v.tokenRefs), uses: Number(v.tokenRefs.instances) || 0,
+      states: STATE_ORDER.filter(st => v.states?.[st]).map(st => ({name: st, style: componentStyle({...v.tokenRefs, ...v.states![st]})})),
+      ...(v.screenshot && SCREENSHOT.test(v.screenshot) ? {screenshot: v.screenshot} : {})})),
     sizes: Object.entries(c.sizeStyles ?? {}).map(([size, refs]) => ({name: size.toUpperCase(), style: componentStyle(refs)})),
   })).filter(c => c.variants.length);
   // A component whose every variant is transparent and unbordered has nothing to draw; list it instead.
@@ -113,7 +134,9 @@ const family = (name: string) => `'${esc(name).replace(/'/g, '')}', 'Hanken Grot
 function specimen(style: ComponentStyle, fallbackLabel: string, typeface: string, textHex: string, surface: string) {
   const css = [`background:${style.background ?? 'transparent'}`, `color:${style.color ?? textHex}`, `border:${style.borderWidth}px solid ${style.border ?? 'transparent'}`,
     `border-radius:${style.radius}px`, `font-size:${style.fontSize || 14}px`, `font-weight:${style.fontWeight}`, `padding:${style.paddingY}px ${Math.min(style.paddingX, 48)}px`,
-    `min-height:${Math.min(style.height, 64)}px`, `font-family:${typeface}`].join(';');
+    `min-height:${Math.min(style.height, 64)}px`, `font-family:${typeface}`, `opacity:${style.opacity}`, `text-decoration:${style.underline ? 'underline' : 'none'}`,
+    `box-shadow:${style.shadows.length ? style.shadows.map(sh => `${sh.inset ? 'inset ' : ''}${sh.x}px ${sh.y}px ${sh.blur}px ${sh.spread}px ${sh.color}`).join(', ') : 'none'}`,
+    style.outline ? `outline:${style.outline.width}px solid ${style.outline.color};outline-offset:${style.outline.offset}px` : 'outline:none'].join(';');
   // Same colour as the surface (or none) and no border: mark the bounds, as Figma shows a frame's edge.
   const invisible = !style.borderWidth && (!style.background || style.background === surface);
   return `<span class="specimen${invisible ? ' bounds' : ''}" style="${css}">${esc(style.label || fallbackLabel)}</span>`;
@@ -132,7 +155,14 @@ export function renderDesignSystemHtml(doc: DesignSystemDoc, links: {figmaExport
   const effects = frame('Effects', doc.shadows.length ? `<div class="radii">${doc.shadows.map(s => `<div class="radius"><i style="box-shadow:${esc(s.value)};border-radius:8px"></i><b>${esc(s.name)}</b><code>${esc(s.value)}</code></div>`).join('')}</div>` : '<p class="empty">No visible shadows were found.</p>');
   // Components sit on the site's own surface, the way they appear on its pages (and in a Figma frame).
   const surface = doc.colors.roles.find(r => r.role === 'surface')?.hex ?? '#ffffff', text = doc.colors.roles.find(r => r.role === 'text')?.hex ?? ink(surface);
-  const components = doc.components.map((c, i) => frame(`${c.name}`, `<div class="variants">${c.variants.map(v => `<div class="variant">${specimen(v.style, c.name, typeface, text, surface)}<b>${esc(v.name)}</b><span>${v.uses.toLocaleString('en')} on the pages read</span></div>`).join('')}</div>${c.sizes.length ? `<div class="sizes"><span class="label">Sizes</span>${c.sizes.map(s => `<div class="variant">${specimen(s.style, s.name, typeface, text, surface)}<b>${esc(s.name)} · ${s.style.height}px</b></div>`).join('')}</div>` : ''}${c.states.length || c.missing.length ? `<p class="states">${c.states.length ? `States: ${c.states.map(esc).join(', ')}` : ''}${c.missing.length ? `<em>Not seen: ${c.missing.map(esc).join(', ')}</em>` : ''}</p>` : ''}`, true).replace('<figure class="frame wide">', `<figure class="frame wide" id="c${i}">`).replace('<div class="board">', `<div class="board site" style="background:${surface};color:${text}">`)).join('');
+  const STATE_LABEL: Record<string, string> = {hover: 'Hover', 'focus-visible': 'Focus', active: 'Pressed', disabled: 'Disabled'};
+  // Each variant: the screenshot taken on the site (when small enough), the look drawn from its styles, then its captured states.
+  const variantBlock = (c: DesignSystemDoc['components'][number], v: DesignSystemDoc['components'][number]['variants'][number]) => `<div class="variant-row">
+    <div class="variant"><b>${esc(v.name)}</b><span>${v.uses.toLocaleString('en')} on the pages read</span></div>
+    ${v.screenshot ? `<figure class="shot"><img src="${v.screenshot}" alt="${esc(v.name)} ${esc(c.name)} as captured on the site"><figcaption>Captured</figcaption></figure>` : ''}
+    <figure class="shot">${specimen(v.style, c.name, typeface, text, surface)}<figcaption>Default</figcaption></figure>
+    ${v.states.map(st => `<figure class="shot">${specimen(st.style, c.name, typeface, text, surface)}<figcaption>${STATE_LABEL[st.name]}</figcaption></figure>`).join('')}</div>`;
+  const components = doc.components.map((c, i) => frame(`${c.name}`, `<div class="variant-rows">${c.variants.map(v => variantBlock(c, v)).join('')}</div>${c.sizes.length ? `<div class="sizes"><span class="label">Sizes</span>${c.sizes.map(s => `<div class="variant">${specimen(s.style, s.name, typeface, text, surface)}<b>${esc(s.name)} · ${s.style.height}px</b></div>`).join('')}</div>` : ''}${c.states.length || c.missing.length ? `<p class="states">${c.states.length ? `States with a visible style: ${c.states.map(esc).join(', ')}` : ''}${c.missing.length ? `<em>No visible style found for: ${c.missing.map(esc).join(', ')}</em>` : ''}</p>` : ''}`, true).replace('<figure class="frame wide">', `<figure class="frame wide" id="c${i}">`).replace('<div class="board">', `<div class="board site" style="background:${surface};color:${text}">`)).join('');
   const families = doc.typography.families.map(f => f.replace(/[^\w -]/g, '')).filter(Boolean);
   const count = doc.colors.groups.reduce((n, g) => n + g.swatches.length, 0);
   return `<title>${esc(doc.name)} design system</title>
@@ -178,6 +208,9 @@ code { font-family: var(--mono); font-size: 11.5px; color: var(--muted) }
 .variants, .sizes { display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-end } .sizes { margin-top: 20px; padding-top: 16px; border-top: 1px dashed var(--line) }
 .variant { display: grid; gap: 6px; justify-items: start } .variant span { color: var(--muted); font-size: 12px }
 .site .variant span, .site .states, .site .label { color: inherit; opacity: .65 } .site .states em { color: inherit; opacity: 1 } .site .sizes { border-top-color: currentColor } .label { width: 100%; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted) }
+.variant-rows { display: grid; gap: 18px } .variant-row { display: flex; flex-wrap: wrap; gap: 16px 24px; align-items: flex-end }
+.variant-row > .variant { width: 140px } .shot { margin: 0; display: grid; gap: 6px; justify-items: start } .shot img { max-width: 240px; height: auto; display: block; image-rendering: auto }
+.shot figcaption { font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: inherit; opacity: .6; font-family: var(--ui) }
 .specimen.bounds { outline: 1px dashed rgba(127,127,127,.55); outline-offset: 0 }
 .specimen { display: inline-flex; align-items: center; justify-content: center; white-space: nowrap; max-width: 320px; overflow: hidden }
 .states { margin: 16px 0 0; color: var(--muted); font-size: 12.5px; display: flex; flex-wrap: wrap; gap: 4px 16px } .states em { font-style: normal; color: var(--fg) }

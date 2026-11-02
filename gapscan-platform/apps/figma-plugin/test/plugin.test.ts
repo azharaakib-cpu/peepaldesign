@@ -71,8 +71,15 @@ test('the importer builds variables, styles, a foundations page and components f
   assert.match(log.textStyles[0]!.description, /Shown in DM Sans because gordita-web is not available/);
   assert.deepEqual(log.sets.map(s => s.name), fixture.components.map((c: {name: string}) => c.name));
   const button = log.sets.find(s => s.name === 'Button')!;
-  assert.deepEqual(Array.from(button.children, (c: Node) => c.name), ['Style=Secondary', 'Style=Outline', 'Style=Ghost', 'Style=Primary']);
-  const primary = button.children.find((c: Node) => c.name === 'Style=Primary');
+  const names = Array.from(button.children, (c: Node) => c.name as string);
+  assert.deepEqual(names, ['Style=Secondary, State=Default', 'Style=Secondary, State=Hover', 'Style=Outline, State=Default', 'Style=Outline, State=Hover', 'Style=Outline, State=Pressed',
+    'Style=Ghost, State=Default', 'Style=Ghost, State=Hover', 'Style=Primary, State=Default'], 'a variant per captured state');
+  const hover = button.children.find((c: Node) => c.name === 'Style=Secondary, State=Hover');
+  assert.ok(hover.effects.some((e: Node) => e.type === 'INNER_SHADOW'), 'the hover ring (an inset shadow on the site) is drawn');
+  assert.ok(button.children.every((c: Node) => c.x >= 0 && c.y >= 0) && new Set(Array.from(button.children, (c: Node) => `${c.x},${c.y}`)).size === names.length, 'laid out as a grid, no overlaps');
+  const ghostHover = button.children.find((c: Node) => c.name === 'Style=Ghost, State=Hover');
+  assert.equal(ghostHover.findOne((n: Node) => n.type === 'TEXT').textDecoration, 'UNDERLINE');
+  const primary = button.children.find((c: Node) => c.name === 'Style=Primary, State=Default');
   assert.equal(primary.fills[0].boundVariables.color, log.variables.find(v => v.name === 'color/bg/action')!.id, 'the primary fill is the semantic action colour');
   assert.ok(log.bindings > 50);
 });
