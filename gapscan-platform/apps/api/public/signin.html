@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sign in to GapScan</title>
+  <link rel="stylesheet" href="/app/styles.css">
+</head>
+<body>
+<main class="narrow">
+  <header class="top">
+    <div><h1>Sign in to GapScan</h1><p class="lead">No password: we email you a link that signs you in.</p></div>
+    <button class="theme-toggle" id="theme" type="button">Toggle theme</button>
+  </header>
+  <section class="card" id="request">
+    <form id="email-form">
+      <label for="email">Work email</label>
+      <div class="row"><input id="email" type="email" autocomplete="email" required placeholder="you@company.com"><button class="primary" type="submit">Email me a link</button></div>
+    </form>
+    <p class="muted" id="request-status" role="status"></p>
+  </section>
+  <section class="card" id="finish" hidden>
+    <p>You opened a sign-in link. Continue to sign in on this browser.</p>
+    <div class="row"><button class="primary" id="finish-button" type="button">Sign in</button></div>
+    <p class="error" id="finish-error" role="alert"></p>
+  </section>
+</main>
+<script src="/app/common.js"></script>
+<script src="/app/signin.js"></script>
+</body>
+</html>

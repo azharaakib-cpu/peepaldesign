@@ -45,6 +45,35 @@ test('blob keys cannot escape the blob root', async () => {
 });
 
 for (const backend of BACKENDS) {
+  test(`${backend.name}: accounts: one user per email, single-use login tokens, expiring sessions, project roles`, async () => {
+    const {store, project} = await setup(backend);
+    const ana = await store.ensureUser('  Ana@Example.com ');
+    assert.equal(ana.email, 'ana@example.com');
+    assert.equal((await store.ensureUser('ana@example.com')).id, ana.id);
+    const later = '2999-01-01T00:00:00.000Z', earlier = '2000-01-01T00:00:00.000Z', at = new Date().toISOString();
+    await store.saveLoginToken({hash: 'h1', email: ana.email, expiresAt: later, createdAt: at});
+    await store.saveLoginToken({hash: 'h2', email: ana.email, expiresAt: earlier, createdAt: at});
+    assert.equal(await store.countLoginTokens(ana.email, earlier), 2);
+    assert.equal(await store.consumeLoginToken('h1', at), ana.email);
+    assert.equal(await store.consumeLoginToken('h1', at), null, 'single use');
+    assert.equal(await store.consumeLoginToken('h2', at), null, 'expired');
+    await store.saveSession({hash: 's1', userId: ana.id, expiresAt: later, createdAt: at});
+    await store.saveSession({hash: 's2', userId: ana.id, expiresAt: earlier, createdAt: at});
+    assert.equal((await store.getSession('s1', at))?.userId, ana.id);
+    assert.equal(await store.getSession('s2', at), null);
+    await store.deleteSession('s1');
+    assert.equal(await store.getSession('s1', at), null);
+    const ben = await store.ensureUser('ben@example.com');
+    await store.setMember(project.id, ana.id, 'owner');
+    await store.setMember(project.id, ben.id, 'editor');
+    assert.equal(await store.roleOf(project.id, ben.id), 'editor');
+    assert.deepEqual((await store.listMembers(project.id)).map(m => [m.email, m.role]), [['ana@example.com', 'owner'], ['ben@example.com', 'editor']]);
+    assert.deepEqual((await store.listProjectsFor(ben.id)).map(p => p.id), [project.id]);
+    await store.removeMember(project.id, ben.id);
+    assert.equal(await store.roleOf(project.id, ben.id), null);
+    assert.deepEqual(await store.listProjectsFor(ben.id), []);
+  });
+
   test(`${backend.name}: job events get gap-free per-job sequence numbers and replay after a cursor`, async () => {
     const {store, project} = await setup(backend);
     const job = await store.createJob({type: 'extract', projectId: project.id, payload: {}});

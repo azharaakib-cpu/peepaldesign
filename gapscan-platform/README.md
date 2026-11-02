@@ -1,4 +1,4 @@
-# GapScan platform (Phases 1–8)
+# GapScan platform (Phases 1–9)
 
 The TypeScript monorepo that replaces the prototype in `../gapscan`, following
 the architecture plan. Phase 1 added the shared contracts, the single estimation
@@ -19,7 +19,8 @@ application's code as a reviewable diff, and the same rewriter is downloadable a
 script you run in your own repository.
 Phase 8 adds hosted infrastructure: a Postgres store, a Postgres job queue that any
 number of instances share, cross-instance live progress, and S3-compatible object
-storage. Local mode still needs nothing installed.
+storage. Local mode still needs nothing installed. Phase 9 adds accounts: sign-in by
+emailed magic link, private projects, and owners who invite people as owners or editors.
 
 Requires Node 24+ (it runs TypeScript directly; there is no build step).
 
@@ -79,6 +80,10 @@ review the result, then compare it against a reference system.
 | `GET /v1/gapscans/:id/codemod/rules` | The rules, their hash and what changes by hand (no application code needed) |
 | `POST /v1/gapscans/:id/codemod`, `GET /v1/gapscans/:id/codemod` | Dry-run the rules on the application sources (a `codemod` job) and read the per-file diffs |
 | `GET /v1/gapscans/:id/codemod.mjs` | The script: `node gapscan-codemod.mjs [paths…]` prints the diff; `--write` applies it. Uses the project's own `typescript` package. |
+| `POST /v1/auth/link` `{email}` | Emails a single-use sign-in link (15 minutes). Same answer whether or not the address can sign in; 5 links per address and 20 requests per IP per 15 minutes. |
+| `POST /v1/auth/session` `{token}`, `GET /v1/auth/me`, `POST /v1/auth/logout` | Exchange the link's token for a session cookie (30 days, HttpOnly, SameSite=Lax), read it, end it |
+| `GET /v1/projects` | Projects you are a member of |
+| `GET`/`POST /v1/projects/:id/members`, `DELETE /v1/projects/:id/members/:userId` | People on a project; owners invite (`{email, role}`, emailed) and remove; the last owner stays |
 | `GET /v1/library`, `GET /v1/library/:id` | Reference systems and their components |
 | `GET /v1/extractions/:id/recommendations` | References ranked by how many of your components have a counterpart |
 | `POST /v1/gapscans` `{edsId, referenceId, assumptions?}` | Starts a `gapscan` job |
@@ -98,6 +103,10 @@ review the result, then compare it against a reference system.
 | `GAPSCAN_QUEUE` | `in-process`, or `postgres` with a Postgres store | The Postgres queue is shared by every instance: one claim per job (`FOR UPDATE SKIP LOCKED`), heartbeats, and a job whose worker stops is failed as retryable after 60 s |
 | `GAPSCAN_BLOBS` | `fs` | `s3` with `GAPSCAN_S3_BUCKET`, `GAPSCAN_S3_REGION`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` (and `AWS_SESSION_TOKEN`). `GAPSCAN_S3_ENDPOINT` and `GAPSCAN_S3_PATH_STYLE=1` for R2 or MinIO; `GAPSCAN_S3_PREFIX` to share a bucket. |
 | `GAPSCAN_CONCURRENCY` | `2` | Jobs this instance runs at once. With the Postgres queue, `0` makes an API-only instance. |
+| `GAPSCAN_AUTH` | `off` locally; required when hosted | `magic-link` turns on accounts. Hosted mode (Postgres) refuses to start until this is set, so a deployment can't go out open by accident; `off` is allowed when you put it behind your own sign-in. |
+| `GAPSCAN_PUBLIC_URL` | unset | The address people open (`https://gapscan.example.com`). Used for sign-in links, the cross-site check and the `Secure` cookie flag. |
+| `GAPSCAN_MAIL` | `log` locally, `smtp` hosted | `smtp` with `GAPSCAN_SMTP_URL` (for example `smtps://user:pass@smtp.postmarkapp.com:465`) and `GAPSCAN_MAIL_FROM`. `log` prints links to the server console and is refused when hosted. |
+| `GAPSCAN_AUTH_DOMAINS` | unset (anyone) | Comma-separated email domains that can create an account. Others can still sign in once an owner invites them. |
 | `GAPSCAN_MAX_PAGES` | `8` | Pages rendered per website source |
 | `GAPSCAN_FIGMA_TOKEN` | unset | Personal access token for reading Figma files. Without it, Figma links are recorded as "not connected". Variables need a Figma plan with REST variable access; otherwise styles and usage are read. |
 | `GAPSCAN_LEGACY_ENGINE` | `../gapscan/engine/` | The prototype extractor, still used for component inventories in code |
@@ -116,8 +125,23 @@ GAPSCAN_STORE=postgres GAPSCAN_DATABASE_URL=… GAPSCAN_BLOBS=s3 … GAPSCAN_CON
 Progress streams from any API instance: events are stored in Postgres and announced
 with `LISTEN/NOTIFY`, and subscribers also poll, so a missed notification only delays
 an event, never loses it. Error messages name a missing setting, never its value; S3
-keys only ever go into the request signature. Not done yet, and decisions for whoever
-hosts it: sign-in and per-project access, and a network sandbox for the renderer.
+keys only ever go into the request signature. Still to decide for whoever hosts it: a
+network sandbox for the renderer.
+
+## Accounts
+
+With `GAPSCAN_AUTH=magic-link`, people sign in with a link emailed to them; there are no
+passwords. The link carries its token in the URL fragment, which browsers never send to a
+server, so it can't land in access logs, and the sign-in page asks for a click before
+using it, so email scanners that open links can't spend it. Tokens and session ids are
+stored only as SHA-256 hashes.
+
+Every project is private to its members. Each API route has an access rule in
+`apps/api/src/auth.ts` (public, any signed-in person, project member, or project owner);
+a route without one stops the server from starting. A project you aren't on answers
+"not found", exactly like one that doesn't exist. Requests that change things must come
+from GapScan's own pages (checked by `Origin`). Approvals record the signed-in person's
+email rather than a typed name.
 
 ## How a website is read
 
@@ -152,8 +176,9 @@ images, gradients or translucent layers is skipped rather than guessed.
   server. Contention between separate machines (SKIP LOCKED claims, cross-connection
   notifications) follows standard Postgres semantics but has not been load-tested
   against a real server.
-- **No accounts yet.** Anyone who can reach the API can use every project; put it
-  behind your own sign-in until per-project access is added.
+- **Accounts are email-only.** No SSO, no organisation-wide admin, and roles are
+  per project (owner or editor). Sign-in requests are rate-limited per instance, not
+  across instances.
 - **Previews are inferred.** "Before" examples from code apply your real CSS to
   generated markup; "after" previews apply the reference's CSS with your role
   colours swapped in. Both are labelled; neither is built or verified code.

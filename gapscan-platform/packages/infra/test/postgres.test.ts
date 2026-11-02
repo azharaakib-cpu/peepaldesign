@@ -21,9 +21,9 @@ async function instance(sql: SqlClient, concurrency: number, options: {staleMs?:
 
 test('migrations apply once and are safe to run again', async () => {
   const sql = await database();
-  assert.equal(await migrate(sql), 1);
-  assert.equal(await migrate(sql), 1);
-  assert.deepEqual((await sql.query('SELECT version FROM gapscan_migrations')).map(r => r.version), [1]);
+  assert.equal(await migrate(sql), 2);
+  assert.equal(await migrate(sql), 2);
+  assert.deepEqual((await sql.query('SELECT version FROM gapscan_migrations')).map(r => r.version), [1, 2]);
   await sql.close();
 });
 

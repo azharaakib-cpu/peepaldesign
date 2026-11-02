@@ -25,6 +25,8 @@ import {buildBrandKit, TEMPLATES} from '@gapscan/assets';
 import {approvalKey, computeReport, createGapScanHandler, loadExtraction, loadGapScan, saveReport, summarize} from './gapscan-job.ts';
 import {codemodPlan, createCodemodHandler, loadCodemodRun} from './codemod-job.ts';
 import {buildScript} from '@gapscan/codemod';
+import {registerAuth} from './auth.ts';
+import type {AuthConfig} from './auth.ts';
 import {createUrlGuard, publicUrl, UnsafeUrlError} from './url-safety.ts';
 import {lookup} from 'node:dns/promises';
 const lookupAll = (hostname: string) => lookup(hostname, {all: true, verbatim: true});
@@ -44,9 +46,9 @@ const AddSourceBody = z.discriminatedUnion('kind', [
 ]);
 const IdParams = z.object({id: z.string().min(1)});
 
-export type AppOptions = {infra: Infra; handlers?: Partial<Record<JobType, JobHandler>>; logger?: boolean; heartbeatMs?: number; figma?: {token?: string; fetch?: typeof fetch}};
+export type AppOptions = {infra: Infra; handlers?: Partial<Record<JobType, JobHandler>>; logger?: boolean; heartbeatMs?: number; figma?: {token?: string; fetch?: typeof fetch}; auth?: AuthConfig};
 
-export function buildApp({infra, handlers = {}, logger = false, heartbeatMs = HEARTBEAT_MS, figma = {token: process.env.GAPSCAN_FIGMA_TOKEN}}: AppOptions) {
+export function buildApp({infra, handlers = {}, logger = false, heartbeatMs = HEARTBEAT_MS, figma = {token: process.env.GAPSCAN_FIGMA_TOKEN}, auth = {mode: 'off'}}: AppOptions) {
   const {store, blobs, bus, queue} = infra;
   // Every page and sub-request the browser makes must pass the same public-URL check as intake.
   // Each extraction gets a fresh guard, so DNS answers are cached for one job only.
@@ -74,6 +76,8 @@ export function buildApp({infra, handlers = {}, logger = false, heartbeatMs = HE
     return result.data;
   };
 
+  // Accounts first: its hook guards every route below.
+  registerAuth(app, store, auth, fail);
   app.get('/health', async () => ({ok: true}));
 
   // The extraction UI: a few static files, no build step. Only known names are served.
@@ -95,13 +99,17 @@ export function buildApp({infra, handlers = {}, logger = false, heartbeatMs = HE
 
   app.post('/v1/projects', async (request, reply) => {
     const body = parse(CreateProjectBody, request.body, reply); if (!body) return reply;
-    return reply.code(201).send(await store.createProject(body.name));
+    const project = await store.createProject(body.name);
+    if (request.user) await store.setMember(project.id, request.user.id, 'owner');
+    return reply.code(201).send(project);
   });
 
   app.get('/v1/projects/:id', async (request, reply) => {
     const {id} = IdParams.parse(request.params);
     const project = await store.getProject(id);
-    return project ? {...project, sources: await store.listSources(id)} : fail(reply, 404, 'Project not found.');
+    if (!project) return fail(reply, 404, 'Project not found.');
+    const extractions = (await store.listExtractions(id)).map(({id: eid, version, createdAt}) => ({id: eid, version, createdAt}));
+    return {...project, sources: await store.listSources(id), extractions, ...(request.user ? {role: await store.roleOf(id, request.user.id)} : {})};
   });
 
   // Sources are validated and stored only; nothing is fetched or parsed until an extraction job runs.

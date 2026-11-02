@@ -16,7 +16,7 @@ test('the pg driver runs migrations, the store, a job and its event stream over 
   // One pooled connection, so transactions never interleave on the shared backend.
   const sql = await createPgClient(`postgres://postgres@127.0.0.1:${port}/postgres`, {max: 1});
   try {
-    assert.equal(await migrate(sql), 1);
+    assert.equal(await migrate(sql), 2);
     const store = createPostgresStore(sql), bus = createPostgresEventBus(sql, store, {pollMs: 50});
     const queue = createPostgresQueue(store, sql, bus, {concurrency: 1, pollMs: 50, heartbeatMs: 100});
     await bus.start(); await queue.start();

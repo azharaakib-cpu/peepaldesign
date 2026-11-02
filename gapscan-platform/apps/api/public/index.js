@@ -4,6 +4,7 @@ let projectId = null, sources = [], activeJob = null, stream = null;
 async function ensureProject() {
   if (projectId) return projectId;
   const project = await api('/v1/projects', {method: 'POST', body: JSON.stringify({name: 'Extraction ' + new Date().toLocaleString()})});
+  history.replaceState(null, '', `/app/?project=${project.id}`);   // so the project can be reopened from the address bar
   return (projectId = project.id);
 }
 function showError(message) { $('#source-error').textContent = message || ''; }
@@ -18,6 +19,40 @@ async function addSource(body) {
     const id = await ensureProject();
     sources.push(await api(`/v1/projects/${id}/sources`, {method: 'POST', body: JSON.stringify(body)}));
     renderSources();
+
+// ── Accounts: your projects, and the people on the open one ──
+const projectParam = new URLSearchParams(location.search).get('project');
+function renderMembers(members, role) {
+  const owners = members.filter(m => m.role === 'owner').length;
+  $('#members').replaceChildren(...members.map(m => el('li', {class: 'source'}, el('span', {}, m.email), el('span', {class: 'pill'}, m.role),
+    role === 'owner' && !(m.role === 'owner' && owners === 1) ? el('button', {type: 'button', onclick: async () => {
+      try { renderMembers(await api(`/v1/projects/${projectId}/members/${m.userId}`, {method: 'DELETE'}), role); } catch (error) { $('#invite-status').textContent = error.message; }
+    }}, 'Remove') : null)));
+}
+async function openProject(id) {
+  const project = await api(`/v1/projects/${id}`);
+  projectId = project.id; sources = project.sources; renderSources();
+  $('#project-card').hidden = false;
+  $('#project-title').textContent = project.name;
+  const [latest] = project.extractions;
+  $('#project-reviews').replaceChildren(latest ? el('a', {href: `/app/review.html?id=${latest.id}`}, `Open the latest review (version ${latest.version}, ${new Date(latest.createdAt).toLocaleString()})`) : 'No extraction yet. Add sources below and run one.');
+  renderMembers(await api(`/v1/projects/${id}/members`), project.role);
+  $('#invite').hidden = project.role !== 'owner';
+}
+$('#invite').addEventListener('submit', async event => {
+  event.preventDefault();
+  try {
+    renderMembers(await api(`/v1/projects/${projectId}/members`, {method: 'POST', body: JSON.stringify({email: $('#invite-email').value, role: $('#invite-role').value})}), 'owner');
+    $('#invite-status').textContent = `Invited ${$('#invite-email').value}. They'll get an email.`; $('#invite-email').value = '';
+  } catch (error) { $('#invite-status').textContent = error.message; }
+});
+whoami.then(async user => {
+  if (!user) return;
+  const projects = await api('/v1/projects');
+  $('#projects-card').hidden = !projects.length;
+  $('#projects').replaceChildren(...projects.map(p => el('li', {class: 'source'}, el('a', {href: `/app/?project=${p.id}`}, p.name), el('span', {class: 'muted'}, new Date(p.createdAt).toLocaleDateString()))));
+  if (projectParam) await openProject(projectParam).catch(error => showError(error.message));
+});
   } catch (error) { showError(error.message); }
 }
 
@@ -47,6 +82,40 @@ $('#run').addEventListener('click', async () => {
     stream.addEventListener('warning', e => log('⚠ ' + JSON.parse(e.data).body.message));
     const finish = (text, href) => {
       stream.close(); activeJob = null; $('#cancel').hidden = true; renderSources();
+
+// ── Accounts: your projects, and the people on the open one ──
+const projectParam = new URLSearchParams(location.search).get('project');
+function renderMembers(members, role) {
+  const owners = members.filter(m => m.role === 'owner').length;
+  $('#members').replaceChildren(...members.map(m => el('li', {class: 'source'}, el('span', {}, m.email), el('span', {class: 'pill'}, m.role),
+    role === 'owner' && !(m.role === 'owner' && owners === 1) ? el('button', {type: 'button', onclick: async () => {
+      try { renderMembers(await api(`/v1/projects/${projectId}/members/${m.userId}`, {method: 'DELETE'}), role); } catch (error) { $('#invite-status').textContent = error.message; }
+    }}, 'Remove') : null)));
+}
+async function openProject(id) {
+  const project = await api(`/v1/projects/${id}`);
+  projectId = project.id; sources = project.sources; renderSources();
+  $('#project-card').hidden = false;
+  $('#project-title').textContent = project.name;
+  const [latest] = project.extractions;
+  $('#project-reviews').replaceChildren(latest ? el('a', {href: `/app/review.html?id=${latest.id}`}, `Open the latest review (version ${latest.version}, ${new Date(latest.createdAt).toLocaleString()})`) : 'No extraction yet. Add sources below and run one.');
+  renderMembers(await api(`/v1/projects/${id}/members`), project.role);
+  $('#invite').hidden = project.role !== 'owner';
+}
+$('#invite').addEventListener('submit', async event => {
+  event.preventDefault();
+  try {
+    renderMembers(await api(`/v1/projects/${projectId}/members`, {method: 'POST', body: JSON.stringify({email: $('#invite-email').value, role: $('#invite-role').value})}), 'owner');
+    $('#invite-status').textContent = `Invited ${$('#invite-email').value}. They'll get an email.`; $('#invite-email').value = '';
+  } catch (error) { $('#invite-status').textContent = error.message; }
+});
+whoami.then(async user => {
+  if (!user) return;
+  const projects = await api('/v1/projects');
+  $('#projects-card').hidden = !projects.length;
+  $('#projects').replaceChildren(...projects.map(p => el('li', {class: 'source'}, el('a', {href: `/app/?project=${p.id}`}, p.name), el('span', {class: 'muted'}, new Date(p.createdAt).toLocaleDateString()))));
+  if (projectParam) await openProject(projectParam).catch(error => showError(error.message));
+});
       $('#status').replaceChildren(href ? el('a', {href}, text) : text);
       if (href) location.href = href;
     };
@@ -57,3 +126,37 @@ $('#run').addEventListener('click', async () => {
 });
 $('#cancel').addEventListener('click', () => { if (activeJob) api(`/v1/jobs/${activeJob}`, {method: 'DELETE'}).catch(error => { $('#status').textContent = error.message; }); });
 renderSources();
+
+// ── Accounts: your projects, and the people on the open one ──
+const projectParam = new URLSearchParams(location.search).get('project');
+function renderMembers(members, role) {
+  const owners = members.filter(m => m.role === 'owner').length;
+  $('#members').replaceChildren(...members.map(m => el('li', {class: 'source'}, el('span', {}, m.email), el('span', {class: 'pill'}, m.role),
+    role === 'owner' && !(m.role === 'owner' && owners === 1) ? el('button', {type: 'button', onclick: async () => {
+      try { renderMembers(await api(`/v1/projects/${projectId}/members/${m.userId}`, {method: 'DELETE'}), role); } catch (error) { $('#invite-status').textContent = error.message; }
+    }}, 'Remove') : null)));
+}
+async function openProject(id) {
+  const project = await api(`/v1/projects/${id}`);
+  projectId = project.id; sources = project.sources; renderSources();
+  $('#project-card').hidden = false;
+  $('#project-title').textContent = project.name;
+  const [latest] = project.extractions;
+  $('#project-reviews').replaceChildren(latest ? el('a', {href: `/app/review.html?id=${latest.id}`}, `Open the latest review (version ${latest.version}, ${new Date(latest.createdAt).toLocaleString()})`) : 'No extraction yet. Add sources below and run one.');
+  renderMembers(await api(`/v1/projects/${id}/members`), project.role);
+  $('#invite').hidden = project.role !== 'owner';
+}
+$('#invite').addEventListener('submit', async event => {
+  event.preventDefault();
+  try {
+    renderMembers(await api(`/v1/projects/${projectId}/members`, {method: 'POST', body: JSON.stringify({email: $('#invite-email').value, role: $('#invite-role').value})}), 'owner');
+    $('#invite-status').textContent = `Invited ${$('#invite-email').value}. They'll get an email.`; $('#invite-email').value = '';
+  } catch (error) { $('#invite-status').textContent = error.message; }
+});
+whoami.then(async user => {
+  if (!user) return;
+  const projects = await api('/v1/projects');
+  $('#projects-card').hidden = !projects.length;
+  $('#projects').replaceChildren(...projects.map(p => el('li', {class: 'source'}, el('a', {href: `/app/?project=${p.id}`}, p.name), el('span', {class: 'muted'}, new Date(p.createdAt).toLocaleDateString()))));
+  if (projectParam) await openProject(projectParam).catch(error => showError(error.message));
+});

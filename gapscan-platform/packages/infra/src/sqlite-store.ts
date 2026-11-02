@@ -6,7 +6,7 @@ import {mkdirSync} from 'node:fs';
 import {dirname} from 'node:path';
 import {Job as JobSchema, JobEvent as JobEventSchema, Project as ProjectSchema, SourceAsset as SourceAssetSchema} from '@gapscan/schema';
 import type {Job, JobEvent, JobEventBody, Project, SourceAsset} from '@gapscan/schema';
-import type {ExtractionRecord, GapScanRecord, MatchApproval, Store} from './types.ts';
+import type {ExtractionRecord, GapScanRecord, MatchApproval, Role, Store} from './types.ts';
 
 const SCHEMA = `
 CREATE TABLE IF NOT EXISTS projects (id TEXT PRIMARY KEY, name TEXT NOT NULL, created_at TEXT NOT NULL);
@@ -22,6 +22,13 @@ CREATE TABLE IF NOT EXISTS gapscans (id TEXT PRIMARY KEY, project_id TEXT NOT NU
 CREATE TABLE IF NOT EXISTS match_approvals (key TEXT PRIMARY KEY, eds_fingerprint TEXT NOT NULL, reference_id TEXT NOT NULL, source_id TEXT NOT NULL,
   target_id TEXT, approved_by TEXT NOT NULL, reason TEXT NOT NULL, at TEXT NOT NULL);
 CREATE INDEX IF NOT EXISTS approvals_scope ON match_approvals(eds_fingerprint, reference_id);
+CREATE TABLE IF NOT EXISTS users (id TEXT PRIMARY KEY, email TEXT NOT NULL UNIQUE, created_at TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS login_tokens (hash TEXT PRIMARY KEY, email TEXT NOT NULL, expires_at TEXT NOT NULL, created_at TEXT NOT NULL);
+CREATE INDEX IF NOT EXISTS login_tokens_email ON login_tokens(email, created_at);
+CREATE TABLE IF NOT EXISTS sessions (hash TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id), expires_at TEXT NOT NULL, created_at TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS project_members (project_id TEXT NOT NULL REFERENCES projects(id), user_id TEXT NOT NULL REFERENCES users(id), role TEXT NOT NULL,
+  added_at TEXT NOT NULL, PRIMARY KEY (project_id, user_id));
+CREATE INDEX IF NOT EXISTS members_user ON project_members(user_id);
 `;
 
 type Row = Record<string, unknown>;
@@ -35,6 +42,8 @@ export function createSqliteStore(path: string): Store {
   const now = () => new Date().toISOString();
   const readJob = (row: Row | undefined) => row ? JobSchema.parse(JSON.parse(text(row, 'data'))) : null;
   const writeJob = (job: Job) => db.prepare('INSERT OR REPLACE INTO jobs (id, project_id, status, data) VALUES (?, ?, ?, ?)').run(job.id, job.projectId, job.status, JSON.stringify(job));
+  const toExtraction = (row: Row): ExtractionRecord => ({id: text(row, 'id'), projectId: text(row, 'project_id'), version: Number(row.version), fingerprint: text(row, 'fingerprint'),
+    blobKey: text(row, 'blob_key'), summary: JSON.parse(text(row, 'summary')) as Record<string, unknown>, createdAt: text(row, 'created_at')});
   const toEvent = (row: Row): JobEvent => JobEventSchema.parse({jobId: text(row, 'job_id'), seq: Number(row.seq), at: text(row, 'at'), body: JSON.parse(text(row, 'body'))});
 
   return {
@@ -93,8 +102,10 @@ export function createSqliteStore(path: string): Store {
     },
     async getExtraction(id) {
       const row = db.prepare('SELECT * FROM extractions WHERE id = ?').get(id) as Row | undefined;
-      return row ? {id: text(row, 'id'), projectId: text(row, 'project_id'), version: Number(row.version), fingerprint: text(row, 'fingerprint'),
-        blobKey: text(row, 'blob_key'), summary: JSON.parse(text(row, 'summary')) as Record<string, unknown>, createdAt: text(row, 'created_at')} : null;
+      return row ? toExtraction(row) : null;
+    },
+    async listExtractions(projectId) {
+      return (db.prepare('SELECT * FROM extractions WHERE project_id = ? ORDER BY version DESC').all(projectId) as Row[]).map(toExtraction);
     },
     async latestExtractionVersion(projectId) {
       return Number((db.prepare('SELECT COALESCE(MAX(version), 0) AS version FROM extractions WHERE project_id = ?').get(projectId) as Row).version);
@@ -116,6 +127,50 @@ export function createSqliteStore(path: string): Store {
       return (db.prepare('SELECT * FROM match_approvals WHERE eds_fingerprint = ? AND reference_id = ? ORDER BY at').all(edsFingerprint, referenceId) as Row[]).map(row => ({
         key: text(row, 'key'), edsFingerprint: text(row, 'eds_fingerprint'), referenceId: text(row, 'reference_id'), sourceId: text(row, 'source_id'),
         targetId: row.target_id === null ? null : text(row, 'target_id'), by: text(row, 'approved_by'), reason: text(row, 'reason'), at: text(row, 'at')}));
+    },
+    async ensureUser(email) {
+      const normalized = email.trim().toLowerCase();
+      db.prepare('INSERT OR IGNORE INTO users (id, email, created_at) VALUES (?, ?, ?)').run(randomUUID(), normalized, now());
+      const row = db.prepare('SELECT * FROM users WHERE email = ?').get(normalized) as Row;
+      return {id: text(row, 'id'), email: text(row, 'email'), createdAt: text(row, 'created_at')};
+    },
+    async findUserByEmail(email) {
+      const row = db.prepare('SELECT * FROM users WHERE email = ?').get(email.trim().toLowerCase()) as Row | undefined;
+      return row ? {id: text(row, 'id'), email: text(row, 'email'), createdAt: text(row, 'created_at')} : null;
+    },
+    async getUser(id) {
+      const row = db.prepare('SELECT * FROM users WHERE id = ?').get(id) as Row | undefined;
+      return row ? {id: text(row, 'id'), email: text(row, 'email'), createdAt: text(row, 'created_at')} : null;
+    },
+    async saveLoginToken(t) { db.prepare('INSERT INTO login_tokens (hash, email, expires_at, created_at) VALUES (?, ?, ?, ?)').run(t.hash, t.email, t.expiresAt, t.createdAt); },
+    async consumeLoginToken(hash, at) {
+      const row = db.prepare('DELETE FROM login_tokens WHERE hash = ? RETURNING email, expires_at').get(hash) as Row | undefined;
+      return row && text(row, 'expires_at') > at ? text(row, 'email') : null;
+    },
+    async countLoginTokens(email, since) {
+      return Number((db.prepare('SELECT COUNT(*) AS n FROM login_tokens WHERE email = ? AND created_at > ?').get(email, since) as Row).n);
+    },
+    async saveSession(x) { db.prepare('INSERT INTO sessions (hash, user_id, expires_at, created_at) VALUES (?, ?, ?, ?)').run(x.hash, x.userId, x.expiresAt, x.createdAt); },
+    async getSession(hash, at) {
+      const row = db.prepare('SELECT user_id, expires_at FROM sessions WHERE hash = ? AND expires_at > ?').get(hash, at) as Row | undefined;
+      return row ? {userId: text(row, 'user_id'), expiresAt: text(row, 'expires_at')} : null;
+    },
+    async deleteSession(hash) { db.prepare('DELETE FROM sessions WHERE hash = ?').run(hash); },
+    async setMember(projectId, userId, role) {
+      db.prepare('INSERT INTO project_members (project_id, user_id, role, added_at) VALUES (?, ?, ?, ?) ON CONFLICT (project_id, user_id) DO UPDATE SET role = excluded.role').run(projectId, userId, role, now());
+    },
+    async removeMember(projectId, userId) { db.prepare('DELETE FROM project_members WHERE project_id = ? AND user_id = ?').run(projectId, userId); },
+    async listMembers(projectId) {
+      return (db.prepare('SELECT m.user_id, u.email, m.role, m.added_at FROM project_members m JOIN users u ON u.id = m.user_id WHERE m.project_id = ? ORDER BY m.added_at, u.email').all(projectId) as Row[])
+        .map(row => ({userId: text(row, 'user_id'), email: text(row, 'email'), role: text(row, 'role') as Role, addedAt: text(row, 'added_at')}));
+    },
+    async roleOf(projectId, userId) {
+      const row = db.prepare('SELECT role FROM project_members WHERE project_id = ? AND user_id = ?').get(projectId, userId) as Row | undefined;
+      return row ? text(row, 'role') as Role : null;
+    },
+    async listProjectsFor(userId) {
+      return (db.prepare('SELECT p.id, p.name, p.created_at FROM projects p JOIN project_members m ON m.project_id = p.id WHERE m.user_id = ? ORDER BY p.created_at DESC').all(userId) as Row[])
+        .map(row => ProjectSchema.parse({id: text(row, 'id'), name: text(row, 'name'), createdAt: text(row, 'created_at')}));
     },
     async close() { db.close(); },
   };

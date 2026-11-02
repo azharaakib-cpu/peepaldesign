@@ -36,7 +36,7 @@ button, .button { font: inherit; border-radius: 8px; border: 1px solid var(--lin
 button.primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
 button:disabled { opacity: .55; cursor: not-allowed; }
 button:focus-visible, input:focus-visible, textarea:focus-visible, summary:focus-visible, a:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
-input[type="text"], input[type="url"], textarea { width: 100%; font: inherit; color: var(--text); background: var(--surface-soft); border: 1px solid var(--line-strong); border-radius: 8px; padding: 9px 11px; }
+input[type="text"], input[type="url"], input[type="email"], textarea { width: 100%; font: inherit; color: var(--text); background: var(--surface-soft); border: 1px solid var(--line-strong); border-radius: 8px; padding: 9px 11px; }
 textarea { min-height: 120px; font-family: var(--mono); font-size: 13px; }
 label { display: block; font-weight: 600; margin: 12px 0 6px; }
 .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
@@ -123,3 +123,11 @@ pre.diff .add { color: var(--ok); background: color-mix(in srgb, var(--ok) 10%, 
 pre.diff .del { color: var(--major); background: var(--major-soft); }
 pre.diff .hunk { color: var(--info); }
 pre.diff .file { color: var(--text-secondary); font-weight: 600; }
+
+/* Accounts */
+main.narrow { max-width: 560px; }
+.account { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.row > select { width: auto; }
+#members .source { display: grid; grid-template-columns: 1fr auto 88px; align-items: center; }
+#members .source > button { justify-self: end; }

@@ -13,6 +13,11 @@ export type GapScanRecord = {id: string; projectId: string; extractionId: string
 // so a new extraction or reference version makes it stale instead of silently reused.
 export type MatchApproval = {key: string; edsFingerprint: string; referenceId: string; sourceId: string; targetId: string | null; by: string; reason: string; at: string};
 
+// Accounts (magic-link sign-in). Tokens and session ids are stored only as SHA-256 hashes.
+export type User = {id: string; email: string; createdAt: string};
+export type Role = 'owner' | 'editor';
+export type Member = {userId: string; email: string; role: Role; addedAt: string};
+
 export interface Store {
   createProject(name: string): Promise<Project>;
   getProject(id: string): Promise<Project | null>;
@@ -28,10 +33,26 @@ export interface Store {
   saveExtraction(record: ExtractionRecord): Promise<void>;
   getExtraction(id: string): Promise<ExtractionRecord | null>;
   latestExtractionVersion(projectId: string): Promise<number>;
+  listExtractions(projectId: string): Promise<ExtractionRecord[]>;   // newest first
   saveGapScan(record: GapScanRecord): Promise<void>;
   getGapScan(id: string): Promise<GapScanRecord | null>;
   saveApproval(approval: MatchApproval): Promise<void>;
   listApprovals(edsFingerprint: string, referenceId: string): Promise<MatchApproval[]>;
+  ensureUser(email: string): Promise<User>;
+  findUserByEmail(email: string): Promise<User | null>;
+  getUser(id: string): Promise<User | null>;
+  saveLoginToken(token: {hash: string; email: string; expiresAt: string; createdAt: string}): Promise<void>;
+  // Single use: returns the email and deletes the token, or null if it is unknown or expired.
+  consumeLoginToken(hash: string, now: string): Promise<string | null>;
+  countLoginTokens(email: string, since: string): Promise<number>;
+  saveSession(session: {hash: string; userId: string; expiresAt: string; createdAt: string}): Promise<void>;
+  getSession(hash: string, now: string): Promise<{userId: string; expiresAt: string} | null>;
+  deleteSession(hash: string): Promise<void>;
+  setMember(projectId: string, userId: string, role: Role): Promise<void>;
+  removeMember(projectId: string, userId: string): Promise<void>;
+  listMembers(projectId: string): Promise<Member[]>;
+  roleOf(projectId: string, userId: string): Promise<Role | null>;
+  listProjectsFor(userId: string): Promise<Project[]>;
   close(): Promise<void>;
 }
 

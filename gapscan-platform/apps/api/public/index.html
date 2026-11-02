@@ -16,6 +16,25 @@
     <button class="theme-toggle" id="theme" type="button">Toggle theme</button>
   </header>
 
+  <section class="card" id="projects-card" aria-labelledby="projects-title" hidden>
+    <h2 id="projects-title">Your projects</h2>
+    <ul class="plain" id="projects"></ul>
+  </section>
+
+  <section class="card" id="project-card" aria-labelledby="project-title" hidden>
+    <h2 id="project-title">Project</h2>
+    <p id="project-reviews"></p>
+    <h3>People</h3>
+    <ul class="plain" id="members"></ul>
+    <form id="invite" class="row" hidden>
+      <label class="visually-hidden" for="invite-email">Email address to invite</label>
+      <input id="invite-email" type="email" placeholder="colleague@company.com" required>
+      <select id="invite-role" aria-label="Role"><option value="editor">Editor</option><option value="owner">Owner</option></select>
+      <button type="submit">Invite</button>
+    </form>
+    <p class="muted" id="invite-status" role="status"></p>
+  </section>
+
   <section class="card" aria-labelledby="sources-title">
     <h2 id="sources-title">Sources</h2>
     <div class="tabs" role="tablist" aria-label="Source type">

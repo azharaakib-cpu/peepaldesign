@@ -5,7 +5,7 @@ import {randomUUID} from 'node:crypto';
 import {EventEmitter} from 'node:events';
 import {Job as JobSchema, JobEvent as JobEventSchema, Project as ProjectSchema, SourceAsset as SourceAssetSchema} from '@gapscan/schema';
 import type {Job, JobEvent, JobType} from '@gapscan/schema';
-import type {EventBus, JobHandler, Queue, Store} from './types.ts';
+import type {EventBus, JobHandler, Queue, Role, Store} from './types.ts';
 import {recordEvent} from './local.ts';
 
 export type SqlRow = Record<string, unknown>;
@@ -100,6 +100,14 @@ CREATE TABLE gapscans (id TEXT PRIMARY KEY, project_id TEXT NOT NULL, extraction
 CREATE TABLE match_approvals (key TEXT PRIMARY KEY, eds_fingerprint TEXT NOT NULL, reference_id TEXT NOT NULL, source_id TEXT NOT NULL,
   target_id TEXT, approved_by TEXT NOT NULL, reason TEXT NOT NULL, at TEXT NOT NULL);
 CREATE INDEX approvals_scope ON match_approvals(eds_fingerprint, reference_id);
+`, `
+CREATE TABLE users (id TEXT PRIMARY KEY, email TEXT NOT NULL UNIQUE, created_at TEXT NOT NULL);
+CREATE TABLE login_tokens (hash TEXT PRIMARY KEY, email TEXT NOT NULL, expires_at TEXT NOT NULL, created_at TEXT NOT NULL);
+CREATE INDEX login_tokens_email ON login_tokens(email, created_at);
+CREATE TABLE sessions (hash TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id), expires_at TEXT NOT NULL, created_at TEXT NOT NULL);
+CREATE TABLE project_members (project_id TEXT NOT NULL REFERENCES projects(id), user_id TEXT NOT NULL REFERENCES users(id), role TEXT NOT NULL,
+  added_at TEXT NOT NULL, PRIMARY KEY (project_id, user_id));
+CREATE INDEX members_user ON project_members(user_id);
 `];
 const LOCK_ID = 727_001;
 
@@ -123,6 +131,8 @@ const json = (value: unknown) => typeof value === 'string' ? JSON.parse(value) a
 export function createPostgresStore(sql: SqlClient): Store {
   const now = () => new Date().toISOString();
   const toJob = (row: SqlRow | undefined) => row ? JobSchema.parse(json(row.data)) : null;
+  const toExtraction = (row: SqlRow) => ({id: str(row, 'id'), projectId: str(row, 'project_id'), version: Number(row.version), fingerprint: str(row, 'fingerprint'),
+    blobKey: str(row, 'blob_key'), summary: json(row.summary) as Record<string, unknown>, createdAt: str(row, 'created_at')});
   const toEvent = (row: SqlRow): JobEvent => JobEventSchema.parse({jobId: str(row, 'job_id'), seq: Number(row.seq), at: str(row, 'at'), body: json(row.body)});
   return {
     async createProject(name) {
@@ -181,8 +191,10 @@ export function createPostgresStore(sql: SqlClient): Store {
     },
     async getExtraction(id) {
       const [row] = await sql.query('SELECT * FROM extractions WHERE id = $1', [id]);
-      return row ? {id: str(row, 'id'), projectId: str(row, 'project_id'), version: Number(row.version), fingerprint: str(row, 'fingerprint'),
-        blobKey: str(row, 'blob_key'), summary: json(row.summary) as Record<string, unknown>, createdAt: str(row, 'created_at')} : null;
+      return row ? toExtraction(row) : null;
+    },
+    async listExtractions(projectId) {
+      return (await sql.query('SELECT * FROM extractions WHERE project_id = $1 ORDER BY version DESC', [projectId])).map(toExtraction);
     },
     async latestExtractionVersion(projectId) {
       return Number((await sql.query('SELECT COALESCE(MAX(version), 0)::int AS version FROM extractions WHERE project_id = $1', [projectId]))[0]!.version);
@@ -206,6 +218,50 @@ export function createPostgresStore(sql: SqlClient): Store {
       return (await sql.query('SELECT * FROM match_approvals WHERE eds_fingerprint = $1 AND reference_id = $2 ORDER BY at', [edsFingerprint, referenceId])).map(row => ({
         key: str(row, 'key'), edsFingerprint: str(row, 'eds_fingerprint'), referenceId: str(row, 'reference_id'), sourceId: str(row, 'source_id'),
         targetId: row.target_id === null ? null : str(row, 'target_id'), by: str(row, 'approved_by'), reason: str(row, 'reason'), at: str(row, 'at')}));
+    },
+    async ensureUser(email) {
+      const normalized = email.trim().toLowerCase();
+      await sql.query('INSERT INTO users (id, email, created_at) VALUES ($1, $2, $3) ON CONFLICT (email) DO NOTHING', [randomUUID(), normalized, now()]);
+      const [row] = await sql.query('SELECT * FROM users WHERE email = $1', [normalized]);
+      return {id: str(row!, 'id'), email: str(row!, 'email'), createdAt: str(row!, 'created_at')};
+    },
+    async findUserByEmail(email) {
+      const [row] = await sql.query('SELECT * FROM users WHERE email = $1', [email.trim().toLowerCase()]);
+      return row ? {id: str(row, 'id'), email: str(row, 'email'), createdAt: str(row, 'created_at')} : null;
+    },
+    async getUser(id) {
+      const [row] = await sql.query('SELECT * FROM users WHERE id = $1', [id]);
+      return row ? {id: str(row, 'id'), email: str(row, 'email'), createdAt: str(row, 'created_at')} : null;
+    },
+    async saveLoginToken(t) { await sql.query('INSERT INTO login_tokens (hash, email, expires_at, created_at) VALUES ($1, $2, $3, $4)', [t.hash, t.email, t.expiresAt, t.createdAt]); },
+    async consumeLoginToken(hash, at) {
+      const [row] = await sql.query('DELETE FROM login_tokens WHERE hash = $1 RETURNING email, expires_at', [hash]);
+      return row && str(row, 'expires_at') > at ? str(row, 'email') : null;
+    },
+    async countLoginTokens(email, since) {
+      return Number((await sql.query('SELECT COUNT(*)::int AS n FROM login_tokens WHERE email = $1 AND created_at > $2', [email, since]))[0]!.n);
+    },
+    async saveSession(x) { await sql.query('INSERT INTO sessions (hash, user_id, expires_at, created_at) VALUES ($1, $2, $3, $4)', [x.hash, x.userId, x.expiresAt, x.createdAt]); },
+    async getSession(hash, at) {
+      const [row] = await sql.query('SELECT user_id, expires_at FROM sessions WHERE hash = $1 AND expires_at > $2', [hash, at]);
+      return row ? {userId: str(row, 'user_id'), expiresAt: str(row, 'expires_at')} : null;
+    },
+    async deleteSession(hash) { await sql.query('DELETE FROM sessions WHERE hash = $1', [hash]); },
+    async setMember(projectId, userId, role) {
+      await sql.query('INSERT INTO project_members (project_id, user_id, role, added_at) VALUES ($1, $2, $3, $4) ON CONFLICT (project_id, user_id) DO UPDATE SET role = EXCLUDED.role', [projectId, userId, role, now()]);
+    },
+    async removeMember(projectId, userId) { await sql.query('DELETE FROM project_members WHERE project_id = $1 AND user_id = $2', [projectId, userId]); },
+    async listMembers(projectId) {
+      return (await sql.query('SELECT m.user_id, u.email, m.role, m.added_at FROM project_members m JOIN users u ON u.id = m.user_id WHERE m.project_id = $1 ORDER BY m.added_at, u.email', [projectId]))
+        .map(row => ({userId: str(row, 'user_id'), email: str(row, 'email'), role: str(row, 'role') as Role, addedAt: str(row, 'added_at')}));
+    },
+    async roleOf(projectId, userId) {
+      const [row] = await sql.query('SELECT role FROM project_members WHERE project_id = $1 AND user_id = $2', [projectId, userId]);
+      return row ? str(row, 'role') as Role : null;
+    },
+    async listProjectsFor(userId) {
+      return (await sql.query('SELECT p.id, p.name, p.created_at FROM projects p JOIN project_members m ON m.project_id = p.id WHERE m.user_id = $1 ORDER BY p.created_at DESC', [userId]))
+        .map(row => ProjectSchema.parse({id: str(row, 'id'), name: str(row, 'name'), createdAt: str(row, 'created_at')}));
     },
     async close() { await sql.close(); },
   };

@@ -21,6 +21,7 @@
     "@electric-sql/pglite": "0.5.10",
     "@electric-sql/pglite-socket": "0.2.13",
     "@types/node": "^24.0.0",
+    "@types/nodemailer": "8.0.2",
     "@types/pg": "8.15.5",
     "typescript": "^5.9.0"
   }
