@@ -1,0 +1,14 @@
+{
+  "name": "@gapscan/api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@gapscan/estimate": "0.1.0",
+    "@gapscan/infra": "0.1.0",
+    "@gapscan/schema": "0.1.0",
+    "@gapscan/taxonomy": "0.1.0",
+    "fastify": "^5.0.0",
+    "zod": "^4.0.0"
+  }
+}
