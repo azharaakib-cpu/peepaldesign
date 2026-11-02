@@ -236,13 +236,15 @@ export function assembleSystem(inputs: readonly AssetResult[], external: readonl
     // Code-derived examples apply real CSS to generated markup, so they are inferred, not captured.
     if (o.html && !specimens.some(s => s.id === `sp:cmp:${shortId(o.name)}`)) specimens.push({id: `sp:cmp:${shortId(o.name)}`, html: o.html, ...(o.css ? {css: o.css} : {}), origin: o.rendered ? 'captured' : 'inferred_probe'});
     const states = [...new Set((o.states ?? []).map(s => s === 'focus' || s === 'focused' ? 'focus-visible' : s))];
+    // Props and design files cannot show focus styling; without style evidence focus is unknown, not missing.
+    const styleEvidence = Boolean(o.css || o.html || o.channel === 'observed_css' || o.channel === 'figma_styles');
     add({
       id: `cmp:${shortId(o.name)}`, canonical: o.name, rawNames: [o.name], category: classification.category, tier: classification.tier,
       variants: (o.variants ?? []).filter(v => !v.startsWith('size=')).map(name => ({name, tokenRefs: {}})),
       sizes: (o.variants ?? []).filter(v => v.startsWith('size=')).map(v => v.slice(5)),
-      statesObserved: states, statesMissing: (REQUIRED_STATES[classification.category] ?? []).filter(s => !states.includes(s)),
+      statesObserved: states, statesMissing: (REQUIRED_STATES[classification.category] ?? []).filter(s => !states.includes(s) && (styleEvidence || !s.startsWith('focus'))),
       ...(o.props?.length ? {props: o.props} : {}),
-      a11y: {focusVisible: interactive ? states.includes('focus-visible') : null}, instances: 1, evidence: [evidenceId], confidence: SOURCE_WEIGHT[o.channel] * 0.9,
+      a11y: {focusVisible: interactive && (styleEvidence || states.includes('focus-visible')) ? states.includes('focus-visible') : null}, instances: 1, evidence: [evidenceId], confidence: SOURCE_WEIGHT[o.channel] * 0.9,
     });
   }
   for (const item of external) { add({...item.component, statesMissing: (REQUIRED_STATES[item.component.category] ?? []).filter(s => !item.component.statesObserved.some(o => o === s || (s === 'focus-visible' && o === 'focus')))}); if (item.specimen) specimens.push(item.specimen); quirks.push(...(item.quirks ?? [])); }

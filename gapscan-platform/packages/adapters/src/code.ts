@@ -2,6 +2,7 @@
 // CSS / SCSS / Less custom properties and declarations. Nothing is executed.
 // Component inventories still come from the prototype extractor in Phase 2.
 import {AdapterError} from './types.ts';
+import {typescriptObservations} from './typescript.ts';
 import type {Adapter, Observation} from './types.ts';
 
 const COLOR_PROPS = /^(color|background|background-color|border(?:-(?:top|right|bottom|left))?-color|border|outline-color|fill|stroke|caret-color|accent-color|text-decoration-color)$/;
@@ -178,6 +179,7 @@ export function createCodeAdapter({classPrefix}: CodeAdapterOptions = {}): Adapt
       observations = json === undefined ? fromCss(source, name) : fromTokenJson(json, name);
     } else {
       observations = fromCss(source, name);
+      if (/\.[jt]sx?$/i.test(name)) observations.push(...typescriptObservations(source, name));
       if (/\.(css|scss|sass|less)$/i.test(name)) for (const c of cssComponents(source, {prefix: classPrefix ?? ''}))
         { const specimen = inferredSpecimen(source, c.name, classPrefix ?? '');
           observations.push({type: 'component', channel: 'code_tokens', name: c.name, variants: [...c.variants, ...c.sizes.map(s => `size=${s}`)], states: c.states, ...(specimen ? {html: specimen.html, css: specimen.css} : {}), locator: `${name} ${c.selector}`, raw: `${c.count} classes`}); }

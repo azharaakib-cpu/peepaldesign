@@ -29,8 +29,12 @@ const SYNONYMS: string[][] = [
   ['danger', 'critical', 'destructive', 'error', 'negative'], ['success', 'positive'], ['warning', 'caution'], ['info', 'informational', 'highlight'],
   ['sm', 'small', 'slim', 'compact'], ['md', 'medium', 'default', 'regular'], ['lg', 'large', 'big'], ['xs', 'micro', 'extra small'], ['xl', 'extra large'],
   ['focus', 'focus visible', 'focused'], ['pressed', 'active'], ['hover', 'hovered'], ['loading', 'busy', 'pending'],
+  // Prop names that mean the same thing across libraries.
+  ['tone', 'color', 'intent', 'severity', 'status', 'color scheme'], ['kind', 'variant', 'appearance', 'look'], ['left icon', 'start icon', 'icon start', 'leading icon', 'prefix'],
+  ['right icon', 'end icon', 'icon end', 'trailing icon', 'suffix'], ['removable', 'on delete', 'deletable', 'dismissible', 'closable', 'on remove'],
+  ['full width', 'block', 'fluid', 'stretch'], ['helper text', 'hint', 'description', 'help text'], ['label', 'title'],
 ];
-const optionName = (value: string) => words(value.replace(/^[\w ]+=/, ''));
+const optionName = (value: string) => words(value.replace(/^[\w ]+=/, '')).replace(/^is /, '');
 const synonymGroup = (value: string) => SYNONYMS.findIndex(group => group.includes(optionName(value)));
 export function sameOption(a: string, b: string): 'same' | 'renamed' | null {
   if (optionName(a) === optionName(b)) return 'same';
@@ -44,9 +48,11 @@ export function scoreCandidate(source: ComponentObservation, target: ComponentOb
   const sameItem = itemOf(source) === itemOf(target) && !/Catch-all/.test(itemOf(source));
   const anatomy = sameItem ? 1 : source.category === target.category ? 0.4 : 0;
   if (sameItem) reasons.push(`Same component type (${itemOf(source)})`); else if (anatomy) reasons.push('Same category, different component type');
-  const options = (c: ComponentObservation) => [...c.variants.map(v => v.name), ...c.sizes, ...c.statesObserved].map(optionName);
+  // Prop names are capability evidence too: Button and Toggle Button share a type but not an API.
+  const withProps = Boolean(source.props?.length && target.props?.length);
+  const options = (c: ComponentObservation) => [...c.variants.map(v => v.name), ...c.sizes, ...c.statesObserved, ...(withProps ? (c.props ?? []).map(p => `prop ${p.name}`) : [])].map(optionName);
   const sourceOptions = options(source), targetOptions = options(target);
-  const overlap = sourceOptions.filter(o => targetOptions.some(t => sameOption(o, t))).length;
+  const overlap = sourceOptions.filter(o => targetOptions.some(t => sameOption(o.replace(/^prop /, ''), t.replace(/^prop /, '')) && o.startsWith('prop ') === t.startsWith('prop '))).length;
   const capability = sourceOptions.length && targetOptions.length ? overlap / Math.max(sourceOptions.length, Math.min(targetOptions.length, sourceOptions.length * 2)) : 0;
   if (capability > 0) reasons.push(`${overlap} shared variant, size or state option${overlap === 1 ? '' : 's'}`);
   const role = source.category === target.category ? 1 : 0;

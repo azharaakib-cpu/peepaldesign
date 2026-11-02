@@ -34,7 +34,8 @@ for (const ref of REFERENCE_SOURCES.filter(r => !wanted.size || wanted.has(r.id)
     // Only the class that *is* the type takes the type's name; `btn-set` reads "Button set", not a second "Button".
     .map(c => { const item = classifyItem({name: c.canonical, kind: 'component'}), isType = c.canonical.toLowerCase().replace(/[-_ ]/g, '') === item.matchedBy.replace(/ /g, '');
       return {...c, category: item.category, tier: item.tier, canonical: isType ? ALIAS_TITLES[item.matchedBy] ?? title(c.canonical) : title(c.canonical).replace(/\bbtn\b/gi, 'button').replace(/^\w/, ch => ch.toUpperCase())}; })
-    .filter(c => !['Miscellaneous', 'Utilities and tooling'].includes(c.category));
+    // CSS references drop utility and unclassified classes as noise; declarations only name real components.
+    .filter(c => c.category !== 'Utilities and tooling' && (ref.kind === 'types' || c.category !== 'Miscellaneous'));
   // Reference specimens: the library's own rules for each component on generated markup, plus the
   // custom properties those rules use, so the preview renders without the rest of the stylesheet.
   const declared = new Map(system.tokens.filter(t => t.path.startsWith('--')).map(t => [t.path, String(t.value)]));
@@ -78,6 +79,6 @@ for (const ref of REFERENCE_SOURCES.filter(r => !wanted.size || wanted.has(r.id)
     components: components.map(c => ({...c, evidence: c.evidence.filter(id => keep.has(id))})), specimens, quirks: [], coverage: system.coverage,
     brandSignals: {voiceSnippets: [], logoAssets: []}, library: ref.library, libraryVersion: ref.version, pinnedAt,
   });
-  await writeFile(new URL(`../references/${ref.id}.json`, import.meta.url), JSON.stringify({...reference, meta: {homepage: ref.homepage, framework: ref.framework}}) + '\n');
+  await writeFile(new URL(`../references/${ref.id}.json`, import.meta.url), JSON.stringify({...reference, meta: {homepage: ref.homepage, framework: ref.framework, kind: ref.kind}}) + '\n');
   console.log(`${ref.id}: ${reference.components.length} components, ${reference.tokens.length} tokens, ${reference.evidence.length} evidence records`);
 }

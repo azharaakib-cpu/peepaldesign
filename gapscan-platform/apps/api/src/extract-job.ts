@@ -74,9 +74,11 @@ export function createExtractHandler({store, blobs, stageDelayMs = 0, figmaToken
 
     // Component inventories from code still come from the prototype extractor (Phase 2 bridge).
     let external: ExternalComponent[] = [];
-    if (documents.length) {
-      await progress('parse', 0, 1, 'Finding components in code…');
-      const bridge = await extractCode(documents);
+    // JS/TS components come from the native TypeScript reader; the prototype bridge now only reads markup.
+    const markup = documents.filter(doc => !/\.(?:[cm]?[jt]sx?)$/i.test(doc.name));
+    if (markup.length) {
+      await progress('parse', 0, 1, 'Finding components in markup…');
+      const bridge = await extractCode(markup);
       // The native class grouping already folds modifiers (`.btn-sm`, `.card--elevated`) into their base
       // component, and chained `.is-error` classes are states; the bridge's per-class copies are dropped.
       const bases = new Set(results.flatMap(r => r.result?.observations ?? []).filter(o => o.type === 'component').map(o => (o as {name: string}).name.toLowerCase()));

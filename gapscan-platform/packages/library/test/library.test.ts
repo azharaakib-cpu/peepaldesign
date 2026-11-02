@@ -8,8 +8,9 @@ test('every configured reference has a pinned, schema-valid snapshot with checks
   for (const summary of list) {
     const reference = (await loadReference(summary.id))!;
     assert.ok(reference.components.length >= 10, `${summary.id} has components`);
+    if (summary.kind === 'types') assert.ok(reference.components.every(c => c.props?.length), `${summary.id} components carry their props`);
     assert.ok(reference.sources.every(s => /^[0-9a-f]{64}$/.test(s.sha256) && s.uri.startsWith('https://cdn.jsdelivr.net/npm/')), 'pinned CDN artifacts with checksums');
-    assert.ok(reference.components.every(c => !['Miscellaneous', 'Utilities and tooling'].includes(c.category)));
+    assert.ok(reference.components.every(c => c.category !== 'Utilities and tooling' && (summary.kind === 'types' || c.category !== 'Miscellaneous')), 'CSS noise is filtered; declared components are kept');
     assert.ok(reference.components.some(c => c.canonical === 'Button' && c.category === 'Actions'), `${summary.id} has a Button`);
   }
 });

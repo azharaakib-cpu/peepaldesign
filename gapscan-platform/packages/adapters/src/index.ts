@@ -10,3 +10,5 @@ export {codeAdapter, createCodeAdapter, cssComponents, cssDeclarations, inferred
 export type {CodeAdapterOptions} from './code.ts';
 export {createUrlAdapter, sameSection, sharedPrefix} from './url.ts';
 export type {UrlAdapterOptions} from './url.ts';
+export {componentApis, typescriptObservations} from './typescript.ts';
+export type {ComponentApi} from './typescript.ts';

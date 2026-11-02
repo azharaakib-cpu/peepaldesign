@@ -57,7 +57,8 @@ test('diffs turn into the rubric drivers with plain-language summaries', () => {
   assert.deepEqual(by('a11y_fix'), [], 'the reference brings keyboard focus with it');
   assert.deepEqual(by('state_missing'), [], 'every state we use exists in the reference');
   assert.deepEqual(diffs.filter(d => d.driver === null).map(d => d.summary), ['Gains a visible keyboard focus style built into Button', 'Gains the disabled state built into Button', 'Gains the loading state built into Button']);
-  assert.equal(by('prop_semantic').length, 2);
+  assert.deepEqual(by('prop_rename'), ['Prop “kind” becomes “variant”', 'Prop “isBusy” becomes “loading”'], 'library naming differences are renames, not rewrites');
+  assert.equal(by('prop_semantic').length, 0);
   const custom = diffComponents(component('s', 'Btn', 'Actions', {states: ['hover', 'selected']}), polarisButton);
   assert.deepEqual(custom.filter(d => d.driver === 'state_missing').map(d => d.summary), ['Your selected state has no equivalent in Button; it must be built or dropped']);
   const neither = diffComponents(component('s', 'Btn', 'Actions', {focus: false}), component('t', 'Button', 'Actions', {states: ['hover']}));

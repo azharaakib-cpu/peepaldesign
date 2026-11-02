@@ -33,9 +33,9 @@ review the result, then compare it against a reference system.
 | `packages/estimate` | The only effort/cost/time implementation: 1–5 driver rubric, variant and uncertainty factors, token categories, hours-weighted complexity, quick wins and breaking changes. |
 | `packages/taxonomy` | The 13-category reference tree and loss-free classification, ported from the prototype and checked against it. |
 | `packages/normalize` | Colour science (sRGB/OKLCH/CIE Lab, CIEDE2000, WCAG contrast), colour clustering and role inference, tonal ramps, spacing grid, type scale fit, radius and elevation scales, multi-source merging with drift detection, confidence. |
-| `packages/adapters` | One adapter per source type, all producing the same observations: rendered website (Playwright), Figma REST, PDF (pdf.js), PPTX and DOCX (in-memory OOXML), CSS/SCSS/Less and DTCG/Style Dictionary token JSON. Includes a hardened ZIP reader and a small XML reader. |
+| `packages/adapters` | One adapter per source type, all producing the same observations: rendered website (Playwright), Figma REST, PDF (pdf.js), PPTX and DOCX (in-memory OOXML), CSS/SCSS/Less and DTCG/Style Dictionary token JSON, and React/TypeScript components (props, variants, sizes and states read from props interfaces and `.d.ts` files with the TypeScript parser; nothing executed). Includes a hardened ZIP reader and a small XML reader. |
 | `packages/extraction` | Assembles observations into tokens, scales, components and plain-language findings (near-duplicates, hard-coded values, off-scale values, declared-vs-observed drift, contrast failures, missing states, unresolved values, coverage gaps). |
-| `packages/library` | Pinned reference systems (Bootstrap 5.3.3, Shopify Polaris 13.9.5, IBM Carbon `@carbon/styles` 1.68.0, Bulma 1.0.2) built from each library's published CSS with checksums, by the same pipeline as user sources. `node packages/library/scripts/build.ts` rebuilds them. |
+| `packages/library` | Pinned reference systems: Bootstrap 5.3.3, Shopify Polaris 13.9.5, IBM Carbon `@carbon/styles` 1.68.0 and Bulma 1.0.2 from their published CSS (with previews), and MUI 6.4.7 from its published `.d.ts` files (component APIs, no previews). All with checksums, by the same pipeline as user sources. `node packages/library/scripts/build.ts` rebuilds them. |
 | `packages/gapscan` | Component matching (weighted 0–100 score; confirmed / suggested / unresolved), diffs into rubric drivers, decisions (keep / update / replace / check first / optional), token mapping, projected previews. Gains the target brings for free are shown but never priced. |
 | `packages/exports` | Token exporters from one canonical list: W3C DTCG `tokens.json` (with provenance in `$extensions`), CSS custom properties (with theme-mode blocks), Tailwind v4 `@theme`, SCSS. Unresolved values are never exported as known. |
 | `packages/objects` | Missing-object generator. Each section is labelled extracted, inferred or drafted; contrast pairs come with fixes that pass; approvals are tied to a content hash and go stale if the content changes. No language model is called. |
@@ -97,9 +97,9 @@ images, gradients or translucent layers is skipped rather than guessed.
 
 ## Current limits
 
-- **Component inventories from code** still come from the prototype extractor
-  through `apps/api/src/legacy-bridge.ts`. Foundations (tokens, colours, type,
-  spacing, radii, shadows) are read natively.
+- **The prototype bridge only reads markup now.** JS/TS components and all
+  foundations are read natively; HTML and Markdown components still pass through
+  `apps/api/src/legacy-bridge.ts`.
 - **URL safety checks names and resolved addresses.** Every host the browser
   contacts must resolve only to public addresses (cached per job). The browser
   resolves names again itself, so a DNS-rebinding attack in between is not fully
@@ -114,9 +114,10 @@ images, gradients or translucent layers is skipped rather than guessed.
 - **Previews are inferred.** "Before" examples from code apply your real CSS to
   generated markup; "after" previews apply the reference's CSS with your role
   colours swapped in. Both are labelled; neither is built or verified code.
-- **The reference library is CSS-based.** React-only systems without a published
-  stylesheet (Material 3 web components, Chakra, Ant Design v5, shadcn) need a
-  different artifact reader before they can be added.
+- **Type-based references have no previews or tokens.** MUI is read from its
+  declarations, so it compares APIs but has no "after" preview or role colours.
+  Chakra, Ant Design v5 and shadcn can be added the same way; Material 3 web
+  components need a custom-element reader.
 - **Drafted sections are templates, not writing.** Prose sections (principles,
   voice, keyboard behaviour) are deterministic drafts for a person to edit and
   approve; an LLM drafting step with citations is not wired in yet.
