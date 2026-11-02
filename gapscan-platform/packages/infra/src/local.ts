@@ -5,7 +5,7 @@ import {dirname, join, resolve, sep} from 'node:path';
 import type {Job, JobEventBody, JobType} from '@gapscan/schema';
 import type {BlobStore, EventBus, JobHandler, Queue, Store} from './types.ts';
 
-const SAFE_KEY = /^[a-zA-Z0-9][a-zA-Z0-9/_.-]*$/;
+export const SAFE_KEY = /^[a-zA-Z0-9][a-zA-Z0-9/_.-]*$/;
 
 export function createFsBlobStore(root: string): BlobStore {
   const base = resolve(root);

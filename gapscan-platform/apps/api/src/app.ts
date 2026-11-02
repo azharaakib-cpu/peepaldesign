@@ -79,6 +79,11 @@ export function buildApp({infra, handlers = {}, logger = false, heartbeatMs = HE
   // The extraction UI: a few static files, no build step. Only known names are served.
   const PUBLIC = new URL('../public/', import.meta.url), TYPES: Record<string, string> = {html: 'text/html; charset=utf-8', css: 'text/css; charset=utf-8', js: 'text/javascript; charset=utf-8'};
   app.get('/', async (_request, reply) => reply.redirect('/app/'));
+  // For load balancers: the store answers (a missing row is fine; a lost connection is not).
+  app.get('/healthz', async (_request, reply) => {
+    try { await store.getProject('00000000-0000-0000-0000-000000000000'); return {ok: true}; }
+    catch { return fail(reply, 503, 'The database is not reachable.'); }
+  });
   app.get('/app/*', async (request, reply) => {
     const name = (request.params as {'*': string})['*'] || 'index.html';
     if (!/^[a-z-]+\.(html|css|js)$/.test(name)) return fail(reply, 404, 'Not found.');

@@ -1,4 +1,4 @@
-# GapScan platform (Phases 1–7)
+# GapScan platform (Phases 1–8)
 
 The TypeScript monorepo that replaces the prototype in `../gapscan`, following
 the architecture plan. Phase 1 added the shared contracts, the single estimation
@@ -17,6 +17,9 @@ component is used, leave unused components out and price the call sites to updat
 Phase 7 adds codemods: the renames a report found become rules, dry-run on the
 application's code as a reviewable diff, and the same rewriter is downloadable as a
 script you run in your own repository.
+Phase 8 adds hosted infrastructure: a Postgres store, a Postgres job queue that any
+number of instances share, cross-instance live progress, and S3-compatible object
+storage. Local mode still needs nothing installed.
 
 Requires Node 24+ (it runs TypeScript directly; there is no build step).
 
@@ -47,7 +50,7 @@ review the result, then compare it against a reference system.
 | `packages/assets` | Brand kit from token slots (reports which slots fell back to defaults), self-contained templates (business card 85×55 mm + 3 mm bleed, OpenGraph 1200×630, LinkedIn banner, PowerPoint deck template with a branded theme, HTML email newsletter with dark mode), contrast checks, offline rendering in Chromium. |
 | `packages/usage` | Application impact: JSX usages through import aliases (with the props each passes), class names in markup and HTML, custom-element tags, files and screens per component. Tests, dependencies and docs are skipped. |
 | `packages/codemod` | Rules from a GapScan report (confirmed matches only): imports re-pointed at the reference's package, prop renames, option values paired exactly as the report pairs them, and class renames for CSS references with a known modifier convention (Bootstrap, Carbon, Bulma). Each element is edited all or nothing; spreads, computed values, props with no equivalent, values the target prop means differently (`type="submit"` in Ant Design) and use outside JSX are listed for a person. The downloadable script embeds the same rewriter and diff code, so it makes exactly the dry-run changes. |
-| `packages/infra` | `Store`, `BlobStore`, `Queue` and `EventBus` interfaces with zero-install local adapters (Node's built-in SQLite, filesystem blobs, in-process queue). |
+| `packages/infra` | `Store`, `BlobStore`, `Queue` and `EventBus` interfaces. Zero-install local adapters (Node's built-in SQLite, filesystem blobs, in-process queue) and hosted ones: Postgres store with numbered migrations, a Postgres job queue shared by all instances, a cross-instance event bus (LISTEN/NOTIFY plus polling), and an S3-compatible blob store with its own SigV4 signing (checked against AWS's published examples). |
 | `apps/api` | Fastify API and the extraction UI (`public/`): projects, sources, extraction jobs, SSE progress with resume, cancellation. |
 
 ## API
@@ -90,14 +93,31 @@ review the result, then compare it against a reference system.
 | Variable | Default | Notes |
 | --- | --- | --- |
 | `PORT`, `HOST` | `4300`, `127.0.0.1` | |
-| `GAPSCAN_DATA_DIR` | `./.data` | SQLite database and blobs |
-| `GAPSCAN_STORE` | `sqlite` | `postgres` is declared but not implemented yet and fails at startup |
-| `GAPSCAN_QUEUE` | `in-process` | `bullmq` likewise |
-| `GAPSCAN_BLOBS` | `fs` | `s3` likewise |
-| `GAPSCAN_CONCURRENCY` | `2` | Jobs run at once |
+| `GAPSCAN_DATA_DIR` | `./.data` | SQLite database and blobs (local mode) |
+| `GAPSCAN_STORE` | `sqlite` | `postgres` with `GAPSCAN_DATABASE_URL` (or `DATABASE_URL`). Migrations run at startup under an advisory lock. |
+| `GAPSCAN_QUEUE` | `in-process`, or `postgres` with a Postgres store | The Postgres queue is shared by every instance: one claim per job (`FOR UPDATE SKIP LOCKED`), heartbeats, and a job whose worker stops is failed as retryable after 60 s |
+| `GAPSCAN_BLOBS` | `fs` | `s3` with `GAPSCAN_S3_BUCKET`, `GAPSCAN_S3_REGION`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` (and `AWS_SESSION_TOKEN`). `GAPSCAN_S3_ENDPOINT` and `GAPSCAN_S3_PATH_STYLE=1` for R2 or MinIO; `GAPSCAN_S3_PREFIX` to share a bucket. |
+| `GAPSCAN_CONCURRENCY` | `2` | Jobs this instance runs at once. With the Postgres queue, `0` makes an API-only instance. |
 | `GAPSCAN_MAX_PAGES` | `8` | Pages rendered per website source |
 | `GAPSCAN_FIGMA_TOKEN` | unset | Personal access token for reading Figma files. Without it, Figma links are recorded as "not connected". Variables need a Figma plan with REST variable access; otherwise styles and usage are read. |
 | `GAPSCAN_LEGACY_ENGINE` | `../gapscan/engine/` | The prototype extractor, still used for component inventories in code |
+
+## Hosting
+
+Run the same `npm start` everywhere; the settings decide each instance's role:
+
+```bash
+# API instances (behind a load balancer; GET /healthz checks the database)
+GAPSCAN_STORE=postgres GAPSCAN_DATABASE_URL=… GAPSCAN_BLOBS=s3 … GAPSCAN_CONCURRENCY=0 npm start
+# Worker instances (need Chromium for websites and assets: npx playwright install chromium)
+GAPSCAN_STORE=postgres GAPSCAN_DATABASE_URL=… GAPSCAN_BLOBS=s3 … GAPSCAN_CONCURRENCY=4 npm start
+```
+
+Progress streams from any API instance: events are stored in Postgres and announced
+with `LISTEN/NOTIFY`, and subscribers also poll, so a missed notification only delays
+an event, never loses it. Error messages name a missing setting, never its value; S3
+keys only ever go into the request signature. Not done yet, and decisions for whoever
+hosts it: sign-in and per-project access, and a network sandbox for the renderer.
 
 ## How a website is read
 
@@ -124,7 +144,16 @@ images, gradients or translucent layers is skipped rather than guessed.
   runtime yet, and screenshots of specimens are not captured yet.
 - **Image sources** (screenshots, mockups) are accepted but not sampled.
 - **The in-process queue does not survive a restart.** Jobs that were queued or
-  running are marked `failed` with `retryable: true` on the next start.
+  running are marked `failed` with `retryable: true` on the next start. The
+  Postgres queue does not have this problem; a job interrupted by a shutdown is
+  failed as retryable rather than reported as cancelled.
+- **Postgres is tested in-process.** The adapters run against PostgreSQL 18 in
+  PGlite, and the `pg` driver path over the wire protocol through PGlite's socket
+  server. Contention between separate machines (SKIP LOCKED claims, cross-connection
+  notifications) follows standard Postgres semantics but has not been load-tested
+  against a real server.
+- **No accounts yet.** Anyone who can reach the API can use every project; put it
+  behind your own sign-in until per-project access is added.
 - **Previews are inferred.** "Before" examples from code apply your real CSS to
   generated markup; "after" previews apply the reference's CSS with your role
   colours swapped in. Both are labelled; neither is built or verified code.

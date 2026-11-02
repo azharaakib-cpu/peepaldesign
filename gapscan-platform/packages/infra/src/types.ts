@@ -1,6 +1,6 @@
 // Ports the services depend on. Local adapters (SQLite, in-process queue,
-// filesystem blobs) run with zero installs; Postgres, BullMQ and S3 adapters
-// implement the same interfaces for hosting.
+// filesystem blobs) run with zero installs; the Postgres store and queue and the S3
+// blob store (postgres.ts, s3.ts) implement the same interfaces for hosting.
 import type {Job, JobEvent, JobEventBody, JobStatus, JobType, Project, SourceAsset} from '@gapscan/schema';
 
 export type ExtractionRecord = {
