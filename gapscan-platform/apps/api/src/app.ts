@@ -9,6 +9,7 @@ import {ExtractedDesignSystem, TERMINAL_JOB_STATUSES} from '@gapscan/schema';
 import type {JobEvent, JobType} from '@gapscan/schema';
 import type {Infra, JobHandler} from '@gapscan/infra';
 import {createUrlAdapter} from '@gapscan/adapters';
+import type {Adapter} from '@gapscan/adapters';
 import {listReferences, loadReference} from '@gapscan/library';
 import {planningTotals} from '@gapscan/estimate';
 import {Assumptions, GapScanReport, ObjectKind} from '@gapscan/schema';
@@ -20,7 +21,9 @@ import type {StoredApproval} from '@gapscan/objects';
 import {assetKey, createRenderHandler} from './render-job.ts';
 import {buildBrandKit, TEMPLATES} from '@gapscan/assets';
 import {approvalKey, computeReport, createGapScanHandler, loadExtraction, saveReport, summarize} from './gapscan-job.ts';
-import {publicUrl, UnsafeUrlError} from './url-safety.ts';
+import {createUrlGuard, publicUrl, UnsafeUrlError} from './url-safety.ts';
+import {lookup} from 'node:dns/promises';
+const lookupAll = (hostname: string) => lookup(hostname, {all: true, verbatim: true});
 
 export const MAX_CODE_BYTES = 1_500_000;
 export const MAX_FILE_BYTES = 40_000_000;
@@ -41,8 +44,9 @@ export type AppOptions = {infra: Infra; handlers?: Partial<Record<JobType, JobHa
 export function buildApp({infra, handlers = {}, logger = false, heartbeatMs = HEARTBEAT_MS}: AppOptions) {
   const {store, blobs, bus, queue} = infra;
   // Every page and sub-request the browser makes must pass the same public-URL check as intake.
-  const allowUrl = (url: URL) => { try { publicUrl(url.href); return true; } catch { return false; } };
-  const urlAdapter = createUrlAdapter({allowUrl, maxPages: Number(process.env.GAPSCAN_MAX_PAGES) || 8});
+  // Each extraction gets a fresh guard, so DNS answers are cached for one job only.
+  const urlAdapter: Adapter = (input, context) =>
+    createUrlAdapter({allowUrl: createUrlGuard(lookupAll), maxPages: Number(process.env.GAPSCAN_MAX_PAGES) || 8})(input, context);
   queue.register('extract', handlers.extract ?? createExtractHandler({store, blobs, urlAdapter}));
   queue.register('gapscan', handlers.gapscan ?? createGapScanHandler({store, blobs}));
   queue.register('render', handlers.render ?? createRenderHandler({store, blobs}));
@@ -234,7 +238,7 @@ export function buildApp({infra, handlers = {}, logger = false, heartbeatMs = HE
     const eds = await loadExtraction(store, blobs, IdParams.parse(request.params).id);
     return eds ? buildBrandKit(eds, String((request.query as {name?: string}).name ?? 'Your brand').slice(0, 80)) : fail(reply, 404, 'Extraction not found.');
   });
-  const StartRender = z.object({template: z.string().refine(id => id in TEMPLATES, 'Unknown template.'), brandName: z.string().trim().max(80).optional(), data: z.record(z.string(), z.string().max(160)).default({})});
+  const StartRender = z.object({template: z.string().refine(id => id in TEMPLATES, 'Unknown template.'), brandName: z.string().trim().max(80).optional(), data: z.record(z.string(), z.string().max(1200)).default({})});
   app.post('/v1/extractions/:id/assets', async (request, reply) => {
     const {id} = IdParams.parse(request.params), extraction = await store.getExtraction(id);
     if (!extraction) return fail(reply, 404, 'Extraction not found.');
@@ -252,6 +256,8 @@ export function buildApp({infra, handlers = {}, logger = false, heartbeatMs = HE
     if (!manifest) return fail(reply, 404, 'Asset not found.');
     const {file, contentType} = JSON.parse(manifest.toString('utf8')) as {file: string; contentType: string};
     const bytes = await blobs.get(assetKey(id, file));
+    // Generated HTML (emails) is served sandboxed: no scripts, no same-origin access, no network except images.
+    if (contentType.startsWith('text/html')) reply.header('content-security-policy', "sandbox; default-src 'none'; style-src 'unsafe-inline'; img-src https: data:");
     return bytes ? reply.type(contentType).header('content-disposition', `${(request.query as {download?: string}).download ? 'attachment' : 'inline'}; filename="${file}"`).send(bytes) : fail(reply, 404, 'Asset file missing.');
   });
 

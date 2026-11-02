@@ -139,10 +139,10 @@ objects();
 
 // Brand assets: template fields are rendered from the server's template list.
 let templates = [];
-const FIELD_LABELS = {name: 'Name', role: 'Role', email: 'Email', phone: 'Phone', website: 'Website', title: 'Title', subtitle: 'Subtitle'};
+const FIELD_LABELS = {name: 'Name', role: 'Role', email: 'Email', phone: 'Phone', website: 'Website', title: 'Title', subtitle: 'Subtitle', points: 'Points (separate with ;)', body: 'Message', cta: 'Button label', url: 'Button link (https://…)'};
 function assetFields() {
   const template = templates.find(t => t.id === $('#asset-template').value);
-  $('#asset-fields').replaceChildren(...(template?.fields ?? []).map(f => el('label', {}, FIELD_LABELS[f] || f, el('input', {type: 'text', name: `field-${f}`, maxlength: '160'}))));
+  $('#asset-fields').replaceChildren(...(template?.fields ?? []).map(f => el('label', {}, FIELD_LABELS[f] || f, el('input', {type: 'text', name: `field-${f}`, maxlength: f === 'body' || f === 'points' ? '1200' : '160'}))));
 }
 async function assets() {
   if (!id) return;
@@ -165,7 +165,9 @@ $('#asset-form').addEventListener('submit', async event => {
       stream.close();
       const manifest = await api(`/v1/assets/${jobId}`), url = `/v1/assets/${jobId}/file`;
       result.replaceChildren(
-        manifest.contentType === 'image/png' ? el('img', {src: url, alt: `${manifest.template.label} preview`, style: 'max-width:100%;border:1px solid var(--line);border-radius:8px'}) : el('p', {}, el('a', {href: url, target: '_blank', rel: 'noopener'}, `Open ${manifest.file}`)),
+        manifest.contentType === 'image/png' ? el('img', {src: url, alt: `${manifest.template.label} preview`, style: 'max-width:100%;border:1px solid var(--line);border-radius:8px'})
+          : manifest.contentType.startsWith('text/html') ? el('iframe', {src: url, sandbox: '', title: 'Email preview', style: 'width:100%;height:520px;border:1px solid var(--line);border-radius:8px;background:#fff'})
+          : el('p', {}, el('a', {href: `${url}?download=1`}, `Download ${manifest.file}`)),
         el('ul', {class: 'plain'}, manifest.checks.map(c => el('li', {class: 'source'}, el('span', {}, c.message), el('span', {class: `pill ${c.pass ? 'ok' : 'minor'}`}, c.pass ? 'Pass' : 'Check')))),
         el('a', {class: 'button', href: `${url}?download=1`}, 'Download'));
     });

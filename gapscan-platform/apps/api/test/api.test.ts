@@ -300,3 +300,18 @@ test('brand assets render through the job system with their checks', {timeout: 9
     assert.equal(file.rawPayload.subarray(0, 5).toString(), '%PDF-');
   } finally { await h.close(); }
 });
+
+test('generated email HTML is served sandboxed', async () => {
+  const h = await harness();
+  try {
+    await h.json('POST', `/v1/projects/${h.project.id}/sources`, {kind: 'code', name: 'acme.css', content: CSS});
+    const {jobId} = (await h.json('POST', `/v1/projects/${h.project.id}/extractions`)).body;
+    await h.infra.queue.idle();
+    const edsId = (await h.json('GET', `/v1/jobs/${jobId}`)).body.resultId;
+    const started = await h.json('POST', `/v1/extractions/${edsId}/assets`, {template: 'email', data: {title: '<img src=x onerror=alert(1)>'}});
+    await h.infra.queue.idle();
+    const file = await h.app.inject({method: 'GET', url: `/v1/assets/${started.body.jobId}/file`});
+    assert.match(file.headers['content-security-policy'] as string, /^sandbox; default-src 'none'/);
+    assert.doesNotMatch(file.body, /<img src=x/);
+  } finally { await h.close(); }
+});

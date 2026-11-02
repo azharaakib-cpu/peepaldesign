@@ -48,3 +48,34 @@ test('renders a print PDF and a PNG in an offline page', {skip: !browser && 'Chr
     assert.equal(Buffer.from(png.bytes).readUInt32BE(20), 630);
   } finally { await page.close(); await browser!.close(); }
 });
+
+test('the slide deck carries the brand in its theme and reads back through the PPTX adapter', async () => {
+  const {pptxAdapter} = await import('@gapscan/adapters');
+  const {renderDeck} = await import('@gapscan/assets');
+  const kit = buildBrandKit(acme, 'Acme & Co');
+  const deck = renderDeck(kit, {title: 'Design system 2.0', subtitle: 'Q4 review', points: 'Faster; Accessible; Consistent'});
+  assert.equal(deck.file, 'slide-deck.pptx');
+  const read = await pptxAdapter({assetId: 'd', name: 'deck.pptx', uri: 'inline:deck.pptx', bytes: deck.bytes}, {signal: new AbortController().signal});
+  assert.equal(read.fetched, 5);
+  const colors = read.observations.filter(o => o.type === 'color') as {name?: string; value: string}[];
+  assert.equal(colors.find(c => c.name === 'theme.accent1')?.value, '#0B5FD6');
+  assert.equal(colors.find(c => c.name === 'theme.dk1')?.value, '#1A1A1A');
+  const fonts = read.observations.filter(o => o.type === 'font') as {role?: string; family: string}[];
+  assert.deepEqual(fonts.filter(f => f.role).map(f => [f.role, f.family]), [['heading', 'Inter Display'], ['body', 'Inter']]);
+  assert.ok(read.observations.some(o => o.type === 'text' && o.text === 'Accessible'));
+  const plan = planAsset('slide-deck', kit, {});
+  assert.equal(plan.checks.find(c => c.rule === 'fonts')?.pass, false, 'brand fonts must be installed to present');
+});
+
+test('the email template is table-based, inline-styled, escaped and only links to https', () => {
+  const kit = buildBrandKit(acme, 'Acme');
+  const plan = planAsset('email', kit, {title: 'Q4 update', body: 'Line one\n<b>not bold</b>', cta: 'Read it', url: 'https://acme.test/q4'});
+  assert.match(plan.html, /<table role="presentation" width="600"/);
+  assert.match(plan.html, /background:#0b5fd6/);
+  assert.match(plan.html, /Line one<br>&lt;b&gt;not bold&lt;\/b&gt;/);
+  assert.match(plan.html, /href="https:\/\/acme.test\/q4"/);
+  assert.ok(plan.checks.every(c => c.rule === 'brand-slots' || c.pass));
+  const unsafe = planAsset('email', kit, {url: 'javascript:alert(1)'});
+  assert.match(unsafe.html, /href="#"/);
+  assert.equal(unsafe.checks.find(c => c.rule === 'link')?.pass, false);
+});

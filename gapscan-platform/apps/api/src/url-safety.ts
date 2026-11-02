@@ -17,3 +17,36 @@ export function publicUrl(value: string): URL {
   url.hash = '';
   return url;
 }
+
+// Host names are only half the check: a public name can resolve to a private
+// address. Every address a host resolves to must be public, or the request is
+// refused (fail closed on DNS errors). Results are cached per host for one job.
+const V4_PRIVATE: [number, number][] = [
+  [0x00000000, 8], [0x0a000000, 8], [0x64400000, 10], [0x7f000000, 8], [0xa9fe0000, 16], [0xac100000, 12], [0xc0000000, 24],
+  [0xc0000200, 24], [0xc0a80000, 16], [0xc6120000, 15], [0xc6336400, 24], [0xcb007100, 24], [0xe0000000, 4], [0xf0000000, 4],
+];
+function v4Private(ip: string): boolean {
+  const parts = ip.split('.').map(Number);
+  if (parts.length !== 4 || parts.some(p => !Number.isInteger(p) || p < 0 || p > 255)) return true;
+  const value = ((parts[0]! << 24) | (parts[1]! << 16) | (parts[2]! << 8) | parts[3]!) >>> 0;
+  return V4_PRIVATE.some(([base, bits]) => (value >>> (32 - bits)) === (base >>> (32 - bits)));
+}
+export function isPrivateAddress(address: string): boolean {
+  const ip = address.toLowerCase().replace(/^\[|\]$/g, '').replace(/%.*$/, '');
+  if (/^\d+\.\d+\.\d+\.\d+$/.test(ip)) return v4Private(ip);
+  const mapped = ip.match(/^::ffff:(\d+\.\d+\.\d+\.\d+)$/);
+  if (mapped) return v4Private(mapped[1]!);
+  if (ip === '::' || ip === '::1') return true;
+  return /^(fc|fd|fe[89ab]|ff)/.test(ip) || ip.startsWith('64:ff9b:') || ip.startsWith('2001:db8:') || !ip.includes(':');
+}
+
+export type Lookup = (hostname: string) => Promise<{address: string}[]>;
+export function createUrlGuard(lookup: Lookup): (url: URL) => Promise<boolean> {
+  const cache = new Map<string, Promise<boolean>>();
+  return async url => {
+    try { publicUrl(url.href); } catch { return false; }
+    const host = url.hostname.toLowerCase();
+    if (!cache.has(host)) cache.set(host, lookup(host).then(addresses => addresses.length > 0 && addresses.every(a => !isPrivateAddress(a.address)), () => false));
+    return cache.get(host)!;
+  };
+}

@@ -3,6 +3,12 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "exports": { ".": "./src/index.ts" },
-  "dependencies": { "@gapscan/normalize": "0.1.0", "@gapscan/schema": "0.1.0" }
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@gapscan/adapters": "0.1.0",
+    "@gapscan/normalize": "0.1.0",
+    "@gapscan/schema": "0.1.0"
+  }
 }

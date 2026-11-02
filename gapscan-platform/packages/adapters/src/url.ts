@@ -8,7 +8,7 @@ import {AdapterError} from './types.ts';
 export type UrlAdapterOptions = {
   maxPages?: number; viewports?: number[]; timeoutMs?: number;
   // Decides which hosts the browser may contact. The API passes its public-URL check.
-  allowUrl: (url: URL) => boolean;
+  allowUrl: (url: URL) => boolean | Promise<boolean>;
 };
 
 // Runs inside the page. Kept as a string so the server build needs no DOM types.
@@ -113,7 +113,7 @@ export function createUrlAdapter(options: UrlAdapterOptions): Adapter {
     try { playwright = await import('playwright'); }
     catch { throw new AdapterError('Website rendering needs Playwright on the server (npm install playwright && npx playwright install chromium).'); }
     const start = new URL(uri);
-    if (!allowUrl(start)) throw new AdapterError('Only public HTTPS websites can be rendered.');
+    if (!(await allowUrl(start))) throw new AdapterError('Only public HTTPS websites can be rendered.');
 
     const browser = await playwright.chromium.launch({headless: true, args: ['--disable-dev-shm-usage']});
     const abort = () => { void browser.close(); };
@@ -123,11 +123,11 @@ export function createUrlAdapter(options: UrlAdapterOptions): Adapter {
     let fetched = 0;
     try {
       const context = await browser.newContext({acceptDownloads: false, javaScriptEnabled: true, serviceWorkers: 'block', userAgent: 'GapScan/1.0 (design-system extraction)'});
-      await context.route('**/*', route => {
+      await context.route('**/*', async route => {
         let url: URL;
         try { url = new URL(route.request().url()); } catch { return route.abort(); }
         if (url.protocol === 'data:' || url.protocol === 'blob:') return route.continue();
-        if (!allowUrl(url) || ['media', 'websocket', 'eventsource'].includes(route.request().resourceType())) return route.abort();
+        if (['media', 'websocket', 'eventsource'].includes(route.request().resourceType()) || !(await allowUrl(url))) return route.abort();
         return route.continue();
       });
       while (queue.length && fetched < maxPages) {
@@ -146,7 +146,7 @@ export function createUrlAdapter(options: UrlAdapterOptions): Adapter {
             if (pass === passes[0]) {
               const response = await page.goto(href, {waitUntil: 'domcontentloaded', timeout: timeoutMs});
               if (!response || response.status() >= 400) throw new Error(`HTTP ${response?.status() ?? 'error'}`);
-              if (!allowUrl(new URL(page.url()))) throw new Error('Redirected to a non-public address.');
+              if (!(await allowUrl(new URL(page.url())))) throw new Error('Redirected to a non-public address.');
               const landed = page.url().split('#')[0]!;
               if (landed !== href && seen.has(landed)) { skippedDuplicate = true; break; }
               seen.add(landed);
@@ -174,7 +174,7 @@ export function createUrlAdapter(options: UrlAdapterOptions): Adapter {
                 const entry = components.get(kind) ?? {count: 0, classes: new Set<string>(), html: c.html, locator: page.url()};
                 entry.count += c.count; c.classes.forEach(cls => entry.classes.add(cls)); components.set(kind, entry);
               }
-              for (const link of data.links) if (!seen.has(link) && !queue.includes(link) && allowUrl(new URL(link)) && sameSection(start, new URL(link))) queue.push(link);
+              for (const link of data.links) if (!seen.has(link) && !queue.includes(link) && sameSection(start, new URL(link)) && await allowUrl(new URL(link))) queue.push(link);
               queue.sort((a, b) => sharedPrefix(start, new URL(b)) - sharedPrefix(start, new URL(a)));
             }
           }

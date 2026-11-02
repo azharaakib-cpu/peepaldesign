@@ -39,7 +39,7 @@ review the result, then compare it against a reference system.
 | `packages/gapscan` | Component matching (weighted 0–100 score; confirmed / suggested / unresolved), diffs into rubric drivers, decisions (keep / update / replace / check first / optional), token mapping, projected previews. Gains the target brings for free are shown but never priced. |
 | `packages/exports` | Token exporters from one canonical list: W3C DTCG `tokens.json` (with provenance in `$extensions`), CSS custom properties (with theme-mode blocks), Tailwind v4 `@theme`, SCSS. Unresolved values are never exported as known. |
 | `packages/objects` | Missing-object generator. Each section is labelled extracted, inferred or drafted; contrast pairs come with fixes that pass; approvals are tied to a content hash and go stale if the content changes. No language model is called. |
-| `packages/assets` | Brand kit from token slots (reports which slots fell back to defaults), self-contained templates (business card 85×55 mm + 3 mm bleed, OpenGraph 1200×630, LinkedIn banner), contrast checks, offline rendering in Chromium. |
+| `packages/assets` | Brand kit from token slots (reports which slots fell back to defaults), self-contained templates (business card 85×55 mm + 3 mm bleed, OpenGraph 1200×630, LinkedIn banner, PowerPoint deck template with a branded theme, HTML email newsletter with dark mode), contrast checks, offline rendering in Chromium. |
 | `packages/infra` | `Store`, `BlobStore`, `Queue` and `EventBus` interfaces with zero-install local adapters (Node's built-in SQLite, filesystem blobs, in-process queue). |
 | `apps/api` | Fastify API and the extraction UI (`public/`): projects, sources, extraction jobs, SSE progress with resume, cancellation. |
 
@@ -100,9 +100,11 @@ images, gradients or translucent layers is skipped rather than guessed.
 - **Component inventories from code** still come from the prototype extractor
   through `apps/api/src/legacy-bridge.ts`. Foundations (tokens, colours, type,
   spacing, radii, shadows) are read natively.
-- **The URL policy checks host names, not resolved IP addresses.** A public name
-  that resolves to a private address is not blocked yet; resolve and pin
-  addresses before hosting this for untrusted users.
+- **URL safety checks names and resolved addresses.** Every host the browser
+  contacts must resolve only to public addresses (cached per job). The browser
+  resolves names again itself, so a DNS-rebinding attack in between is not fully
+  excluded; run rendering in a network sandbox without private routes when hosting
+  for untrusted users.
 - **Component states on websites** come from stylesheet rules for the
   component's classes (same-origin sheets only); states are not forced at
   runtime yet, and screenshots of specimens are not captured yet.
@@ -120,5 +122,6 @@ images, gradients or translucent layers is skipped rather than guessed.
   approve; an LLM drafting step with citations is not wired in yet.
 - **Print colour is RGB.** Business-card PDFs are RGB with bleed; CMYK conversion
   with an ICC profile, Pantone matching and PDF/X preflight are not done yet.
-- **Not built yet:** slide decks (PPTX/Google Slides), email templates, swag
-  specs and Figma Variables sync.
+- **Decks use the brand fonts by name.** PowerPoint cannot carry a fallback stack;
+  the deck's checks remind presenters to install or embed them.
+- **Not built yet:** Google Slides, swag specs and Figma Variables sync.
