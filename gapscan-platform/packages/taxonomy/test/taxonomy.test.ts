@@ -54,11 +54,19 @@ test('coverage fails on count mismatch, duplicates, or foreign occurrences', () 
 });
 
 const legacyPath = new URL('../../../../gapscan/engine/taxonomy.mjs', import.meta.url);
-test('classifies exactly like the prototype module', {skip: !existsSync(legacyPath) && 'prototype checkout not present'}, async () => {
-  const legacy = await import(legacyPath.href) as {classifyItem: typeof classifyItem};
-  const names = [...new Set(CATEGORY_TAXONOMY.flatMap(c => ITEM_RANKS.flatMap(r => c.ranks[r])))]
+test('classifies the prototype’s vocabulary exactly like the prototype module', {skip: !existsSync(legacyPath) && 'prototype checkout not present'}, async () => {
+  const legacy = await import(legacyPath.href) as {classifyItem: typeof classifyItem; CATEGORY_TAXONOMY: typeof CATEGORY_TAXONOMY};
+  // The prototype's own vocabulary: aliases added since (combobox, accordion, chip…) are new behaviour, not drift.
+  const names = [...new Set(legacy.CATEGORY_TAXONOMY.flatMap(c => ITEM_RANKS.flatMap(r => c.ranks[r])))]
     .flatMap(alias => [alias, alias.replace(/ (\w)/g, (_, c: string) => c.toUpperCase()), 'Mui' + alias.replace(/^\w/, c => c.toUpperCase())]);
   const extras = [item('m-2'), item('legacy.test.js', 'component', 'src/legacy.test.js'), {name: 'Widget', html: '<nav role="navigation"></nav>'}, {name: 'Thing', taxonomyHint: 'Overlays'}, {name: 'Deprecated Button'}];
   for (const subject of [...names.map(n => item(n)), ...names.map(n => item(n, 'token')), ...extras])
     assert.deepEqual(classifyItem(subject), legacy.classifyItem(subject), subject.name);
+});
+
+test('common component types from current libraries have a home', () => {
+  const cases: [string, string, string][] = [['Combobox', 'Forms and input', 'combobox'], ['SearchBox', 'Forms and input', 'search box'], ['TabList', 'Navigation', 'tab list'],
+    ['DataGrid', 'Data display', 'data grid'], ['Chip', 'Data display', 'chip'], ['Tag', 'Data display', 'tag'], ['MessageBar', 'Feedback and status', 'message bar'],
+    ['Accordion', 'Layout and structure', 'accordion'], ['Toolbar', 'Actions', 'toolbar'], ['Persona', 'Media and identity', 'persona'], ['Notification', 'Feedback and status', 'notification']];
+  for (const [name, category, alias] of cases) assert.deepEqual([classifyItem({name}).category, classifyItem({name}).matchedBy], [category, alias], name);
 });

@@ -15,6 +15,7 @@ import {REFERENCE_SOURCES} from '../src/index.ts';
 const ALIAS_TITLES: Record<string, string> = {btn: 'Button', 'btn group': 'Button group', textfield: 'Text field', 'text input': 'Text field', input: 'Text field', img: 'Image', sidenav: 'Side nav', modal: 'Modal', snackbar: 'Toast'};
 const title = (text: string) => text.replace(/([a-z0-9])([A-Z])/g, '$1 $2').replace(/[-_]+/g, ' ').replace(/\b\w/, c => c.toUpperCase()).trim();
 const wanted = new Set(process.argv.slice(2));
+const PART = /^(Trigger|Surface|Body|Content|Title|Actions?|Footer|Header|HeaderCell|HeaderTitle|HeaderNavigation|Cell|CellActions|CellLayout|SelectionCell|ResizeHandle|Row|Item|ItemLink|Panel|GroupHeader|Divider|Popover|Preview|Primary|Secondary|Display|Description|Label|Icon|Separator|Option|Container)$/;
 
 for (const ref of REFERENCE_SOURCES.filter(r => !wanted.size || wanted.has(r.id))) {
   const signal = new AbortController().signal, sources: SourceAsset[] = [], results = [], texts: {source: string; prefix: string}[] = [];
@@ -89,7 +90,10 @@ for (const ref of REFERENCE_SOURCES.filter(r => !wanted.size || wanted.has(r.id)
     // CSS references drop utility and unclassified classes as noise; declarations only name real components.
     .filter(c => c.category !== 'Utilities and tooling' && (ref.kind === 'types' || c.category !== 'Miscellaneous'))
     // Declaration files also export internals (InternalButton, PurePanel, SizeContext.Provider…); those are not components teams use.
-    .filter(c => ref.kind !== 'types' || !c.rawNames.some(n => /^(Internal|Pure|Wrap|Base)[A-Z]|(Context|Provider|Ref|Props)$/.test(n)));
+    .filter(c => ref.kind !== 'types' || !c.rawNames.some(n => /^(Internal|Pure|Wrap|Base)[A-Z]|(Context|Provider|Ref|Props)$/.test(n)))
+    // Compound parts (DialogTitle, TableRow, MenuTrigger…) belong to their component; they are not separate adoptions.
+    // Groups and lists stay: RadioGroup, TabList and ButtonGroup are the components people use.
+    .filter((c, _, all) => ref.kind !== 'types' || !c.rawNames.some(n => all.some(o => o !== c && o.rawNames.some(base => n.startsWith(base) && PART.test(n.slice(base.length))))));
   // Reference specimens: the library's own rules for each component on generated markup, plus the
   // custom properties those rules use, so the preview renders without the rest of the stylesheet.
   const declared = new Map(system.tokens.filter(t => t.path.startsWith('--')).map(t => [t.path, String(t.value)]));

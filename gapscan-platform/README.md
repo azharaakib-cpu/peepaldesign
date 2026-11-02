@@ -44,7 +44,7 @@ review the result, then compare it against a reference system.
 | `packages/normalize` | Colour science (sRGB/OKLCH/CIE Lab, CIEDE2000, WCAG contrast), colour clustering and role inference, tonal ramps, spacing grid, type scale fit, radius and elevation scales, multi-source merging with drift detection, confidence. |
 | `packages/adapters` | One adapter per source type, all producing the same observations: rendered website (Playwright), Figma REST, PDF (pdf.js), PPTX and DOCX (in-memory OOXML), CSS/SCSS/Less and DTCG/Style Dictionary token JSON, and React/TypeScript components (props, variants, sizes and states read from props interfaces and `.d.ts` files with the TypeScript parser; nothing executed). Includes a hardened ZIP reader and a small XML reader. |
 | `packages/extraction` | Assembles observations into tokens, scales, components and plain-language findings (near-duplicates, hard-coded values, off-scale values, declared-vs-observed drift, contrast failures, missing states, unresolved values, coverage gaps). |
-| `packages/library` | Pinned reference systems: Bootstrap 5.3.3, Shopify Polaris 13.9.5, IBM Carbon `@carbon/styles` 1.68.0 and Bulma 1.0.2 from their published CSS (with previews), MUI 6.4.7 and Ant Design 5.24.2 from their published `.d.ts` files, and Material Design 3 from `@material/web` 2.3.0 web components (each tag a style variant). Type-based references compare APIs only: no previews or role colours, and no conclusions about hover or focus styling. All with checksums, by the same pipeline as user sources. `node packages/library/scripts/build.ts` rebuilds them. |
+| `packages/library` | Pinned reference systems: Bootstrap 5.3.3, Shopify Polaris 13.9.5, IBM Carbon `@carbon/styles` 1.68.0 and Bulma 1.0.2 from their published CSS (with previews), MUI 6.4.7, Ant Design 5.24.2 and Fluent 2 (`@fluentui/react-components` 9.74.10) from their published `.d.ts` files, and Material Design 3 from `@material/web` 2.3.0 web components (each tag a style variant). Type-based references compare APIs only: no previews or role colours, and no conclusions about hover or focus styling, or about native attributes (disabled, required…) a component inherits without declaring. Compound parts (DialogTitle, TableRow…) belong to their component and are not listed separately. All with checksums, by the same pipeline as user sources. `node packages/library/scripts/build.ts` rebuilds them. |
 | `packages/gapscan` | Component matching (weighted 0–100 score; confirmed / suggested / unresolved), diffs into rubric drivers, decisions (keep / update / replace / check first / optional), token mapping, projected previews. Gains the target brings for free are shown but never priced. |
 | `packages/exports` | Figma Variables sync planner (create / update / unchanged / skipped, with modes and aliases, bound to a plan hash) and token exporters from one canonical list: W3C DTCG `tokens.json` (with provenance in `$extensions`), CSS custom properties (with theme-mode blocks), Tailwind v4 `@theme`, SCSS. Unresolved values are never exported as known. |
 | `packages/objects` | Missing-object generator. Each section is labelled extracted, inferred or drafted; contrast pairs come with fixes that pass; approvals are tied to a content hash and go stale if the content changes. No language model is called. |
@@ -189,13 +189,13 @@ images, gradients or translucent layers is skipped rather than guessed.
   colours swapped in. Both are labelled; neither is built or verified code.
 - **Type-based references have no previews or tokens.** MUI is read from its
   declarations, so it compares APIs but has no "after" preview or role colours.
-  Chakra can be added the same way; shadcn has no published package to read
-  (its components are copied into each project), so it needs a different source.
+  Chakra's v3 types are generated per recipe and need their own reader; shadcn has no
+  published package to read (its components are copied into each project).
 - **Codemods cover renames, not redesigns.** JSX in `.js/.jsx/.ts/.tsx` and class
   attributes in markup are rewritten; Vue and Svelte templates only have their class
   attributes rewritten. Web-component targets (Material Web) and Polaris are listed
   for a person rather than guessed. A prop the reference declares no counterpart for
-  (MUI's `startIcon` → Ant Design's `icon` + `iconPosition`) stays manual.
+  (MUI's `startIcon` → Ant Design's `icon` + `iconPosition`) stays manual. Codemods can target MUI, Ant Design and Fluent 2 imports.
 - **Drafted sections are templates, not writing.** Prose sections (principles,
   voice, keyboard behaviour) are deterministic drafts for a person to edit and
   approve; an LLM drafting step with citations is not wired in yet.

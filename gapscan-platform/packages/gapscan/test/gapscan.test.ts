@@ -135,3 +135,13 @@ test('style and size props are priced once, and a default size maps to a single-
     'Style “contained” becomes “filled”', 'Size “small” has no equivalent in Button', 'Prop “startIcon” has no direct equivalent; usage needs rework',
   ]);
 });
+
+test('native attributes a typed reference inherits without declaring are not reported missing', () => {
+  const mine = component('s-tf', 'Text field', 'Forms and input', {states: ['disabled', 'error'], props: ['label', 'error', 'disabled', 'placeholder', 'onChange']});
+  const typed = component('t-in', 'Input', 'Forms and input', {props: ['appearance', 'size', 'contentBefore']});   // Fluent's Input: disabled comes from <input>
+  const summaries = diffComponents(mine, typed).map(d => d.summary);
+  assert.ok(!summaries.some(s => /disabled|placeholder|onChange/.test(s)), summaries.join('\n'));
+  assert.ok(summaries.some(s => /error state has no equivalent/.test(s)), 'a styled state the reference lacks is still reported');
+  const css = component('t-css', 'Text field', 'Forms and input', {states: ['focus-visible']});
+  assert.ok(diffComponents(mine, css).some(d => /disabled state has no equivalent/.test(d.summary)), 'a stylesheet without :disabled rules is still evidence');
+});

@@ -15,11 +15,20 @@ export type ReferenceSource = {id: string; library: string; version: string; hom
   // How code reaches the library, for codemods: the package its components are imported from (and
   // the exports it is known to publish), or how its modifier classes are written.
   codemod?: CodemodBinding};
-export type CodemodBinding = {package?: string; exports?: string[]; classes?: {style: 'suffix' | 'chained'; prefix: string; separator: string}};
+export type CodemodBinding = {package?: string; exports?: string[] | 'all'; classes?: {style: 'suffix' | 'chained'; prefix: string; separator: string}};
 const pascal = (folder: string) => folder.replace(/(^|-)(\w)/g, (_, __, ch: string) => ch.toUpperCase());
 const MUI_COMPONENTS = ['Button', 'TextField', 'Checkbox', 'Radio', 'Switch', 'Select', 'Chip', 'Badge', 'Alert', 'Snackbar', 'Dialog', 'Tabs', 'Tooltip', 'Card', 'Avatar', 'Table', 'Slider', 'Menu', 'Breadcrumbs', 'Pagination', 'LinearProgress', 'CircularProgress', 'IconButton', 'ButtonGroup', 'AppBar', 'Drawer', 'Accordion', 'Fab', 'ToggleButton', 'Autocomplete', 'Link'];
 
 const ANTD_COMPONENTS = ['button', 'input', 'checkbox', 'radio', 'switch', 'select', 'tag', 'badge', 'alert', 'modal', 'tabs', 'tooltip', 'card', 'avatar', 'table', 'slider', 'menu', 'breadcrumb', 'pagination', 'progress', 'dropdown', 'drawer', 'collapse', 'float-button', 'segmented', 'auto-complete', 'steps', 'notification'];
+
+// Fluent 2 (Microsoft): each component package ships one rolled-up declaration file. Versions are
+// the ones @fluentui/react-components 9.74.10 depends on; it re-exports all of them.
+const FLUENT_PACKAGES: Record<string, string> = {
+  button: '9.11.2', input: '9.8.8', textarea: '9.7.8', checkbox: '9.6.6', radio: '9.6.7', switch: '9.7.7', select: '9.5.7', combobox: '9.17.8', field: '9.5.6',
+  slider: '9.6.7', spinbutton: '9.6.8', search: '9.4.8', badge: '9.5.7', 'message-bar': '9.7.8', toast: '9.8.5', dialog: '9.18.6', drawer: '9.13.5', popover: '9.14.10',
+  tooltip: '9.10.8', tabs: '9.12.6', breadcrumb: '9.4.7', link: '9.8.6', menu: '9.25.7', card: '9.7.4', avatar: '9.11.9', persona: '9.7.11', table: '9.19.23',
+  accordion: '9.12.5', progress: '9.5.7', spinner: '9.8.7', skeleton: '9.7.7', tags: '9.9.8', divider: '9.7.6', rating: '9.4.7', toolbar: '9.8.6',
+};
 
 export const REFERENCE_SOURCES: readonly ReferenceSource[] = [
   {id: 'bootstrap-5.3.3', library: 'Bootstrap', version: '5.3.3', homepage: 'https://getbootstrap.com/docs/5.3/', framework: 'HTML/CSS', kind: 'css',
@@ -39,6 +48,9 @@ export const REFERENCE_SOURCES: readonly ReferenceSource[] = [
   {id: 'antd-5.24.2', library: 'Ant Design', version: '5.24.2', homepage: 'https://ant.design/', framework: 'React', kind: 'types', artifacts: [],
     bundles: {base: 'https://cdn.jsdelivr.net/npm/antd@5.24.2/es', prelude: ['config-provider/SizeContext.d.ts', '_util/statusUtils.d.ts'],
       components: ANTD_COMPONENTS}, codemod: {package: 'antd', exports: ANTD_COMPONENTS.filter(c => c !== 'notification').map(pascal)}},
+  {id: 'fluent-9.74.10', library: 'Fluent 2 (Microsoft)', version: '@fluentui/react-components 9.74.10', homepage: 'https://fluent2.microsoft.design/', framework: 'React', kind: 'types',
+    artifacts: Object.entries(FLUENT_PACKAGES).map(([pkg, version]) => ({url: `https://cdn.jsdelivr.net/npm/@fluentui/react-${pkg}@${version}/dist/index.d.ts`, name: `${pkg}.d.ts`})),
+    codemod: {package: '@fluentui/react-components', exports: 'all'}},
 ];
 
 export const codemodBinding = (referenceId: string): CodemodBinding => REFERENCE_SOURCES.find(r => r.id === referenceId)?.codemod ?? {};

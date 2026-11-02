@@ -46,7 +46,8 @@ export function buildPlan({report, source, reference, usage, binding}: PlanInput
 
     const imports = usageOf.get(item.name)?.imports.filter(m => m !== 'custom element') ?? [];
     if (imports.length) {
-      const exportName = binding.package ? target.rawNames.find(n => binding.exports?.includes(n)) ?? null : null;
+      // 'all': the package re-exports every component the reference read (Fluent's react-components).
+      const exportName = binding.package ? target.rawNames.find(n => binding.exports === 'all' ? /^[A-Z][A-Za-z0-9]*$/.test(n) : binding.exports?.includes(n)) ?? null : null;
       const alreadyThere = binding.package !== undefined && imports.every(m => m === binding.package || m.startsWith(binding.package + '/'));
       if (exportName || alreadyThere) {
         const sourceOptions = optionsOf(component, 'variant'), targetOptions = optionsOf(target, 'variant');

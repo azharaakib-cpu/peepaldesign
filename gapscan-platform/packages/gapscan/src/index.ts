@@ -16,6 +16,8 @@ const canonicalName = (c: ComponentObservation) => words(c.canonical);
 const ITEM_ALIASES: Record<string, string> = {
   btn: 'button', 'btn group': 'button group', textfield: 'text field', 'text input': 'text field', input: 'text field', textarea: 'text area',
   img: 'image', sidenav: 'side nav', 'nav drawer': 'side nav', modal: 'dialog', snackbar: 'toast', flag: 'toast', switch: 'toggle', offcanvas: 'drawer', fab: 'floating action button',
+  tag: 'chip', pill: 'chip', collapse: 'accordion', 'message bar': 'alert', notification: 'toast', combobox: 'autocomplete', 'search field': 'search box',
+  'number input': 'spin button', 'data grid': 'table', 'tab list': 'tabs', tab: 'tabs',
 };
 const itemOf = (c: ComponentObservation) => { const alias = classifyItem({name: c.canonical, kind: 'component'}).matchedBy; return ITEM_ALIASES[alias] ?? alias; };
 function jaccard(a: readonly string[], b: readonly string[]): number {
@@ -116,9 +118,14 @@ export function diffComponents(source: ComponentObservation, target: ComponentOb
   // so they are compared only when the reference recorded at least one of them.
   const INTERACTION = /^(hover|focus|focus-visible|active|pressed)$/;
   const targetShowsInteraction = target.statesObserved.some(s => INTERACTION.test(s));
+  // Disabled, read-only and required come from the native element: a reference read from type
+  // declarations often inherits them without listing them, so their absence there proves nothing.
+  const NATIVE_STATE = /^(disabled|readonly|read-only|required)$/;
+  const inheritsNative = (state: string) => NATIVE_STATE.test(state) && Boolean(target.props?.length) && !target.props!.some(p => p.name.toLowerCase() === state.replace('-', ''));
   for (const state of source.statesObserved) {
     if (target.statesObserved.some(t => sameOption(state, t))) continue;
     if (INTERACTION.test(state) && !targetShowsInteraction) continue;
+    if (inheritsNative(state)) continue;
     diffs.push({dimension: REQUIRED_A11Y.has(state) ? 'a11y' : 'states', driver: 'state_missing', summary: `Your ${optionName(state)} state has no equivalent in ${target.canonical}; it must be built or dropped`, before: state});
   }
   for (const state of target.statesObserved) {
@@ -131,7 +138,7 @@ export function diffComponents(source: ComponentObservation, target: ComponentOb
   const OPTION_PROPS = /^(variant|kind|appearance|tone|color|colorScheme|intent|look|size|type|status|severity)$/;
   // Event handlers and DOM attributes pass through to the element in every React library;
   // references read from type declarations list only the component's own props.
-  const DOM_PROPS = /^(on[A-Z]\w*|aria-[\w-]+|data-[\w-]+|className|style|id|children|ref|key|role|tabIndex)$/;
+  const DOM_PROPS = /^(on[A-Z]\w*|aria-[\w-]+|data-[\w-]+|className|style|id|children|ref|key|role|tabIndex|disabled|required|readOnly|placeholder|name|value|defaultValue|autoFocus|autoComplete|href|target|rel)$/;
   if (source.props?.length && target.props?.length) for (const prop of source.props) {
     if (target.props.some(p => p.name === prop.name) || OPTION_PROPS.test(prop.name) || DOM_PROPS.test(prop.name)) continue;
     const similar = target.props.find(p => sameOption(p.name, prop.name) || words(p.name).replace(/ /g, '') === words(prop.name).replace(/ /g, ''));
