@@ -25,6 +25,11 @@ export async function computeReport(store: Store, blobs: BlobStore, edsId: strin
   return runGapScan({source, reference, assumptions, approvals, usage});
 }
 
+export async function loadGapScan(store: Store, blobs: BlobStore, id: string) {
+  const record = await store.getGapScan(id), blob = record && await blobs.get(record.blobKey);
+  return record && blob ? {record, report: GapScanReport.parse(JSON.parse(blob.toString('utf8')))} : null;
+}
+
 export function summarize(report: Omit<Report, 'id'>) {
   const decisions: Record<string, number> = {};
   for (const item of report.items) decisions[item.decision] = (decisions[item.decision] ?? 0) + 1;

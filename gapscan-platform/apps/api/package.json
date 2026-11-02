@@ -6,6 +6,7 @@
   "dependencies": {
     "@gapscan/adapters": "0.1.0",
     "@gapscan/assets": "0.1.0",
+    "@gapscan/codemod": "0.1.0",
     "@gapscan/estimate": "0.1.0",
     "@gapscan/exports": "0.1.0",
     "@gapscan/extraction": "0.1.0",

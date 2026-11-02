@@ -10,6 +10,7 @@ const range = (low, high, format = num) => format(low) === format(high) ? format
 const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
 let report, reference, techLoaded = null;
 
+const kpi = (value, label) => el('div', {class: 'stat'}, el('b', {}, value), el('span', {}, label));
 function complexityWord(c) { return c === null ? 'Not estimated' : c < 1.5 ? 'Trivial' : c < 2.5 ? 'Easy' : c < 3.5 ? 'Moderate' : c < 4.5 ? 'Hard' : 'Very hard'; }
 
 function headline() {
@@ -32,7 +33,6 @@ function areaHours() {
 function renderSummary() {
   const t = report.totals, a = report.assumptions, required = report.items.filter(i => i.decision !== 'optional');
   $('#headline').textContent = headline();
-  const kpi = (value, label) => el('div', {class: 'stat'}, el('b', {}, value), el('span', {}, label));
   $('#kpis').replaceChildren(
     kpi(required.length, 'components compared'),
     kpi(t.complexity === null ? '—' : `${t.complexity} / 5`, complexityWord(t.complexity)),
@@ -147,6 +147,48 @@ function renderItems() {
   $('#items').replaceChildren(...(visible.length ? visible.map(itemCard) : [el('p', {class: 'empty'}, 'Nothing in this view.')]));
 }
 
+// ── Codemod ──
+function diffBlock(diff) {
+  return el('pre', {class: 'diff'}, diff.trimEnd().split('\n').map(line => el('span', {class: line.startsWith('@@') ? 'hunk' : line.startsWith('+++') || line.startsWith('---') ? 'file' : line[0] === '+' ? 'add' : line[0] === '-' ? 'del' : null}, line + '\n')));
+}
+function renderCodemod(plan, run) {
+  const covered = plan.rules.components.map(c => c.component === c.target ? c.component : `${c.component} → ${c.target}`);
+  const parts = [el('p', {}, covered.length ? `Rules for ${plural(covered.length, 'component')}: ${covered.join(', ')}.` : 'No confirmed matches can be rewritten automatically yet.')];
+  if (plan.notes.length) parts.push(el('details', {}, el('summary', {}, `Changes by hand (${plan.notes.length})`), el('ul', {class: 'muted'}, plan.notes.map(n => el('li', {}, n)))));
+  if (run) {
+    const t = run.totals;
+    parts.push(el('div', {class: 'grid stats'}, kpi(t.changes.toLocaleString(), `edits in ${plural(t.filesChanged, 'file')}`), kpi(t.manual.toLocaleString(), 'call sites to change by hand'), kpi(t.filesRead.toLocaleString(), 'files read')));
+    if (run.hash !== plan.hash) parts.push(el('p', {class: 'error'}, 'The report has changed since this dry run. Run it again before downloading the script.'));
+    parts.push(...run.files.map(f => el('details', {class: 'item'},
+      el('summary', {}, el('span', {class: 'name'}, el('code', {}, f.path)), f.changes ? el('span', {class: 'pill'}, plural(f.changes, 'edit')) : null, f.manual.length ? el('span', {class: 'pill minor'}, `${f.manual.length} by hand`) : null),
+      f.manual.length ? el('ul', {}, f.manual.map(m => el('li', {}, `Line ${m.line}${m.component ? ` · ${m.component}` : ''}: ${m.reason}`))) : null,
+      f.diff ? diffBlock(f.diff) : null)));
+    if (!run.files.length) parts.push(el('p', {class: 'empty'}, 'Nothing in your code needs changing for these rules.'));
+    parts.push(el('p', {class: 'muted'}, `Dry run of rules ${run.hash}, ${new Date(run.createdAt).toLocaleString()}. Run the script from your repository root: node gapscan-codemod.mjs (add --write to apply).`));
+  }
+  $('#codemod').replaceChildren(...parts);
+}
+async function loadCodemod() {
+  $('#codemod-download').href = `/v1/gapscans/${reportId}/codemod.mjs`;
+  try {
+    const plan = await api(`/v1/gapscans/${reportId}/codemod/rules`);
+    const run = await api(`/v1/gapscans/${reportId}/codemod`).catch(() => null);
+    renderCodemod(plan, run);
+  } catch (error) { $('#codemod').replaceChildren(el('p', {class: 'error'}, error.message)); }
+}
+$('#codemod-run').addEventListener('click', async () => {
+  const button = $('#codemod-run'), out = $('#codemod');
+  button.disabled = true;
+  try {
+    const {events} = await api(`/v1/gapscans/${reportId}/codemod`, {method: 'POST'});
+    const stream = new EventSource(events), done = () => { stream.close(); button.disabled = false; };
+    stream.addEventListener('progress', e => out.replaceChildren(el('p', {class: 'muted'}, JSON.parse(e.data).body.message)));
+    stream.addEventListener('warning', e => out.append(el('p', {class: 'muted'}, JSON.parse(e.data).body.message)));
+    stream.addEventListener('failed', e => { done(); out.replaceChildren(el('p', {class: 'error'}, JSON.parse(e.data).body.message)); });
+    stream.addEventListener('complete', () => { done(); loadCodemod(); });
+  } catch (error) { button.disabled = false; out.replaceChildren(el('p', {class: 'error'}, error.message)); }
+});
+
 async function load() {
   if (!reportId) { $('#headline').textContent = 'No report id in the link.'; return; }
   try {
@@ -156,7 +198,7 @@ async function load() {
     specimens = new Map(eds.specimens.map(s => [s.id, s]));
     $('#title').textContent = `Your system → ${reference.library} ${reference.version}`;
     $('#back').href = `/app/review.html?id=${report.edsId}`;
-    renderSummary(); renderItems();
+    renderSummary(); renderItems(); loadCodemod();
   } catch (error) { $('#headline').textContent = error.message; }
 }
 $('#filter').addEventListener('change', renderItems);

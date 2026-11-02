@@ -28,7 +28,7 @@ function jaccard(a: readonly string[], b: readonly string[]): number {
 const SYNONYMS: string[][] = [
   ['primary', 'filled', 'solid', 'contained', 'brand'], ['secondary', 'outline', 'outlined', 'tonal', 'default'], ['tertiary', 'ghost', 'plain', 'text', 'link', 'subtle'],
   ['danger', 'critical', 'destructive', 'error', 'negative'], ['success', 'positive'], ['warning', 'caution'], ['info', 'informational', 'highlight'],
-  ['sm', 'small', 'slim', 'compact'], ['md', 'medium', 'default', 'regular'], ['lg', 'large', 'big'], ['xs', 'micro', 'extra small'], ['xl', 'extra large'],
+  ['sm', 'small', 'slim', 'compact'], ['md', 'medium', 'middle', 'default', 'regular'], ['lg', 'large', 'big'], ['xs', 'micro', 'extra small'], ['xl', 'extra large'],
   ['focus', 'focus visible', 'focused'], ['pressed', 'active'], ['hover', 'hovered'], ['loading', 'busy', 'pending'], ['checked', 'selected', 'on', 'toggled'],
   // Prop names that mean the same thing across libraries.
   ['tone', 'color', 'intent', 'severity', 'status', 'color scheme'], ['kind', 'variant', 'appearance', 'look'], ['left icon', 'start icon', 'icon start', 'leading icon', 'prefix'],
@@ -41,6 +41,22 @@ export function sameOption(a: string, b: string): 'same' | 'renamed' | null {
   if (optionName(a) === optionName(b)) return 'same';
   const g = synonymGroup(a);
   return g >= 0 && g === synonymGroup(b) ? 'renamed' : null;
+}
+
+// The closest option in `targets`: an identical value wins over a synonym, and among equals the one
+// on the same (or a synonymous) prop. Bare values belong to `variant`. GapScan's diff and the codemod
+// both pair options with this, so the report and the rewrite always agree.
+const optionProp = (option: string) => option.match(/^([\w-]+)=/)?.[1] ?? 'variant';
+export function pairOption(option: string, targets: readonly string[], bare = 'variant'): {option: string; kind: 'same' | 'renamed'} | null {
+  const propOf = (o: string) => o.includes('=') ? optionProp(o) : bare;
+  let best: {option: string; kind: 'same' | 'renamed'} | null = null, bestScore = 0;
+  for (const t of targets) {
+    const kind = sameOption(option, t);
+    if (!kind) continue;
+    const score = (kind === 'same' ? 4 : 2) + (propOf(t) === propOf(option) || sameOption(propOf(t), propOf(option)) ? 1 : 0);
+    if (score > bestScore) { best = {option: t, kind}; bestScore = score; }
+  }
+  return best;
 }
 
 export type Candidate = {target: ComponentObservation; score: number; reasons: string[]};
@@ -85,11 +101,10 @@ export function diffComponents(source: ComponentObservation, target: ComponentOb
   const diffs: GapDiff[] = [];
   const compare = (from: string[], to: string[], dimension: 'variants' | 'sizes', label: string) => {
     for (const option of from) {
-      const exact = to.find(t => sameOption(option, t) === 'same');
-      if (exact) continue;
-      const renamed = to.find(t => sameOption(option, t) === 'renamed');
-      diffs.push(renamed
-        ? {dimension, driver: 'variant_renamed', summary: `${label} “${optionName(option)}” becomes “${optionName(renamed)}”`, before: option, after: renamed}
+      const paired = pairOption(option, to);
+      if (paired?.kind === 'same') continue;
+      diffs.push(paired
+        ? {dimension, driver: 'variant_renamed', summary: `${label} “${optionName(option)}” becomes “${optionName(paired.option)}”`, before: option, after: paired.option}
         : {dimension, driver: 'variant_missing', summary: `${label} “${optionName(option)}” has no equivalent in ${target.canonical}`, before: option});
     }
   };
@@ -114,8 +129,11 @@ export function diffComponents(source: ComponentObservation, target: ComponentOb
   }
   // Props whose values were already compared as styles or sizes are not priced a second time.
   const OPTION_PROPS = /^(variant|kind|appearance|tone|color|colorScheme|intent|look|size|type|status|severity)$/;
+  // Event handlers and DOM attributes pass through to the element in every React library;
+  // references read from type declarations list only the component's own props.
+  const DOM_PROPS = /^(on[A-Z]\w*|aria-[\w-]+|data-[\w-]+|className|style|id|children|ref|key|role|tabIndex)$/;
   if (source.props?.length && target.props?.length) for (const prop of source.props) {
-    if (target.props.some(p => p.name === prop.name) || OPTION_PROPS.test(prop.name)) continue;
+    if (target.props.some(p => p.name === prop.name) || OPTION_PROPS.test(prop.name) || DOM_PROPS.test(prop.name)) continue;
     const similar = target.props.find(p => sameOption(p.name, prop.name) || words(p.name).replace(/ /g, '') === words(prop.name).replace(/ /g, ''));
     diffs.push(similar
       ? {dimension: 'api', driver: 'prop_rename', summary: `Prop “${prop.name}” becomes “${similar.name}”`, before: prop.name, after: similar.name}
@@ -209,7 +227,7 @@ export function runGapScan({source, reference, assumptions = {}, approvals = new
     items: estimated.map(item => item.decision === 'optional' ? item : {...item, tech: {tokenDiff: mapping, propMap: item.diffs.filter(d => d.dimension === 'api').map(d => ({from: d.before, to: d.after ?? null}))}}),
     tokenCategories: categories, assumptions: {rate: 75, apps: 1, engineers: 2, qaPct: 20, excluded: [], edited: {}, ...assumptions}, totals,
     exclusions: [
-      `${totals.notEstimatedCount} item${totals.notEstimatedCount === 1 ? '' : 's'} need review before they can be estimated`,
+      totals.notEstimatedCount === 1 ? '1 item needs review before it can be estimated' : `${totals.notEstimatedCount} items need review before they can be estimated`,
       usage ? `${totals.consumer?.unusedExcluded ?? 0} component${totals.consumer?.unusedExcluded === 1 ? '' : 's'} not used in the scanned application (${usage.filesScanned} files) are left out` : 'Your application code was not scanned, so screen and usage counts are unknown',
       'Optional components from the reference system are not included',
       'Dedicated regression, visual and accessibility testing beyond the QA allowance',

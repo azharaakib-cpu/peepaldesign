@@ -1,4 +1,4 @@
-# GapScan platform (Phases 1–6)
+# GapScan platform (Phases 1–7)
 
 The TypeScript monorepo that replaces the prototype in `../gapscan`, following
 the architecture plan. Phase 1 added the shared contracts, the single estimation
@@ -14,6 +14,9 @@ starts the asset engine: a brand kit and rendered business cards (print PDF
 with bleed), OpenGraph images and social banners, each with its checks.
 Phase 6 adds application impact: scan the product's own code to count where each
 component is used, leave unused components out and price the call sites to update.
+Phase 7 adds codemods: the renames a report found become rules, dry-run on the
+application's code as a reviewable diff, and the same rewriter is downloadable as a
+script you run in your own repository.
 
 Requires Node 24+ (it runs TypeScript directly; there is no build step).
 
@@ -43,6 +46,7 @@ review the result, then compare it against a reference system.
 | `packages/objects` | Missing-object generator. Each section is labelled extracted, inferred or drafted; contrast pairs come with fixes that pass; approvals are tied to a content hash and go stale if the content changes. No language model is called. |
 | `packages/assets` | Brand kit from token slots (reports which slots fell back to defaults), self-contained templates (business card 85×55 mm + 3 mm bleed, OpenGraph 1200×630, LinkedIn banner, PowerPoint deck template with a branded theme, HTML email newsletter with dark mode), contrast checks, offline rendering in Chromium. |
 | `packages/usage` | Application impact: JSX usages through import aliases (with the props each passes), class names in markup and HTML, custom-element tags, files and screens per component. Tests, dependencies and docs are skipped. |
+| `packages/codemod` | Rules from a GapScan report (confirmed matches only): imports re-pointed at the reference's package, prop renames, option values paired exactly as the report pairs them, and class renames for CSS references with a known modifier convention (Bootstrap, Carbon, Bulma). Each element is edited all or nothing; spreads, computed values, props with no equivalent, values the target prop means differently (`type="submit"` in Ant Design) and use outside JSX are listed for a person. The downloadable script embeds the same rewriter and diff code, so it makes exactly the dry-run changes. |
 | `packages/infra` | `Store`, `BlobStore`, `Queue` and `EventBus` interfaces with zero-install local adapters (Node's built-in SQLite, filesystem blobs, in-process queue). |
 | `apps/api` | Fastify API and the extraction UI (`public/`): projects, sources, extraction jobs, SSE progress with resume, cancellation. |
 
@@ -69,6 +73,9 @@ review the result, then compare it against a reference system.
 | `GET /v1/assets/:jobId`, `GET /v1/assets/:jobId/file` | Checks and the rendered file (`?download=1` to save) |
 | `POST /v1/projects/:id/sources` with `role: "application"` | Add the product's code (pasted, ZIP, or a public `github.com` repository) |
 | `POST /v1/projects/:id/usage` `{edsId}`, `GET /v1/projects/:id/usage` | Scan usage and read the latest report; GapScan picks it up automatically |
+| `GET /v1/gapscans/:id/codemod/rules` | The rules, their hash and what changes by hand (no application code needed) |
+| `POST /v1/gapscans/:id/codemod`, `GET /v1/gapscans/:id/codemod` | Dry-run the rules on the application sources (a `codemod` job) and read the per-file diffs |
+| `GET /v1/gapscans/:id/codemod.mjs` | The script: `node gapscan-codemod.mjs [paths…]` prints the diff; `--write` applies it. Uses the project's own `typescript` package. |
 | `GET /v1/library`, `GET /v1/library/:id` | Reference systems and their components |
 | `GET /v1/extractions/:id/recommendations` | References ranked by how many of your components have a counterpart |
 | `POST /v1/gapscans` `{edsId, referenceId, assumptions?}` | Starts a `gapscan` job |
@@ -125,6 +132,11 @@ images, gradients or translucent layers is skipped rather than guessed.
   declarations, so it compares APIs but has no "after" preview or role colours.
   Chakra can be added the same way; shadcn has no published package to read
   (its components are copied into each project), so it needs a different source.
+- **Codemods cover renames, not redesigns.** JSX in `.js/.jsx/.ts/.tsx` and class
+  attributes in markup are rewritten; Vue and Svelte templates only have their class
+  attributes rewritten. Web-component targets (Material Web) and Polaris are listed
+  for a person rather than guessed. A prop the reference declares no counterpart for
+  (MUI's `startIcon` → Ant Design's `icon` + `iconPosition`) stays manual.
 - **Drafted sections are templates, not writing.** Prose sections (principles,
   voice, keyboard behaviour) are deterministic drafts for a person to edit and
   approve; an LLM drafting step with citations is not wired in yet.

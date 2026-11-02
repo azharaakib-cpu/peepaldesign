@@ -22,7 +22,9 @@ import type {StoredApproval} from '@gapscan/objects';
 import {assetKey, createRenderHandler} from './render-job.ts';
 import {createUsageHandler, githubRepo, loadUsageReport} from './usage-job.ts';
 import {buildBrandKit, TEMPLATES} from '@gapscan/assets';
-import {approvalKey, computeReport, createGapScanHandler, loadExtraction, saveReport, summarize} from './gapscan-job.ts';
+import {approvalKey, computeReport, createGapScanHandler, loadExtraction, loadGapScan, saveReport, summarize} from './gapscan-job.ts';
+import {codemodPlan, createCodemodHandler, loadCodemodRun} from './codemod-job.ts';
+import {buildScript} from '@gapscan/codemod';
 import {createUrlGuard, publicUrl, UnsafeUrlError} from './url-safety.ts';
 import {lookup} from 'node:dns/promises';
 const lookupAll = (hostname: string) => lookup(hostname, {all: true, verbatim: true});
@@ -54,6 +56,7 @@ export function buildApp({infra, handlers = {}, logger = false, heartbeatMs = HE
   queue.register('gapscan', handlers.gapscan ?? createGapScanHandler({store, blobs}));
   queue.register('render', handlers.render ?? createRenderHandler({store, blobs}));
   queue.register('usage', handlers.usage ?? createUsageHandler({store, blobs, allowUrl: url => createUrlGuard(lookupAll)(url)}));
+  queue.register('codemod', handlers.codemod ?? createCodemodHandler({store, blobs, allowUrl: url => createUrlGuard(lookupAll)(url)}));
   const app = Fastify({logger, bodyLimit: Math.ceil(MAX_FILE_BYTES * 1.4)});
   // Action endpoints like POST /extractions take no body; clients that still send
   // `content-type: application/json` with nothing in it should not get a 400.
@@ -317,10 +320,7 @@ export function buildApp({infra, handlers = {}, logger = false, heartbeatMs = HE
   // ── GapScan (architecture Part 2) ─────────────────────────────────────────
   const StartGapScan = z.object({edsId: z.string().min(1), referenceId: z.string().min(1), assumptions: Assumptions.partial().optional()});
   const ApproveMatch = z.object({targetId: z.string().min(1).nullable(), by: z.string().trim().min(1).max(200), reason: z.string().trim().min(1).max(1000)});
-  const loadReport = async (id: string) => {
-    const record = await store.getGapScan(id), blob = record && await blobs.get(record.blobKey);
-    return record && blob ? {record, report: GapScanReport.parse(JSON.parse(blob.toString('utf8')))} : null;
-  };
+  const loadReport = (id: string) => loadGapScan(store, blobs, id);
 
   app.get('/v1/library', async () => listReferences());
   app.get('/v1/library/:id', async (request, reply) => {
@@ -396,6 +396,30 @@ export function buildApp({infra, handlers = {}, logger = false, heartbeatMs = HE
     const report = {id, ...await computeReport(store, blobs, loaded.record.extractionId, loaded.report.reference.id, loaded.report.assumptions)};
     await saveReport(store, blobs, report, loaded.record.projectId, loaded.record.extractionId, loaded.record.createdAt);
     return {item: report.items.find(i => i.match.sourceId === sourceId), totals: report.totals, summary: summarize(report)};
+  });
+
+  // ── Codemods: a dry run on the application's code, and the same rewriter as a script ──
+  app.post('/v1/gapscans/:id/codemod', async (request, reply) => {
+    const loaded = await loadReport(IdParams.parse(request.params).id);
+    if (!loaded) return fail(reply, 404, 'Report not found.');
+    if (!(await store.listSources(loaded.record.projectId)).some(s => s.role === 'application')) return fail(reply, 400, 'Add application code to this project first.');
+    const job = await store.createJob({type: 'codemod', projectId: loaded.record.projectId, subjectId: loaded.report.id, payload: {gapscanId: loaded.report.id}});
+    await queue.enqueue(job);
+    return reply.code(202).send({jobId: job.id, events: `/v1/jobs/${job.id}/events`});
+  });
+  app.get('/v1/gapscans/:id/codemod', async (request, reply) => (await loadCodemodRun(blobs, IdParams.parse(request.params).id)) ?? fail(reply, 404, 'No dry run yet.'));
+  // Rules only, no application code needed: what the script will change and what it leaves to a person.
+  app.get('/v1/gapscans/:id/codemod/rules', async (request, reply) => {
+    const loaded = await loadReport(IdParams.parse(request.params).id);
+    if (!loaded) return fail(reply, 404, 'Report not found.');
+    return codemodPlan(store, blobs, loaded.report, loaded.record);
+  });
+  app.get('/v1/gapscans/:id/codemod.mjs', async (request, reply) => {
+    const loaded = await loadReport(IdParams.parse(request.params).id);
+    if (!loaded) return fail(reply, 404, 'Report not found.');
+    const plan = await codemodPlan(store, blobs, loaded.report, loaded.record), reference = await loadReference(loaded.report.reference.id);
+    const script = await buildScript(plan, {reportId: loaded.report.id, library: reference?.library ?? loaded.report.reference.id, version: loaded.report.reference.version, generatedAt: new Date().toISOString()});
+    return reply.type('text/javascript; charset=utf-8').header('content-disposition', 'attachment; filename="gapscan-codemod.mjs"').send(script);
   });
 
   return app;

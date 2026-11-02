@@ -61,6 +61,26 @@ test('usage scan of a zipped app feeds GapScan: unused components drop out and c
     assert.ok(report.totals.consumer, 'consumer hours are part of the totals');
     assert.equal(report.totals.consumer.unusedExcluded, 1, 'Chip is not used, so it is not required work');
     assert.match(report.exclusions[1], /not used in the scanned application \(2 files\)/);
+
+    // Codemod: approve the Button match, dry-run on the zipped app, download the script.
+    const buttonItem = report.items.find((i: {name: string}) => i.name === 'Button');
+    if (buttonItem.match.status !== 'confirmed') await json('PUT', `/v1/gapscans/${report.id}/matches/${buttonItem.match.sourceId}`, {targetId: buttonItem.match.targetId, by: 'lead@example.com'});
+    const rules = (await json('GET', `/v1/gapscans/${report.id}/codemod/rules`)).body;
+    assert.equal(rules.rules.components.find((c: {component: string}) => c.component === 'Button').jsx.package, '@mui/material');
+    assert.equal((await json('GET', `/v1/gapscans/${report.id}/codemod`)).status, 404, 'no dry run yet');
+    const codemodJob = (await json('POST', `/v1/gapscans/${report.id}/codemod`)).body;
+    await infra.queue.idle();
+    assert.equal((await json('GET', `/v1/jobs/${codemodJob.jobId}`)).body.status, 'completed');
+    const run = (await json('GET', `/v1/gapscans/${report.id}/codemod`)).body;
+    assert.deepEqual(run.files.map((f: {path: string}) => f.path), ['src/app/home/page.tsx', 'src/app/settings/page.tsx'], 'node_modules is never rewritten');
+    const settings = run.files[1];
+    assert.match(settings.diff, /\+import \{Button, TextField\} from '@mui\/material';/);
+    assert.match(settings.diff, /\+.*<Button color="primary" loading>Save<\/Button><Button variant="text">Cancel<\/Button>/);
+    assert.equal(run.hash, rules.hash);
+    const script = await app.inject({method: 'GET', url: `/v1/gapscans/${report.id}/codemod.mjs`});
+    assert.match(String(script.headers['content-type']), /^text\/javascript/);
+    assert.match(String(script.headers['content-disposition']), /attachment; filename="gapscan-codemod.mjs"/);
+    assert.ok(script.body.includes(`rules ${rules.hash}`));
   } finally { await app.close(); await infra.close(); await rm(dataDir, {recursive: true, force: true}); }
 });
 

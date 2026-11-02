@@ -11,28 +11,37 @@ import type {ReferenceDS as ReferenceDSType} from '@gapscan/schema';
 export type ReferenceSource = {id: string; library: string; version: string; homepage: string; framework: string; kind: 'css' | 'types';
   artifacts: {url: string; name: string; classPrefix?: string}[]; bundles?: {base: string; components: string[]; prelude: string[]};
   // Web-component libraries: one folder per component, its tags are the style variants.
-  customElements?: {package: string; version: string; folders: Record<string, string>}};
+  customElements?: {package: string; version: string; folders: Record<string, string>};
+  // How code reaches the library, for codemods: the package its components are imported from (and
+  // the exports it is known to publish), or how its modifier classes are written.
+  codemod?: CodemodBinding};
+export type CodemodBinding = {package?: string; exports?: string[]; classes?: {style: 'suffix' | 'chained'; prefix: string; separator: string}};
+const pascal = (folder: string) => folder.replace(/(^|-)(\w)/g, (_, __, ch: string) => ch.toUpperCase());
 const MUI_COMPONENTS = ['Button', 'TextField', 'Checkbox', 'Radio', 'Switch', 'Select', 'Chip', 'Badge', 'Alert', 'Snackbar', 'Dialog', 'Tabs', 'Tooltip', 'Card', 'Avatar', 'Table', 'Slider', 'Menu', 'Breadcrumbs', 'Pagination', 'LinearProgress', 'CircularProgress', 'IconButton', 'ButtonGroup', 'AppBar', 'Drawer', 'Accordion', 'Fab', 'ToggleButton', 'Autocomplete', 'Link'];
+
+const ANTD_COMPONENTS = ['button', 'input', 'checkbox', 'radio', 'switch', 'select', 'tag', 'badge', 'alert', 'modal', 'tabs', 'tooltip', 'card', 'avatar', 'table', 'slider', 'menu', 'breadcrumb', 'pagination', 'progress', 'dropdown', 'drawer', 'collapse', 'float-button', 'segmented', 'auto-complete', 'steps', 'notification'];
 
 export const REFERENCE_SOURCES: readonly ReferenceSource[] = [
   {id: 'bootstrap-5.3.3', library: 'Bootstrap', version: '5.3.3', homepage: 'https://getbootstrap.com/docs/5.3/', framework: 'HTML/CSS', kind: 'css',
-    artifacts: [{url: 'https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.css', name: 'bootstrap.css'}]},
+    artifacts: [{url: 'https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.css', name: 'bootstrap.css'}], codemod: {classes: {style: 'suffix', prefix: '', separator: '-'}}},
   {id: 'polaris-13.9.5', library: 'Shopify Polaris', version: '13.9.5', homepage: 'https://polaris.shopify.com/', framework: 'React', kind: 'css',
     artifacts: [{url: 'https://cdn.jsdelivr.net/npm/@shopify/polaris@13.9.5/build/esm/styles.css', name: 'polaris.css', classPrefix: 'Polaris-'},
       {url: 'https://cdn.jsdelivr.net/npm/@shopify/polaris-tokens@9.4.2/dist/css/styles.css', name: 'polaris-tokens.css'}]},
   {id: 'carbon-styles-1.68.0', library: 'IBM Carbon', version: '@carbon/styles 1.68.0', homepage: 'https://carbondesignsystem.com/', framework: 'React / Web Components', kind: 'css',
-    artifacts: [{url: 'https://cdn.jsdelivr.net/npm/@carbon/styles@1.68.0/css/styles.css', name: 'carbon.css', classPrefix: 'cds--'}]},
+    artifacts: [{url: 'https://cdn.jsdelivr.net/npm/@carbon/styles@1.68.0/css/styles.css', name: 'carbon.css', classPrefix: 'cds--'}], codemod: {classes: {style: 'suffix', prefix: 'cds--', separator: '--'}}},
   {id: 'bulma-1.0.2', library: 'Bulma', version: '1.0.2', homepage: 'https://bulma.io/', framework: 'HTML/CSS', kind: 'css',
-    artifacts: [{url: 'https://cdn.jsdelivr.net/npm/bulma@1.0.2/css/bulma.css', name: 'bulma.css'}]},
+    artifacts: [{url: 'https://cdn.jsdelivr.net/npm/bulma@1.0.2/css/bulma.css', name: 'bulma.css'}], codemod: {classes: {style: 'chained', prefix: '', separator: 'is-'}}},
   {id: 'mui-6.4.7', library: 'MUI (Material UI)', version: '6.4.7', homepage: 'https://mui.com/material-ui/', framework: 'React', kind: 'types',
-    artifacts: MUI_COMPONENTS.map(c => ({url: `https://cdn.jsdelivr.net/npm/@mui/material@6.4.7/${c}/${c}.d.ts`, name: `${c}.d.ts`}))},
+    artifacts: MUI_COMPONENTS.map(c => ({url: `https://cdn.jsdelivr.net/npm/@mui/material@6.4.7/${c}/${c}.d.ts`, name: `${c}.d.ts`})), codemod: {package: '@mui/material', exports: MUI_COMPONENTS}},
   {id: 'material-web-2.3.0', library: 'Material Design 3 (Material Web)', version: '2.3.0', homepage: 'https://m3.material.io/', framework: 'Web Components', kind: 'types', artifacts: [],
     customElements: {package: '@material/web', version: '2.3.0', folders: {button: 'Button', checkbox: 'Checkbox', chips: 'Chip', dialog: 'Dialog', divider: 'Divider', fab: 'Fab', iconbutton: 'Icon Button',
       list: 'List', menu: 'Menu', progress: 'Progress', radio: 'Radio', select: 'Select', slider: 'Slider', switch: 'Switch', tabs: 'Tabs', textfield: 'Text Field'}}},
   {id: 'antd-5.24.2', library: 'Ant Design', version: '5.24.2', homepage: 'https://ant.design/', framework: 'React', kind: 'types', artifacts: [],
     bundles: {base: 'https://cdn.jsdelivr.net/npm/antd@5.24.2/es', prelude: ['config-provider/SizeContext.d.ts', '_util/statusUtils.d.ts'],
-      components: ['button', 'input', 'checkbox', 'radio', 'switch', 'select', 'tag', 'badge', 'alert', 'modal', 'tabs', 'tooltip', 'card', 'avatar', 'table', 'slider', 'menu', 'breadcrumb', 'pagination', 'progress', 'dropdown', 'drawer', 'collapse', 'float-button', 'segmented', 'auto-complete', 'steps', 'notification']}},
+      components: ANTD_COMPONENTS}, codemod: {package: 'antd', exports: ANTD_COMPONENTS.filter(c => c !== 'notification').map(pascal)}},
 ];
+
+export const codemodBinding = (referenceId: string): CodemodBinding => REFERENCE_SOURCES.find(r => r.id === referenceId)?.codemod ?? {};
 
 const ROOT = new URL('../references/', import.meta.url);
 export type ReferenceSummary = {id: string; library: string; version: string; homepage: string; framework: string; kind: 'css' | 'types'; components: number; tokens: number; pinnedAt: string};

@@ -181,7 +181,7 @@ export const UsageReport = z.object({
 // ── Part 4: projects and jobs ───────────────────────────────────────────────
 export const Project = z.object({id, name: z.string().min(1).max(200), createdAt: isoDate});
 
-export const JobType = z.enum(['extract', 'gapscan', 'generate', 'render', 'usage']);
+export const JobType = z.enum(['extract', 'gapscan', 'generate', 'render', 'usage', 'codemod']);
 export const JobStatus = z.enum(['queued', 'running', 'completed', 'failed', 'cancelled']);
 export const TERMINAL_JOB_STATUSES: ReadonlyArray<z.infer<typeof JobStatus>> = ['completed', 'failed', 'cancelled'];
 export const Job = z.object({

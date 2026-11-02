@@ -22,9 +22,11 @@ export async function loadUsageReport(blobs: BlobStore, projectId: string): Prom
   return blob ? UsageReport.parse(JSON.parse(blob.toString('utf8'))) : null;
 }
 
-type Options = {store: Store; blobs: BlobStore; allowUrl?: (url: URL) => Promise<boolean>; fetch?: typeof fetch};
-export function createUsageHandler({store, blobs, allowUrl = async () => true, fetch: fetchImpl = fetch}: Options): JobHandler {
-  const download = async (url: string, limit: number, signal: AbortSignal) => {
+type FetchOptions = {allowUrl?: (url: URL) => Promise<boolean>; fetch?: typeof fetch};
+// Reads one application source into files: a public GitHub repository (as its ZIP), an uploaded ZIP, or pasted code.
+// `accept` picks the paths worth reading; nothing in them is executed.
+export function createApplicationReader({blobs, allowUrl = async () => true, fetch: fetchImpl = fetch, accept = isScannable}: FetchOptions & {blobs: BlobStore; accept?: (path: string) => boolean}) {
+  const download = async (url: string, limit: number, signal: AbortSignal): Promise<Uint8Array> => {
     if (!(await allowUrl(new URL(url)))) throw new Error(`${new URL(url).hostname} is not a public address.`);
     const response = await fetchImpl(url, {signal, redirect: 'manual', headers: {'user-agent': 'GapScan/1.0'}});
     if (response.status >= 300 && response.status < 400 && response.headers.get('location')) return download(new URL(response.headers.get('location')!, url).href, limit, signal);
@@ -33,7 +35,7 @@ export function createUsageHandler({store, blobs, allowUrl = async () => true, f
     if (bytes.length > limit) throw new Error('The repository archive is larger than 50 MB.');
     return bytes;
   };
-  const filesFrom = async (source: SourceAsset, signal: AbortSignal): Promise<SourceFile[]> => {
+  return async (source: SourceAsset, signal: AbortSignal): Promise<SourceFile[]> => {
     const repo = source.kind === 'url' ? githubRepo(source.uri) : null;
     let zip: Uint8Array | null = null, prefix = '';
     if (repo) {
@@ -48,11 +50,16 @@ export function createUsageHandler({store, blobs, allowUrl = async () => true, f
       // GitHub archives wrap everything in one top-level folder (repo-branch/).
       const roots = new Set(archive.entries.map(e => e.name.split('/')[0]));
       if (roots.size === 1) prefix = `${[...roots][0]}/`;
-      return archive.entries.filter(e => !e.name.endsWith('/') && !e.encrypted && !e.symlink && e.size <= 1_000_000 && isScannable(e.name.slice(prefix.length)))
+      return archive.entries.filter(e => !e.name.endsWith('/') && !e.encrypted && !e.symlink && e.size <= 1_000_000 && accept(e.name.slice(prefix.length)))
         .slice(0, 6000).map(e => ({path: e.name.slice(prefix.length), content: archive.read(e.name).toString('utf8')}));
     }
     return stored ? [{path: source.label ?? source.id, content: stored.toString('utf8')}] : [];
   };
+}
+
+type Options = FetchOptions & {store: Store; blobs: BlobStore};
+export function createUsageHandler({store, blobs, allowUrl, fetch}: Options): JobHandler {
+  const filesFrom = createApplicationReader({blobs, ...(allowUrl ? {allowUrl} : {}), ...(fetch ? {fetch} : {})});
 
   return async ({job, signal, progress, warn}) => {
     const {edsId} = job.payload as {edsId: string};
