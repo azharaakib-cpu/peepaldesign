@@ -13,11 +13,14 @@ import type {ComponentObservation, CoverageReport, EvidenceRecord, QuirkRecord, 
 
 export type AssetResult = {asset: SourceAsset; result: AdapterResult | null; error?: string};
 export type ExternalComponent = {component: ComponentObservation; specimen?: Specimen; evidence: EvidenceRecord[]; quirks?: QuirkRecord[]};
+export type TextStyle = {px: number; weight: number; lineHeightPx: number | null; family: string; count: number};
 export type Scales = {
   colors: {hex: string; count: number; neutral: boolean; members: string[]}[];
   roles: {role: string; hex: string; reason: string}[];
   spacing: ReturnType<typeof detectSpacing>;
   type: ReturnType<typeof fitTypeScale>;
+  // Text styles as used: the common size + weight + line-height + family combinations (most used first).
+  textStyles?: TextStyle[];
   radius: ReturnType<typeof radiusScale>;
   elevation: ReturnType<typeof elevationScale>;
 };
@@ -198,6 +201,7 @@ export function assembleSystem(inputs: readonly AssetResult[], external: readonl
     summary: `${spacing.offScale.map(v => `${v.px}px`).slice(0, 6).join(', ')} fall outside the ${spacing.baseUnit}px spacing grid (${Math.round(spacing.coverage * 100)}% of values fit).`, detail: spacing.offScale, evidence: spacing.offScale.flatMap(v => v.evidence).slice(0, 20)});
 
   const fonts = pick('font');
+  const textStyles = textStylesFrom(fonts.map(f => f.o));
   const type = fitTypeScale(fonts.filter(f => f.o.size).map(({o}) => ({size: o.size!, family: o.family, ...(o.weight ? {weight: o.weight} : {}), ...(o.selector ? {selector: o.selector} : {}), count: o.count ?? 1})));
   if (type) {
     for (const size of type.sizes) tokens.push({id: `tok:type:${size.px}`, tier: 'global', path: `font.size.${size.role}${type.sizes.filter(s => s.role === size.role).length > 1 ? '.' + size.step : ''}`, type: 'dimension', value: `${size.px}px`, status: 'resolved', evidence: [], confidence: type.irregular ? 0.4 : 0.6, usageCount: size.count});
@@ -240,8 +244,13 @@ export function assembleSystem(inputs: readonly AssetResult[], external: readonl
     const styleEvidence = Boolean(o.css || o.html || o.channel === 'observed_css' || o.channel === 'figma_styles');
     add({
       id: `cmp:${shortId(o.name)}`, canonical: o.name, rawNames: [o.name], category: classification.category, tier: classification.tier,
-      variants: (o.variants ?? []).filter(v => !v.startsWith('size=')).map(name => ({name, tokenRefs: {}})),
+      // Rendered sites record how each variant looks (computed styles of a representative instance).
+      variants: (o.variants ?? []).filter(v => !v.startsWith('size=')).map(name => {
+        const seen = o.variantStyles?.find(v => v.name === name);
+        return {name, tokenRefs: seen ? {...seen.style, ...(seen.text ? {label: seen.text} : {}), instances: String(seen.count)} : {}};
+      }),
       sizes: (o.variants ?? []).filter(v => v.startsWith('size=')).map(v => v.slice(5)),
+      ...(o.variantStyles?.some(v => v.name.startsWith('size=')) ? {sizeStyles: Object.fromEntries(o.variantStyles.filter(v => v.name.startsWith('size=')).map(v => [v.name.slice(5), {...v.style}]))} : {}),
       statesObserved: states, statesMissing: (REQUIRED_STATES[classification.category] ?? []).filter(s => !states.includes(s) && (styleEvidence || !s.startsWith('focus'))),
       ...(o.props?.length ? {props: o.props} : {}),
       a11y: {focusVisible: interactive && (styleEvidence || states.includes('focus-visible')) ? states.includes('focus-visible') : null}, instances: 1, evidence: [evidenceId], confidence: SOURCE_WEIGHT[o.channel] * 0.9,
@@ -259,7 +268,7 @@ export function assembleSystem(inputs: readonly AssetResult[], external: readonl
   const dedupedQuirks = quirks.filter(q => !seen.has(q.id) && seen.add(q.id));
   return {
     evidence, tokens, components: [...components.values()], specimens, quirks: dedupedQuirks, coverage, brandSignals: {voiceSnippets, logoAssets},
-    scales: {colors: clusters.map(c => ({hex: c.hex, count: c.count, neutral: c.neutral, members: c.members})), roles, spacing, type, radius, elevation},
+    scales: {colors: clusters.map(c => ({hex: c.hex, count: c.count, neutral: c.neutral, members: c.members})), roles, spacing, type, textStyles, radius, elevation},
   };
 }
 
@@ -272,3 +281,25 @@ export function systemFingerprint(system: Pick<AssembledSystem, 'tokens' | 'comp
 }
 
 export {buildRamp, toHex, toPx};
+
+// Rendered text clusters into styles by whole-pixel size and weight; line height and family are the
+// most used for that pair. Combinations under 1% of text are one-offs, not styles.
+export function textStylesFrom(fonts: readonly {size?: string; weight?: string; lineHeight?: string; family?: string; count?: number}[]): TextStyle[] {
+  const groups = new Map<string, {px: number; weight: number; count: number; lines: Map<string, number>; families: Map<string, number>}>();
+  let total = 0;
+  for (const f of fonts) {
+    const px = f.size?.endsWith('px') ? Math.round(parseFloat(f.size)) : NaN, weight = Number(f.weight) || 400, n = f.count ?? 1;
+    if (!px) continue;
+    total += n;
+    const key = `${px}|${weight}`, g = groups.get(key) ?? {px, weight, count: 0, lines: new Map(), families: new Map()};
+    g.count += n;
+    const line = f.lineHeight?.endsWith('px') ? String(Math.round(parseFloat(f.lineHeight))) : '';
+    if (line) g.lines.set(line, (g.lines.get(line) ?? 0) + n);
+    const family = f.family?.split(',')[0]?.trim().replace(/^['"]|['"]$/g, '');
+    if (family) g.families.set(family, (g.families.get(family) ?? 0) + n);
+    groups.set(key, g);
+  }
+  const top = (m: Map<string, number>) => [...m].sort((a, b) => b[1] - a[1])[0]?.[0];
+  return [...groups.values()].filter(g => g.count / total >= 0.01).map(g => ({px: g.px, weight: g.weight, lineHeightPx: top(g.lines) ? Number(top(g.lines)) : null, family: top(g.families) ?? '', count: g.count}))
+    .sort((a, b) => b.px - a.px || b.weight - a.weight);
+}

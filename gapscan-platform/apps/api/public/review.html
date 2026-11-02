@@ -13,7 +13,7 @@
       <h1 id="title">Your design system, extracted</h1>
       <p class="lead" id="subtitle">Loading…</p>
     </div>
-    <div class="row"><a class="button" href="/app/">New extraction</a><button class="theme-toggle" id="theme" type="button">Toggle theme</button></div>
+    <div class="row"><a class="button primary" id="design-system" href="#">Design system</a><a class="button" href="/app/">New extraction</a><button class="theme-toggle" id="theme" type="button">Toggle theme</button></div>
   </header>
   <div class="grid stats" id="stats"></div>
   <section class="card" aria-labelledby="compare"><h2 id="compare">Compare against a reference system</h2><p class="muted">Ranked by how many of your components have a likely counterpart. This is a suggestion; choose any.</p><div class="recs" id="recs"><p class="muted">Checking the library…</p></div><div class="log" id="scan-log" hidden aria-live="polite"></div></section>
@@ -21,6 +21,13 @@
     <form id="impact-form" class="row"><input type="url" name="repo" placeholder="https://github.com/your-org/your-app (public)" style="flex:1 1 280px"><span class="muted">or</span><input type="file" name="zip" accept=".zip"><button type="submit">Add and scan</button></form>
     <div id="impact-result" style="margin-top:12px"></div></section>
   <section class="card" aria-labelledby="handoff"><h2 id="handoff">Hand-off files</h2><p class="muted">Generated from this extraction. Unresolved values are left out; inferred values are marked.</p><div class="row" id="exports"></div></section>
+  <section class="card" aria-labelledby="export-figma-title" id="export-figma"><h2 id="export-figma-title">Export to Figma</h2>
+    <p class="muted">Optional. Turns this extraction into a Figma library (colour, spacing and radius variables, text and effect styles, components with their variants) in a Figma file you choose. GapScan doesn't write to Figma; the GapScan Importer plugin does, inside Figma, when you run it.</p>
+    <ol class="steps">
+      <li><a class="button primary" id="figma-export" href="#" download>Download the Figma export</a></li>
+      <li>First time only: <a href="/v1/figma-plugin.zip" download>download the GapScan Importer plugin</a>, unzip it, then in the Figma desktop app choose Plugins → Development → Import plugin from manifest… and pick <code>manifest.json</code>.</li>
+      <li>Open the Figma file you want, run Plugins → Development → GapScan Importer, and choose the export.</li>
+    </ol></section>
   <section class="card" aria-labelledby="figma-title"><h2 id="figma-title">Sync to Figma Variables</h2><p class="muted">Preview first: nothing is written until you confirm the exact changes shown.</p>
     <form id="figma-form" class="row"><input type="url" name="fileUrl" placeholder="https://www.figma.com/design/…" required style="flex:1 1 320px"><button type="submit">Preview changes</button></form>
     <div id="figma-result" style="margin-top:12px"></div></section>

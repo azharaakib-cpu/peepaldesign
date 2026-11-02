@@ -111,11 +111,13 @@ export function buildRamp(seed: ColorCluster, observed: readonly ColorCluster[] 
 // ── Spacing ─────────────────────────────────────────────────────────────────
 export type SpacingObservation = {value: string; count?: number; evidenceId?: string};
 export type SpacingScale = {baseUnit: 4 | 8 | null; coverage: number; steps: number[]; offScale: {px: number; count: number; evidence: string[]}[]};
+export const SPACING_MAX_PX = 128;
 export function detectSpacing(observations: readonly SpacingObservation[]): SpacingScale {
   const values = new Map<number, {count: number; evidence: string[]}>();
   for (const o of observations) for (const part of o.value.trim().split(/\s+/)) {
     const px = toPx(part);
-    if (px === null || px <= 0) continue;
+    // Above 128px a value is layout (column widths, section offsets), not spacing.
+    if (px === null || px <= 0 || px > SPACING_MAX_PX) continue;
     const key = roundPx(Math.abs(px)), entry = values.get(key) ?? {count: 0, evidence: []};
     entry.count += o.count ?? 1; if (o.evidenceId) entry.evidence.push(o.evidenceId); values.set(key, entry);
   }
@@ -125,9 +127,13 @@ export function detectSpacing(observations: readonly SpacingObservation[]): Spac
   // Prefer the larger grid when it explains enough: an 8px system also fits a 4px grid.
   const baseUnit = ([8, 4] as const).find(base => coverageFor(base) >= THRESHOLDS.gridShare) ?? null;
   // With a grid, steps are the grid multiples actually used (7.8px and 8px are both the 8px step).
+  // Without a grid, steps are whole pixels that carry real use: em-derived fractions (16.59px) join
+  // their nearest pixel, and values under 1% of all spacing are one-offs, not steps.
+  const whole = new Map<number, number>();
+  for (const [px, v] of values) whole.set(Math.round(px), (whole.get(Math.round(px)) ?? 0) + v.count);
   const steps = baseUnit
     ? [...new Set([...values.keys()].filter(px => fits(px, baseUnit)).map(px => Math.round(px / baseUnit) * baseUnit).filter(px => px > 0))].sort((a, b) => a - b)
-    : [...values.keys()].sort((a, b) => a - b);
+    : [...whole].filter(([px, count]) => px > 0 && (count / total >= 0.01 || whole.size <= 6)).map(([px]) => px).sort((a, b) => a - b);
   const offScale = baseUnit ? [...values].filter(([px]) => !fits(px, baseUnit)).map(([px, v]) => ({px, count: v.count, evidence: v.evidence})).sort((a, b) => b.count - a.count) : [];
   return {baseUnit, coverage: Math.round((baseUnit ? coverageFor(baseUnit) : 0) * 100) / 100, steps, offScale};
 }
@@ -193,8 +199,17 @@ export function radiusScale(values: readonly string[]): {name: string; px: numbe
 }
 
 export type ShadowLevel = {level: number; value: string; blurPx: number; offsetYPx: number};
+// A shadow layer that draws nothing: zero offsets, blur and spread, or a fully transparent colour
+// (often a transition's resting state, like `0 0 0 0 rgba(0,0,0,0)`).
+function invisibleLayer(layer: string): boolean {
+  const color = layer.match(/(rgba?|hsla?|oklch)\([^)]*\)|#[0-9a-f]{3,8}\b|transparent/i)?.[0] ?? '';
+  const lengths = layer.replace(/(rgba?|hsla?|oklch)\([^)]*\)|#[0-9a-f]+|inset|transparent/gi, ' ').trim().split(/\s+/).map(part => toPx(part)).filter((n): n is number => n !== null);
+  return color === 'transparent' || (parseColor(color)?.alpha ?? 1) === 0 || lengths.every(n => n === 0);
+}
 export function elevationScale(values: readonly string[]): ShadowLevel[] {
-  const parsed = [...new Set(values)].filter(v => v.trim() !== 'none').map(value => {
+  // Invisible layers are dropped from each value; a value with nothing left is not a shadow.
+  const visible = values.map(v => v.split(/,(?![^(]*\))/).map(l => l.trim()).filter(l => l && l !== 'none' && !invisibleLayer(l)).join(', ')).filter(Boolean);
+  const parsed = [...new Set(visible)].map(value => {
     const first = value.split(/,(?![^(]*\))/)[0] ?? '', lengths = first.replace(/(rgba?|hsla?|oklch)\([^)]*\)|#[0-9a-f]+|inset/gi, ' ').trim().split(/\s+/).map(part => toPx(part)).filter((n): n is number => n !== null);
     return {value, offsetYPx: lengths[1] ?? 0, blurPx: lengths[2] ?? 0};
   });

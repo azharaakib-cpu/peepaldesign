@@ -8,7 +8,7 @@ export {pdfAdapter, PDF_LIMITS} from './pdf.ts';
 export {createFigmaAdapter, figmaFileKey, FIGMA_LIMITS} from './figma.ts';
 export {codeAdapter, createCodeAdapter, cssComponents, cssDeclarations, inferredSpecimen} from './code.ts';
 export type {CodeAdapterOptions} from './code.ts';
-export {createUrlAdapter, sameSection, sharedPrefix} from './url.ts';
+export {createUrlAdapter, describeVariants, sameSection, sharedPrefix} from './url.ts';
 export type {UrlAdapterOptions} from './url.ts';
 export {startEgressProxy, EGRESS_CHROMIUM_ARGS} from './egress.ts';
 export type {EgressProxy, EgressResolver} from './egress.ts';

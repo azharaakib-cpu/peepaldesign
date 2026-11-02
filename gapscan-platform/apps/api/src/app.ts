@@ -8,14 +8,14 @@ import {z} from 'zod';
 import {ExtractedDesignSystem, TERMINAL_JOB_STATUSES} from '@gapscan/schema';
 import type {JobEvent, JobType} from '@gapscan/schema';
 import type {Infra, JobHandler} from '@gapscan/infra';
-import {createUrlAdapter, figmaFileKey} from '@gapscan/adapters';
+import {createUrlAdapter, figmaFileKey, writeZip} from '@gapscan/adapters';
 import type {Adapter} from '@gapscan/adapters';
 import {listReferences, loadReference} from '@gapscan/library';
 import {planningTotals} from '@gapscan/estimate';
 import {Assumptions, GapScanReport, ObjectKind} from '@gapscan/schema';
 import {CODE_FILE, createExtractHandler} from './extract-job.ts';
 import {projectSpecimen} from '@gapscan/gapscan';
-import {EXPORT_FORMATS, exportTokens, planFigmaSync} from '@gapscan/exports';
+import {buildDesignSystem, buildFigmaPlan, EXPORT_FORMATS, exportTokens, planFigmaSync, renderDesignSystemHtml} from '@gapscan/exports';
 import type {ExistingVariables} from '@gapscan/exports';
 import {buildObjects, contentHash} from '@gapscan/objects';
 import type {StoredApproval} from '@gapscan/objects';
@@ -209,6 +209,35 @@ export function buildApp({infra, handlers = {}, logger = false, heartbeatMs = HE
     const record = await store.getExtraction(IdParams.parse(request.params).id);
     const blob = record && await blobs.get(`extractions/${record.id}.scales.json`);
     return blob ? JSON.parse(blob.toString('utf8')) : fail(reply, 404, 'Scales not found for this extraction.');
+  });
+
+  // The extraction as a Figma-style library: JSON for tools, or a self-contained page to read and share.
+  const designSystem = async (id: string) => {
+    const record = await store.getExtraction(id), eds = await loadExtraction(store, blobs, id);
+    const scales = record && await blobs.get(`extractions/${record.id}.scales.json`);
+    if (!record || !eds) return null;
+    const project = await store.getProject(record.projectId), host = eds.sources.map(s => { try { return new URL(s.uri).hostname.replace(/^www\./, ''); } catch { return ''; } }).find(Boolean);
+    return buildDesignSystem(eds, scales ? JSON.parse(scales.toString('utf8')) : {}, host ?? project?.name ?? 'Design system');
+  };
+  app.get('/v1/extractions/:id/design-system', async (request, reply) => (await designSystem(IdParams.parse(request.params).id)) ?? fail(reply, 404, 'Extraction not found.'));
+  // Export to Figma: a build plan the GapScan Importer plugin applies inside Figma. GapScan itself never writes to Figma.
+  app.get('/v1/extractions/:id/figma-export.json', async (request, reply) => {
+    const doc = await designSystem(IdParams.parse(request.params).id);
+    if (!doc) return fail(reply, 404, 'Extraction not found.');
+    return reply.type('application/json; charset=utf-8').header('content-disposition', `attachment; filename="${doc.name.replace(/[^\w.-]/g, '-')}.figma.json"`).send(JSON.stringify(buildFigmaPlan(doc), null, 1));
+  });
+  app.get('/v1/figma-plugin.zip', async (_request, reply) => {
+    const dir = new URL('../../figma-plugin/', import.meta.url);
+    const files = Object.fromEntries(await Promise.all(['manifest.json', 'code.js', 'ui.html'].map(async name => [`gapscan-importer/${name}`, await readFile(new URL(name, dir))] as const)));
+    return reply.type('application/zip').header('content-disposition', 'attachment; filename="gapscan-importer.zip"').send(writeZip(files));
+  });
+  app.get('/v1/extractions/:id/design-system.html', async (request, reply) => {
+    const doc = await designSystem(IdParams.parse(request.params).id);
+    if (!doc) return fail(reply, 404, 'Extraction not found.');
+    const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">${renderDesignSystemHtml(doc, {figmaExport: 'figma-export.json', reviewHref: `/app/review.html?id=${encodeURIComponent(IdParams.parse(request.params).id)}#export-figma`})}`;
+    // No scripts at all; styles inline, fonts from Google Fonts only.
+    return reply.type('text/html; charset=utf-8').header('content-security-policy', "default-src 'none'; style-src 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src data:")
+      .header('content-disposition', `${(request.query as {download?: string}).download ? 'attachment' : 'inline'}; filename="${doc.name.replace(/[^\w.-]/g, '-')}-design-system.html"`).send(html);
   });
 
   app.get('/v1/extractions/:id', async (request, reply) => {

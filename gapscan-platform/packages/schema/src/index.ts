@@ -51,6 +51,8 @@ export const ComponentObservation = z.object({
   variants: z.array(z.object({name: z.string(), tokenRefs: z.record(z.string(), z.string()), specimenId: z.string().optional()})),
   sizes: z.array(z.string()), statesObserved: z.array(z.string()), statesMissing: z.array(z.string()),
   props: z.array(z.object({name: z.string(), type: z.string(), values: z.array(z.string()).optional()})).optional(),
+  // Rendered sites: computed styles of a representative instance at each size (height, padding, font size…).
+  sizeStyles: z.record(z.string(), z.record(z.string(), z.string())).optional(),
   a11y: z.object({contrastMin: z.number().optional(), focusVisible: z.boolean().nullable(), role: z.string().optional()}),
   instances: z.number().int().min(0), evidence: z.array(id), confidence: unit,
 });

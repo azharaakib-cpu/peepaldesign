@@ -2,7 +2,7 @@
 // Reads *computed* styles of visible elements at several viewports and in dark
 // mode, CSS custom properties, and repeated interactive structures. Every
 // request is checked against the public-URL policy; downloads are blocked.
-import type {Adapter, Observation} from './types.ts';
+import type {Adapter, Observation, VariantStyle} from './types.ts';
 import {AdapterError} from './types.ts';
 import {EGRESS_CHROMIUM_ARGS, startEgressProxy} from './egress.ts';
 import type {EgressResolver} from './egress.ts';
@@ -61,9 +61,26 @@ const COLLECT = String.raw`(() => {
       : tag === 'input' && el.type === 'checkbox' ? 'Checkbox' : tag === 'input' && el.type === 'radio' ? 'Radio'
       : role === 'tab' ? 'Tabs' : tag === 'nav' ? 'Navigation' : tag === 'dialog' || role === 'dialog' ? 'Dialog' : tag === 'table' ? 'Table'
       : /\bcard\b/i.test(el.className) ? 'Card' : /\b(alert|banner)\b/i.test(el.className) || role === 'alert' ? 'Alert' : /\bbadge\b/i.test(el.className) ? 'Badge' : null;
-    if (kind) {
-      const c = out.components[kind] || (out.components[kind] = {count: 0, classes: [], html: el.outerHTML.slice(0, 2000)});
+    // Component names that builds leave in class names: styled-components (ArtistTile__Label-sc-1w4yhde-4),
+    // CSS modules (Button_root__a1B2c) and Emotion labels (css-1x2y3z-Card). Only a component's root counts.
+    let named = null;
+    for (const cls of el.classList) {
+      const m = cls.match(/^([A-Z][A-Za-z0-9]+)(?:__([A-Za-z0-9]+))?-sc-[a-z0-9]+-\d+$/) || cls.match(/^([A-Za-z][A-Za-z0-9-]*?)(?:-module)?_+([a-zA-Z0-9]+)__[\w-]{5,}$/) || cls.match(/^css-[a-z0-9]+-([A-Z][A-Za-z0-9]+)$/);
+      // CSS-module file names are often lowercase or kebab-case (button_base__BjwbK, nav-bar_root__x1y2z).
+      if (m && (!m[2] || /^(root|Root|container|Container|wrapper|Wrapper|base|Base)$/.test(m[2]))) { named = m[1].replace(/(^|-)([a-z])/g, (_, __, c) => c.toUpperCase()); break; }
+    }
+    for (const name of [kind, named && named !== kind ? named : null]) {
+      if (!name) continue;
+      const c = out.components[name] || (out.components[name] = {count: 0, classes: [], html: el.outerHTML.slice(0, 2000), named: name === named, styles: {}});
       c.count++; for (const cls of el.classList) if (c.classes.length < 30 && !c.classes.includes(cls)) c.classes.push(cls);
+      // Visual signature: instances that look the same are one variant.
+      const box = el.getBoundingClientRect(), bordered = parseFloat(cs.borderTopWidth) > 0 && !transparent(cs.borderTopColor);
+      const style = {background: transparent(cs.backgroundColor) ? 'transparent' : cs.backgroundColor, color: cs.color, border: bordered ? cs.borderTopWidth + ' ' + cs.borderTopColor : 'none',
+        radius: cs.borderTopLeftRadius, fontSize: cs.fontSize, fontWeight: cs.fontWeight, fontFamily: cs.fontFamily.split(',')[0].replace(/['"]/g, '').trim(),
+        paddingY: cs.paddingTop, paddingX: cs.paddingLeft, height: Math.round(box.height) + 'px', width: Math.round(box.width) + 'px', shadow: cs.boxShadow};
+      const key = [style.background, style.color, style.border, style.radius, style.fontSize, style.fontWeight, style.paddingY, style.paddingX].join('|');
+      const v = c.styles[key] || (Object.keys(c.styles).length < 12 ? (c.styles[key] = {count: 0, style, html: el.outerHTML.slice(0, 1500), text: (el.innerText || el.value || el.placeholder || '').trim().slice(0, 40)}) : null);
+      if (v) v.count++;
     }
   }
   const root = getComputedStyle(document.documentElement);
@@ -86,8 +103,41 @@ type Collected = {
   colors: Record<string, {count: number; value: string; property: string; selector: string}>;
   fonts: Record<string, {count: number; family: string; size: string; weight: string; lineHeight: string; selector: string}>;
   spacing: Record<string, {count: number}>; radius: Record<string, {count: number}>; shadow: Record<string, {count: number}>;
-  vars: Record<string, string>; components: Record<string, {count: number; classes: string[]; html: string}>; selectors: string[]; links: string[]; title: string;
+  vars: Record<string, string>; selectors: string[]; links: string[]; title: string;
+  components: Record<string, {count: number; classes: string[]; html: string; named: boolean; styles: Record<string, {count: number; style: VariantStyle; html: string; text: string}>}>;
 };
+
+const STRUCTURAL = /(Wrapper|Container|Layout|Inner|Outer|Content|Section|Box|Flex|Spacer|Row|Column|Col|Grid|Page|Root|Main|Body|Holder|Area)s?$/;
+const title = (name: string) => name.replace(/([a-z0-9])([A-Z])/g, '$1 $2').replace(/^./, c => c.toUpperCase()).replace(/ ([A-Z])/g, (_, c: string) => ' ' + c.toLowerCase());
+
+// Names a component's looks the way a design library would: filled (by use: primary first), neutral,
+// outline and plain appearances, and sm/md/lg sizes when instances come in distinct heights.
+function rgb(value: string): [number, number, number] | null {
+  const m = value.match(/rgba?\(([\d.]+),\s*([\d.]+),\s*([\d.]+)/);
+  return m ? [Number(m[1]), Number(m[2]), Number(m[3])] : null;
+}
+const saturation = (value: string) => { const c = rgb(value); if (!c) return 0; const max = Math.max(...c), min = Math.min(...c); return max === 0 ? 0 : (max - min) / max; };
+const hueOf = (value: string) => { const c = rgb(value); if (!c) return 0; const [r, g, b] = c.map(x => x / 255) as [number, number, number], max = Math.max(r, g, b), d = max - Math.min(r, g, b);
+  if (!d) return 0; const h = max === r ? ((g - b) / d) % 6 : max === g ? (b - r) / d + 2 : (r - g) / d + 4; return (h * 60 + 360) % 360; };
+export function describeVariants(kind: string, styles: {count: number; style: VariantStyle; html: string; text: string}[]) {
+  const ranked = [...styles].sort((a, b) => b.count - a.count);
+  const appearance = (s: VariantStyle) => s.background === 'transparent' ? (s.border !== 'none' ? 'outline' : kind === 'Button' ? 'ghost' : 'plain')
+    : saturation(s.background) > 0.25 ? 'filled' : 'neutral';
+  const named = new Map<string, (typeof ranked)[number]>();
+  let filled = 0;
+  for (const v of ranked) {
+    let name = appearance(v.style);
+    if (name === 'filled') { const hue = hueOf(v.style.background); name = filled++ === 0 ? 'primary' : hue < 20 || hue > 335 ? 'danger' : hue > 80 && hue < 170 ? 'success' : hue > 30 && hue < 60 ? 'warning' : `filled ${filled}`; }
+    else if (name === 'neutral') name = 'secondary';
+    if (!named.has(name)) named.set(name, v);
+  }
+  const heights = [...new Set(ranked.filter(v => v.count >= 2 || ranked.length === 1).map(v => Math.round(parseFloat(v.style.height) / 4) * 4))].filter(h => h > 0).sort((a, b) => a - b);
+  const SIZE_NAMES = heights.length === 2 ? ['sm', 'md'] : ['sm', 'md', 'lg', 'xl'];
+  const sizes = heights.length >= 2 && heights.length <= 4 ? heights.map((h, i) => ({name: SIZE_NAMES[i]!, height: h})) : [];
+  const sizeStyles = sizes.map(size => { const v = ranked.find(r => Math.round(parseFloat(r.style.height) / 4) * 4 === size.height)!; return {name: `size=${size.name}`, style: v.style, count: v.count, html: v.html, text: v.text}; });
+  const variantStyles = [...[...named].slice(0, 6).map(([name, v]) => ({name, style: v.style, count: v.count, html: v.html, text: v.text})), ...sizeStyles];
+  return {variants: variantStyles.map(v => v.name), variantStyles};
+}
 
 const STATES = ['hover', 'focus-visible', 'focus', 'active', 'disabled'] as const;
 const statesFor = (kind: string, classes: string[], selectors: string[]) => {
@@ -126,7 +176,8 @@ export function createUrlAdapter(options: UrlAdapterOptions): Adapter {
     const abort = () => { void browser.close(); };
     signal.addEventListener('abort', abort, {once: true});
     const observations: Observation[] = [], failed: {locator: string; reason: string}[] = [], themes = new Set<string>(['light']);
-    const queue = [start.href], seen = new Set<string>(), components = new Map<string, {count: number; classes: Set<string>; html: string; locator: string}>(), selectors = new Set<string>();
+    const queue = [start.href], seen = new Set<string>(), selectors = new Set<string>();
+    const components = new Map<string, {count: number; classes: Set<string>; html: string; locator: string; named: boolean; styles: Map<string, {count: number; style: VariantStyle; html: string; text: string}>}>();
     let fetched = 0;
     try {
       const context = await browser.newContext({acceptDownloads: false, javaScriptEnabled: true, serviceWorkers: 'block', userAgent: 'GapScan/1.0 (design-system extraction)'});
@@ -178,8 +229,9 @@ export function createUrlAdapter(options: UrlAdapterOptions): Adapter {
               for (const [name, value] of Object.entries(data.vars)) if (value) observations.push({type: 'token', channel, path: name, value, locator: `${page.url()} :root`});
               for (const selector of data.selectors) selectors.add(selector);
               for (const [kind, c] of Object.entries(data.components)) {
-                const entry = components.get(kind) ?? {count: 0, classes: new Set<string>(), html: c.html, locator: page.url()};
+                const entry = components.get(kind) ?? {count: 0, classes: new Set<string>(), html: c.html, locator: page.url(), named: c.named, styles: new Map()};
                 entry.count += c.count; c.classes.forEach(cls => entry.classes.add(cls)); components.set(kind, entry);
+                for (const [key, v] of Object.entries(c.styles)) { const seenStyle = entry.styles.get(key); if (seenStyle) seenStyle.count += v.count; else entry.styles.set(key, {...v}); }
               }
               for (const link of data.links) if (!seen.has(link) && !queue.includes(link) && sameSection(start, new URL(link)) && await allowUrl(new URL(link))) queue.push(link);
               queue.sort((a, b) => sharedPrefix(start, new URL(b)) - sharedPrefix(start, new URL(a)));
@@ -193,7 +245,13 @@ export function createUrlAdapter(options: UrlAdapterOptions): Adapter {
           failed.push({locator: href, reason: error instanceof Error ? error.message.split('\n')[0]! : 'Page failed to render.'});
         } finally { await page.close().catch(() => undefined); }
       }
-      for (const [kind, c] of components) observations.push({type: 'component', channel: 'observed_css', name: kind, html: c.html, states: [...statesFor(kind, [...c.classes], [...selectors])], locator: c.locator, raw: `${c.count} instances; classes ${[...c.classes].slice(0, 8).join(' ')}`});
+      for (const [kind, c] of components) {
+        // Structural wrappers (PageWrapper, ContentContainer…) are layout plumbing, not components.
+        if (c.named && STRUCTURAL.test(kind)) continue;
+        const {variants, variantStyles} = describeVariants(kind, [...c.styles.values()]);
+        observations.push({type: 'component', channel: 'observed_css', name: c.named ? title(kind) : kind, html: c.html, states: [...statesFor(kind, [...c.classes], [...selectors])],
+          variants, variantStyles, locator: c.locator, raw: `${c.count} instances; classes ${[...c.classes].slice(0, 8).join(' ')}`});
+      }
     } finally {
       signal.removeEventListener('abort', abort);
       await browser.close().catch(() => undefined);

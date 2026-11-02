@@ -131,3 +131,4 @@ main.narrow { max-width: 560px; }
 .row > select { width: auto; }
 #members .source { display: grid; grid-template-columns: 1fr auto 88px; align-items: center; }
 #members .source > button { justify-self: end; }
+.steps { display: grid; gap: 10px; padding-left: 20px; margin: 12px 0 0; } .steps li { padding-left: 4px; }

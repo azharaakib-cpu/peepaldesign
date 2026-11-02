@@ -84,6 +84,8 @@ review the result, then compare it against a reference system.
 | `POST /v1/auth/session` `{token}`, `GET /v1/auth/me`, `POST /v1/auth/logout` | Exchange the link's token for a session cookie (30 days, HttpOnly, SameSite=Lax), read it, end it |
 | `GET /v1/projects` | Projects you are a member of |
 | `GET`/`POST /v1/projects/:id/members`, `DELETE /v1/projects/:id/members/:userId` | People on a project; owners invite (`{email, role}`, emailed) and remove; the last owner stays |
+| `GET /v1/extractions/:id/design-system`, `…/design-system.html` | The extraction laid out like a Figma library (colour ramps, text styles, spacing, radius, effects, components with variants), as JSON or a self-contained page with no scripts |
+| `GET /v1/extractions/:id/figma-export.json`, `GET /v1/figma-plugin.zip` | Export to Figma, on request: a build plan, and the GapScan Importer plugin that applies it inside a Figma file you choose. GapScan never writes to Figma itself. |
 | `GET /v1/library`, `GET /v1/library/:id` | Reference systems and their components |
 | `GET /v1/extractions/:id/recommendations` | References ranked by how many of your components have a counterpart |
 | `POST /v1/gapscans` `{edsId, referenceId, assumptions?}` | Starts a `gapscan` job |
@@ -144,11 +146,32 @@ a route without one stops the server from starting. A project you aren't on answ
 from GapScan's own pages (checked by `Origin`). Approvals record the signed-in person's
 email rather than a typed name.
 
+## Export to Figma
+
+After an extraction, the review page offers **Export to Figma** (optional). It downloads a
+`.figma.json` build plan: primitives from the site's declared colour variables (with their CSS
+names as code syntax), semantic colours aliased to them, spacing and radius variables, text and
+effect styles, and one component set per component with a variant per appearance, bound to those
+variables. The **GapScan Importer** plugin (`apps/figma-plugin`, also served as a zip) applies it
+in whichever Figma file you open it in: Plugins → Development → Import plugin from manifest once,
+then run it and choose the file. It fetches nothing, re-runs update variables and styles by name,
+and existing component sets are left alone. When the site's typeface isn't installed for Figma,
+styles use a similar sans and say so.
+
 ## How a website is read
 
 Pages are rendered in headless Chromium at 1440, 768 and 375px and in dark mode
 (dark mode is recorded only when the page actually changes). The crawl stays on
 the start page's origin and section, and skips other documentation versions.
+Component names come from semantic elements (button, input, table…) and from the names builds
+leave in class names: styled-components (`ArtistTile-sc-1w4yhde-4`), CSS modules
+(`Button_root__a1B2c`, `nav-bar_root__x1y2z`) and Emotion labels; layout wrappers are skipped.
+Each component's instances are grouped by their computed styles into variants (primary, secondary,
+outline, ghost…) and sizes. Utility-class sites (Tailwind) carry no component names, so only
+semantic elements are found there. Spacing ignores layout widths over 128px and one-off values;
+invisible shadow layers are dropped; declared colour variables become ramps and sets, without
+framework internals or compiler-generated names.
+
 Every request the browser makes is checked against the same public-HTTPS policy
 as intake; private addresses, media and downloads are blocked. The browser doesn't
 resolve names itself: its traffic goes through GapScan's egress proxy, which connects

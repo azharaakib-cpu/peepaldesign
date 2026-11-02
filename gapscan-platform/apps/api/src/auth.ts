@@ -52,7 +52,7 @@ export function accessRules(store: Store): Record<string, Rule> {
     'POST /v1/projects/:id/usage': viaProject, 'GET /v1/projects/:id/usage': viaProject, 'GET /v1/projects/:id/members': viaProject,
     'POST /v1/projects/:id/members': {access: 'owner', project: async r => param(r)}, 'DELETE /v1/projects/:id/members/:userId': {access: 'owner', project: async r => param(r)},
     'GET /v1/jobs/:id': viaJob, 'DELETE /v1/jobs/:id': viaJob, 'GET /v1/jobs/:id/events': viaJob, 'GET /v1/assets/:id': viaJob, 'GET /v1/assets/:id/file': viaJob,
-    'GET /v1/extractions/:id': viaExtraction, 'GET /v1/extractions/:id/scales': viaExtraction, 'GET /v1/extractions/:id/export': viaExtraction,
+    'GET /v1/extractions/:id': viaExtraction, 'GET /v1/extractions/:id/scales': viaExtraction, 'GET /v1/extractions/:id/design-system': viaExtraction, 'GET /v1/extractions/:id/design-system.html': viaExtraction, 'GET /v1/extractions/:id/figma-export.json': viaExtraction, 'GET /v1/figma-plugin.zip': user, 'GET /v1/extractions/:id/export': viaExtraction,
     'GET /v1/extractions/:id/objects': viaExtraction, 'PUT /v1/extractions/:id/objects/:kind/sections/:sectionId/approval': viaExtraction,
     'POST /v1/extractions/:id/figma-sync/plan': viaExtraction, 'POST /v1/extractions/:id/figma-sync/apply': viaExtraction, 'GET /v1/extractions/:id/brandkit': viaExtraction,
     'POST /v1/extractions/:id/assets': viaExtraction, 'GET /v1/extractions/:id/recommendations': viaExtraction,

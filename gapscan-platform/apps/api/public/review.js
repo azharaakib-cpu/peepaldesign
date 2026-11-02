@@ -238,3 +238,5 @@ $('#impact-form').addEventListener('submit', async event => {
   } catch (error) { out.replaceChildren(el('p', {class: 'error'}, error.message)); }
 });
 impact();
+// The Figma-style library view of this extraction (also saved as a self-contained file with ?download=1).
+if (id) { $("#design-system").href = `/v1/extractions/${id}/design-system.html`; $("#figma-export").href = `/v1/extractions/${id}/figma-export.json`; }
