@@ -315,3 +315,40 @@ test('generated email HTML is served sandboxed', async () => {
     assert.doesNotMatch(file.body, /<img src=x/);
   } finally { await h.close(); }
 });
+
+test('Figma Variables sync previews without writing and applies only the confirmed plan', async () => {
+  const calls: {method: string; url: string; body?: unknown}[] = [];
+  let variables = {meta: {variables: {}, variableCollections: {}}};
+  const fakeFetch = (async (url: string | URL | Request, init?: RequestInit) => {
+    const method = init?.method ?? 'GET', body = init?.body ? JSON.parse(String(init.body)) : undefined;
+    calls.push({method, url: String(url), body});
+    if (method === 'GET') return new Response(JSON.stringify(variables), {status: 200});
+    return new Response(JSON.stringify({status: 200, meta: {tempIdToRealId: {}}}), {status: 200});
+  }) as typeof fetch;
+  const dataDir = await mkdtemp(join(tmpdir(), 'gapscan-api-'));
+  const infra = await createInfra({...configFromEnv({}), dataDir});
+  const app = buildApp({infra, figma: {token: 'test-token', fetch: fakeFetch}});
+  const json = async (method: string, url: string, payload?: object) => { const r = await app.inject({method: method as 'GET', url, ...(payload ? {payload} : {})}); return {status: r.statusCode, body: JSON.parse(r.body)}; };
+  try {
+    const project = (await json('POST', '/v1/projects', {name: 'Acme'})).body;
+    await json('POST', `/v1/projects/${project.id}/sources`, {kind: 'code', name: 'acme.css', content: CSS});
+    const {jobId} = (await json('POST', `/v1/projects/${project.id}/extractions`)).body;
+    await infra.queue.idle();
+    const edsId = (await json('GET', `/v1/jobs/${jobId}`)).body.resultId;
+    const fileUrl = 'https://www.figma.com/design/AbCdEf1234567890/Acme';
+    const plan = (await json('POST', `/v1/extractions/${edsId}/figma-sync/plan`, {fileUrl})).body;
+    assert.ok(plan.create.length > 0);
+    assert.equal(plan.payload, undefined, 'the raw payload is not exposed');
+    assert.ok(calls.every(c => c.method === 'GET'), 'previewing never writes');
+    assert.equal((await json('POST', `/v1/extractions/${edsId}/figma-sync/apply`, {fileUrl, hash: plan.hash})).status, 400, 'explicit confirmation required');
+    assert.equal((await json('POST', `/v1/extractions/${edsId}/figma-sync/apply`, {fileUrl, hash: '0'.repeat(16), confirm: true})).status, 409, 'a stale plan is refused');
+    const applied = (await json('POST', `/v1/extractions/${edsId}/figma-sync/apply`, {fileUrl, hash: plan.hash, confirm: true})).body;
+    assert.equal(applied.applied, true);
+    const write = calls.find(c => c.method === 'POST')!;
+    assert.equal(write.url, 'https://api.figma.com/v1/files/AbCdEf1234567890/variables');
+    assert.ok((write.body as {variables: unknown[]}).variables.length === plan.create.filter((c: {mode: string}) => c.mode === 'Light').length);
+    variables = {meta: {variables: {}, variableCollections: {}}};
+    const noToken = buildApp({infra, figma: {}});
+    assert.equal((await noToken.inject({method: 'POST', url: `/v1/extractions/${edsId}/figma-sync/plan`, payload: {fileUrl}})).statusCode, 400);
+  } finally { await app.close(); await infra.close(); await rm(dataDir, {recursive: true, force: true}); }
+});

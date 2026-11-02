@@ -24,6 +24,8 @@ export function componentApis(source: string, fileName: string): ComponentApi[] 
   const kind = /\.tsx$/i.test(fileName) ? ts.ScriptKind.TSX : /\.jsx$/i.test(fileName) ? ts.ScriptKind.JSX : /\.js$/i.test(fileName) ? ts.ScriptKind.JS : ts.ScriptKind.TS;
   const file = ts.createSourceFile(fileName, source, ts.ScriptTarget.Latest, true, kind);
   const shapes = new Map<string, {members: ts.TypeElement[]; bases: string[]}>(), values = new Set<string>(), usesProps = new Map<string, string>();
+  // Type aliases and declared const types, so `ButtonType = (typeof _ButtonTypes)[number]` resolves to its literals.
+  const aliasText = new Map<string, string>(), constText = new Map<string, string>();
   const lineOf = (node: ts.Node) => file.getLineAndCharacterOfPosition(node.getStart(file)).line + 1;
   const refName = (type: ts.TypeNode | undefined): string | undefined => {
     if (!type) return undefined;
@@ -36,6 +38,7 @@ export function componentApis(source: string, fileName: string): ComponentApi[] 
   const visit = (node: ts.Node) => {
     if (ts.isInterfaceDeclaration(node)) shapes.set(node.name.text, {members: [...node.members], bases: (node.heritageClauses ?? []).flatMap(h => h.types.map(t => t.expression.getText(file)))});
     else if (ts.isTypeAliasDeclaration(node)) {
+      aliasText.set(node.name.text, node.type.getText(file));
       const parts = ts.isIntersectionTypeNode(node.type) ? node.type.types : [node.type];
       // Generic wrappers (`ExtendPaperTypeMap<{props: …}>`) carry their members in a type-literal argument.
       const literalsIn = (p: ts.TypeNode): ts.TypeElement[] => ts.isTypeLiteralNode(p) ? [...p.members] : ts.isTypeReferenceNode(p) ? (p.typeArguments ?? []).flatMap(literalsIn) : [];
@@ -45,6 +48,7 @@ export function componentApis(source: string, fileName: string): ComponentApi[] 
       values.add(node.name.text);
       const props = propsOf(node); if (props) usesProps.set(node.name.text, props);
     } else if (ts.isVariableStatement(node)) for (const d of node.declarationList.declarations) {
+      if (ts.isIdentifier(d.name) && d.type) constText.set(d.name.text, d.type.getText(file));
       if (!ts.isIdentifier(d.name) || !pascal(d.name.text)) continue;
       values.add(d.name.text);
       // const Button = (props: ButtonProps) => …, forwardRef<HTMLButtonElement, ButtonProps>(…), React.FC<ButtonProps>
@@ -74,6 +78,9 @@ export function componentApis(source: string, fileName: string): ComponentApi[] 
     }).filter(m => !(ts.isPropertySignature(m) && m.name.getText(file) === 'defaultComponent'));
     return [...unwrapped, ...shape.bases.flatMap(b => membersOf(b.replace(/<.*$/, ''), seen))];
   };
+  const expand = (text: string, depth = 0): string => depth > 4 ? text : text
+    .replace(/typeof\s+([A-Za-z_$][\w$]*)/g, (whole, name: string) => constText.has(name) ? expand(constText.get(name)!, depth + 1) : whole)
+    .replace(/\b([A-Z][A-Za-z0-9_]*)\b(?!\s*[:<(])/g, (whole, name: string) => aliasText.has(name) && !shapes.get(name)?.members.length ? `(${expand(aliasText.get(name)!, depth + 1)})` : whole);
   const propCount = (name: string) => membersOf(name).filter(m => ts.isPropertySignature(m) && !NOISE.test(m.name.getText(file).replace(/['"]/g, ''))).length;
   // Components: values typed by a props shape, plus `XProps` / `XOwnProps` shapes for an exported X or the file's own name.
   const stem = fileName.split('/').pop()!.replace(/\.(d\.)?[jt]sx?$/, '');
@@ -90,10 +97,12 @@ export function componentApis(source: string, fileName: string): ComponentApi[] 
       if (!ts.isPropertySignature(m) || !m.name) return [];
       const prop = m.name.getText(file).replace(/['"]/g, '');
       if (NOISE.test(prop)) return [];
-      const type = m.type?.getText(file).replace(/\s+/g, ' ').slice(0, 160) ?? 'unknown', options = literals(type);
+      const type = m.type?.getText(file).replace(/\s+/g, ' ').slice(0, 160) ?? 'unknown', options = literals(expand(m.type?.getText(file) ?? ''));
       return [{name: prop, type, optional: Boolean(m.questionToken), ...(options.length ? {values: options} : {})}];
     }).filter((p, i, all) => all.findIndex(q => q.name === p.name) === i);
-    const variants = props.filter(p => VARIANT_PROPS.test(p.name) && p.values).flatMap(p => p.values!.map(v => p.name === 'variant' ? v : `${p.name}=${v}`));
+    // `type` is a style in some libraries (antd) and the HTML button type in others; only the former is a variant.
+    const isStyleType = (p: {name: string; values?: string[]}) => p.name === 'type' && Boolean(p.values?.some(v => !/^(button|submit|reset)$/.test(v)));
+    const variants = props.filter(p => (VARIANT_PROPS.test(p.name) || isStyleType(p)) && p.values).flatMap(p => p.values!.map(v => p.name === 'variant' ? v : `${p.name}=${v}`));
     const sizes = props.find(p => p.name === 'size')?.values ?? [];
     const states = [...new Set(props.filter(p => STATE_PROPS[p.name] && /boolean/.test(p.type)).map(p => STATE_PROPS[p.name]!))];
     return [{name, line: lineOf(file), props, variants, sizes, states}];

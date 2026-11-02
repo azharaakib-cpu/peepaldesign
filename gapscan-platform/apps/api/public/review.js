@@ -174,3 +174,27 @@ $('#asset-form').addEventListener('submit', async event => {
   } catch (error) { result.replaceChildren(el('p', {class: 'error'}, error.message)); }
 });
 assets();
+
+// Figma Variables: preview, then an explicit confirmation that applies exactly that preview.
+$('#figma-form').addEventListener('submit', async event => {
+  event.preventDefault();
+  const fileUrl = event.target.elements.fileUrl.value.trim(), out = $('#figma-result');
+  out.replaceChildren(el('p', {class: 'muted'}, 'Reading the file’s variables…'));
+  try {
+    const plan = await api(`/v1/extractions/${id}/figma-sync/plan`, {method: 'POST', body: JSON.stringify({fileUrl})});
+    const row = c => el('tr', {}, el('td', {}, el('code', {}, c.name)), el('td', {}, c.mode), el('td', {}, c.before ?? 'new'), el('td', {}, c.after));
+    const apply = el('button', {class: 'primary', type: 'button'}, `Apply ${plan.create.length + plan.update.length} changes to Figma`);
+    apply.disabled = !plan.create.length && !plan.update.length;
+    apply.addEventListener('click', async () => {
+      if (!confirm(`Write ${plan.create.length} new and ${plan.update.length} changed values to the “${plan.collection}” collection in this Figma file?`)) return;
+      apply.disabled = true;
+      try { const done = await api(`/v1/extractions/${id}/figma-sync/apply`, {method: 'POST', body: JSON.stringify({fileUrl, hash: plan.hash, confirm: true})}); out.append(el('p', {}, done.applied ? `Done: ${done.created} new, ${done.updated} changed.` : done.message)); }
+      catch (error) { apply.disabled = false; out.append(el('p', {class: 'error'}, error.message)); }
+    });
+    out.replaceChildren(
+      el('p', {}, `${plan.collectionExists ? 'Updating' : 'Creating'} the “${plan.collection}” collection (modes: ${plan.modes.join(', ')}): ${plan.create.length} new, ${plan.update.length} changed, ${plan.unchanged} unchanged, ${plan.skipped.length} skipped.`),
+      [...plan.create, ...plan.update].length ? el('div', {class: 'table-wrap'}, el('table', {}, el('tr', {}, el('th', {}, 'Variable'), el('th', {}, 'Mode'), el('th', {}, 'Now'), el('th', {}, 'After')), [...plan.update, ...plan.create].slice(0, 40).map(row))) : '',
+      plan.skipped.length ? el('details', {}, el('summary', {class: 'muted'}, `Skipped (${plan.skipped.length})`), el('ul', {}, plan.skipped.map(s => el('li', {}, `${s.path}: ${s.reason}`)))) : '',
+      el('div', {class: 'row'}, apply));
+  } catch (error) { out.replaceChildren(el('p', {class: 'error'}, error.message)); }
+});

@@ -85,3 +85,5 @@ export function exportTokens(eds: ExtractedDesignSystem, format: ExportFormat, o
       return `// ${header}\n${list.map(e => `$${e.path.join('-')}: ${e.reference ? `$${e.reference.join('-')}` : e.value};`).join('\n')}\n`;
   }
 }
+export {planFigmaSync, variableName} from './figma-variables.ts';
+export type {ExistingVariables, SyncChange, SyncPlan} from './figma-variables.ts';

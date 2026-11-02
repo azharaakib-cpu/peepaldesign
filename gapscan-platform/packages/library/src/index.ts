@@ -6,7 +6,10 @@ import {ReferenceDS} from '@gapscan/schema';
 import type {ReferenceDS as ReferenceDSType} from '@gapscan/schema';
 
 // `css` references are read from a published stylesheet (with previews); `types` references from published TypeScript declarations (APIs only).
-export type ReferenceSource = {id: string; library: string; version: string; homepage: string; framework: string; kind: 'css' | 'types'; artifacts: {url: string; name: string; classPrefix?: string}[]};
+// `bundles` read declaration files that are split across a folder: each component's index.d.ts, the
+// same-folder files it imports, and shared prelude files, read together as one document.
+export type ReferenceSource = {id: string; library: string; version: string; homepage: string; framework: string; kind: 'css' | 'types';
+  artifacts: {url: string; name: string; classPrefix?: string}[]; bundles?: {base: string; components: string[]; prelude: string[]}};
 const MUI_COMPONENTS = ['Button', 'TextField', 'Checkbox', 'Radio', 'Switch', 'Select', 'Chip', 'Badge', 'Alert', 'Snackbar', 'Dialog', 'Tabs', 'Tooltip', 'Card', 'Avatar', 'Table', 'Slider', 'Menu', 'Breadcrumbs', 'Pagination', 'LinearProgress', 'CircularProgress', 'IconButton', 'ButtonGroup', 'AppBar', 'Drawer', 'Accordion', 'Fab', 'ToggleButton', 'Autocomplete', 'Link'];
 
 export const REFERENCE_SOURCES: readonly ReferenceSource[] = [
@@ -21,6 +24,9 @@ export const REFERENCE_SOURCES: readonly ReferenceSource[] = [
     artifacts: [{url: 'https://cdn.jsdelivr.net/npm/bulma@1.0.2/css/bulma.css', name: 'bulma.css'}]},
   {id: 'mui-6.4.7', library: 'MUI (Material UI)', version: '6.4.7', homepage: 'https://mui.com/material-ui/', framework: 'React', kind: 'types',
     artifacts: MUI_COMPONENTS.map(c => ({url: `https://cdn.jsdelivr.net/npm/@mui/material@6.4.7/${c}/${c}.d.ts`, name: `${c}.d.ts`}))},
+  {id: 'antd-5.24.2', library: 'Ant Design', version: '5.24.2', homepage: 'https://ant.design/', framework: 'React', kind: 'types', artifacts: [],
+    bundles: {base: 'https://cdn.jsdelivr.net/npm/antd@5.24.2/es', prelude: ['config-provider/SizeContext.d.ts', '_util/statusUtils.d.ts'],
+      components: ['button', 'input', 'checkbox', 'radio', 'switch', 'select', 'tag', 'badge', 'alert', 'modal', 'tabs', 'tooltip', 'card', 'avatar', 'table', 'slider', 'menu', 'breadcrumb', 'pagination', 'progress', 'dropdown', 'drawer', 'collapse', 'float-button', 'segmented', 'auto-complete', 'steps', 'notification']}},
 ];
 
 const ROOT = new URL('../references/', import.meta.url);

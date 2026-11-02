@@ -8,14 +8,15 @@ import {z} from 'zod';
 import {ExtractedDesignSystem, TERMINAL_JOB_STATUSES} from '@gapscan/schema';
 import type {JobEvent, JobType} from '@gapscan/schema';
 import type {Infra, JobHandler} from '@gapscan/infra';
-import {createUrlAdapter} from '@gapscan/adapters';
+import {createUrlAdapter, figmaFileKey} from '@gapscan/adapters';
 import type {Adapter} from '@gapscan/adapters';
 import {listReferences, loadReference} from '@gapscan/library';
 import {planningTotals} from '@gapscan/estimate';
 import {Assumptions, GapScanReport, ObjectKind} from '@gapscan/schema';
 import {CODE_FILE, createExtractHandler} from './extract-job.ts';
 import {projectSpecimen} from '@gapscan/gapscan';
-import {EXPORT_FORMATS, exportTokens} from '@gapscan/exports';
+import {EXPORT_FORMATS, exportTokens, planFigmaSync} from '@gapscan/exports';
+import type {ExistingVariables} from '@gapscan/exports';
 import {buildObjects, contentHash} from '@gapscan/objects';
 import type {StoredApproval} from '@gapscan/objects';
 import {assetKey, createRenderHandler} from './render-job.ts';
@@ -39,9 +40,9 @@ const AddSourceBody = z.discriminatedUnion('kind', [
 ]);
 const IdParams = z.object({id: z.string().min(1)});
 
-export type AppOptions = {infra: Infra; handlers?: Partial<Record<JobType, JobHandler>>; logger?: boolean; heartbeatMs?: number};
+export type AppOptions = {infra: Infra; handlers?: Partial<Record<JobType, JobHandler>>; logger?: boolean; heartbeatMs?: number; figma?: {token?: string; fetch?: typeof fetch}};
 
-export function buildApp({infra, handlers = {}, logger = false, heartbeatMs = HEARTBEAT_MS}: AppOptions) {
+export function buildApp({infra, handlers = {}, logger = false, heartbeatMs = HEARTBEAT_MS, figma = {token: process.env.GAPSCAN_FIGMA_TOKEN}}: AppOptions) {
   const {store, blobs, bus, queue} = infra;
   // Every page and sub-request the browser makes must pass the same public-URL check as intake.
   // Each extraction gets a fresh guard, so DNS answers are cached for one job only.
@@ -230,6 +231,41 @@ export function buildApp({infra, handlers = {}, logger = false, heartbeatMs = HE
     approvals[`${params.data.kind}:${params.data.sectionId}`] = {by: body.by, at: new Date().toISOString(), hash: contentHash(section.content)};
     await blobs.put(approvalsKey(params.data.id), JSON.stringify(approvals));
     return buildObjects(eds, approvals).find(o => o.kind === params.data.kind);
+  });
+
+  // ── Figma Variables sync: preview first, then a confirmed apply of that exact plan ──
+  const FigmaSync = z.object({fileUrl: z.string().url(), collection: z.string().trim().min(1).max(80).default('GapScan tokens')});
+  const figmaCall = async (path: string, init: RequestInit = {}) => {
+    const response = await (figma.fetch ?? fetch)(`https://api.figma.com/v1${path}`, {...init, headers: {'X-Figma-Token': figma.token!, 'content-type': 'application/json'}});
+    const body = await response.json().catch(() => ({})) as Record<string, unknown>;
+    return {ok: response.ok, status: response.status, body};
+  };
+  const syncPlan = async (edsId: string, fileUrl: string, collection: string, reply: FastifyReply) => {
+    if (!figma.token) { void fail(reply, 400, 'Figma is not connected. Set GAPSCAN_FIGMA_TOKEN on the server.'); return null; }
+    const eds = await loadExtraction(store, blobs, edsId);
+    if (!eds) { void fail(reply, 404, 'Extraction not found.'); return null; }
+    let key: string;
+    try { key = figmaFileKey(fileUrl); } catch (error) { void fail(reply, 400, (error as Error).message); return null; }
+    const existing = await figmaCall(`/files/${key}/variables/local`);
+    if (!existing.ok) { void fail(reply, existing.status === 403 ? 403 : 502, existing.status === 403 ? 'This account cannot read or write variables through the Figma API (it needs a plan with REST variable access and edit rights on the file).' : `Figma returned ${existing.status}.`); return null; }
+    return {key, plan: planFigmaSync(eds, existing.body as ExistingVariables, collection)};
+  };
+  app.post('/v1/extractions/:id/figma-sync/plan', async (request, reply) => {
+    const body = parse(FigmaSync, request.body, reply); if (!body) return reply;
+    const result = await syncPlan(IdParams.parse(request.params).id, body.fileUrl, body.collection, reply);
+    if (!result) return reply;
+    const {payload: _payload, ...plan} = result.plan;
+    return plan;
+  });
+  app.post('/v1/extractions/:id/figma-sync/apply', async (request, reply) => {
+    const body = parse(FigmaSync.extend({hash: z.string().regex(/^[0-9a-f]{16}$/), confirm: z.literal(true)}), request.body, reply); if (!body) return reply;
+    const result = await syncPlan(IdParams.parse(request.params).id, body.fileUrl, body.collection, reply);
+    if (!result) return reply;
+    if (result.plan.hash !== body.hash) return fail(reply, 409, 'The file or the tokens changed since the preview. Preview again before applying.');
+    if (!result.plan.create.length && !result.plan.update.length) return {applied: false, message: 'Nothing to change.'};
+    const written = await figmaCall(`/files/${result.key}/variables`, {method: 'POST', body: JSON.stringify(result.plan.payload)});
+    if (!written.ok) return fail(reply, 502, `Figma refused the change (${written.status}).`);
+    return {applied: true, created: result.plan.create.length, updated: result.plan.update.length, idMap: written.body.meta ?? null};
   });
 
   // ── Brand assets (architecture Part 3 §3.2) ──────────────────────────────

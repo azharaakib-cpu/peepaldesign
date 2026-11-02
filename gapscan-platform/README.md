@@ -35,9 +35,9 @@ review the result, then compare it against a reference system.
 | `packages/normalize` | Colour science (sRGB/OKLCH/CIE Lab, CIEDE2000, WCAG contrast), colour clustering and role inference, tonal ramps, spacing grid, type scale fit, radius and elevation scales, multi-source merging with drift detection, confidence. |
 | `packages/adapters` | One adapter per source type, all producing the same observations: rendered website (Playwright), Figma REST, PDF (pdf.js), PPTX and DOCX (in-memory OOXML), CSS/SCSS/Less and DTCG/Style Dictionary token JSON, and React/TypeScript components (props, variants, sizes and states read from props interfaces and `.d.ts` files with the TypeScript parser; nothing executed). Includes a hardened ZIP reader and a small XML reader. |
 | `packages/extraction` | Assembles observations into tokens, scales, components and plain-language findings (near-duplicates, hard-coded values, off-scale values, declared-vs-observed drift, contrast failures, missing states, unresolved values, coverage gaps). |
-| `packages/library` | Pinned reference systems: Bootstrap 5.3.3, Shopify Polaris 13.9.5, IBM Carbon `@carbon/styles` 1.68.0 and Bulma 1.0.2 from their published CSS (with previews), and MUI 6.4.7 from its published `.d.ts` files (component APIs, no previews). All with checksums, by the same pipeline as user sources. `node packages/library/scripts/build.ts` rebuilds them. |
+| `packages/library` | Pinned reference systems: Bootstrap 5.3.3, Shopify Polaris 13.9.5, IBM Carbon `@carbon/styles` 1.68.0 and Bulma 1.0.2 from their published CSS (with previews), and MUI 6.4.7 and Ant Design 5.24.2 from their published `.d.ts` files (component APIs, no previews). All with checksums, by the same pipeline as user sources. `node packages/library/scripts/build.ts` rebuilds them. |
 | `packages/gapscan` | Component matching (weighted 0–100 score; confirmed / suggested / unresolved), diffs into rubric drivers, decisions (keep / update / replace / check first / optional), token mapping, projected previews. Gains the target brings for free are shown but never priced. |
-| `packages/exports` | Token exporters from one canonical list: W3C DTCG `tokens.json` (with provenance in `$extensions`), CSS custom properties (with theme-mode blocks), Tailwind v4 `@theme`, SCSS. Unresolved values are never exported as known. |
+| `packages/exports` | Figma Variables sync planner (create / update / unchanged / skipped, with modes and aliases, bound to a plan hash) and token exporters from one canonical list: W3C DTCG `tokens.json` (with provenance in `$extensions`), CSS custom properties (with theme-mode blocks), Tailwind v4 `@theme`, SCSS. Unresolved values are never exported as known. |
 | `packages/objects` | Missing-object generator. Each section is labelled extracted, inferred or drafted; contrast pairs come with fixes that pass; approvals are tied to a content hash and go stale if the content changes. No language model is called. |
 | `packages/assets` | Brand kit from token slots (reports which slots fell back to defaults), self-contained templates (business card 85×55 mm + 3 mm bleed, OpenGraph 1200×630, LinkedIn banner, PowerPoint deck template with a branded theme, HTML email newsletter with dark mode), contrast checks, offline rendering in Chromium. |
 | `packages/infra` | `Store`, `BlobStore`, `Queue` and `EventBus` interfaces with zero-install local adapters (Node's built-in SQLite, filesystem blobs, in-process queue). |
@@ -57,6 +57,8 @@ review the result, then compare it against a reference system.
 | `GET /v1/extractions/:id` | Summary; `?include=full` returns the whole `ExtractedDesignSystem` |
 | `GET /v1/extractions/:id/scales` | Colour clusters and roles, spacing grid, type scale, radii and elevation |
 | `GET /v1/extractions/:id/export?format=dtcg\|css\|tailwind4\|scss` | Download a hand-off file (`&palette=1` adds inferred palette colours) |
+| `POST /v1/extractions/:id/figma-sync/plan` `{fileUrl}` | Preview the variable changes for a Figma file (reads only) |
+| `POST /v1/extractions/:id/figma-sync/apply` `{fileUrl, hash, confirm: true}` | Writes exactly the previewed plan; refused if anything changed |
 | `GET /v1/extractions/:id/objects` | The six architectural objects with completeness and sections |
 | `PUT /v1/extractions/:id/objects/:kind/sections/:sectionId/approval` `{by}` | Approve exactly the content shown |
 | `GET /v1/templates`, `GET /v1/extractions/:id/brandkit` | Asset templates and the brand kit they read |
@@ -116,7 +118,7 @@ images, gradients or translucent layers is skipped rather than guessed.
   colours swapped in. Both are labelled; neither is built or verified code.
 - **Type-based references have no previews or tokens.** MUI is read from its
   declarations, so it compares APIs but has no "after" preview or role colours.
-  Chakra, Ant Design v5 and shadcn can be added the same way; Material 3 web
+  Chakra and shadcn can be added the same way; Material 3 web
   components need a custom-element reader.
 - **Drafted sections are templates, not writing.** Prose sections (principles,
   voice, keyboard behaviour) are deterministic drafts for a person to edit and
@@ -125,4 +127,7 @@ images, gradients or translucent layers is skipped rather than guessed.
   with an ICC profile, Pantone matching and PDF/X preflight are not done yet.
 - **Decks use the brand fonts by name.** PowerPoint cannot carry a fallback stack;
   the deck's checks remind presenters to install or embed them.
-- **Not built yet:** Google Slides, swag specs and Figma Variables sync.
+- **Figma Variables need the right Figma plan.** Reading and writing variables
+  through the REST API requires a plan with that access and edit rights on the
+  file; otherwise the preview explains why it cannot proceed.
+- **Not built yet:** Google Slides and swag specs.

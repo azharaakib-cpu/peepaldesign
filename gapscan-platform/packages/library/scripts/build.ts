@@ -18,6 +18,29 @@ const wanted = new Set(process.argv.slice(2));
 
 for (const ref of REFERENCE_SOURCES.filter(r => !wanted.size || wanted.has(r.id))) {
   const signal = new AbortController().signal, sources: SourceAsset[] = [], results = [], texts: {source: string; prefix: string}[] = [];
+  // Expand bundles into one in-memory artifact per component (index.d.ts + same-folder imports + prelude).
+  const bundled: {name: string; text: string; files: {url: string; bytes: Uint8Array}[]}[] = [];
+  if (ref.bundles) {
+    const get = async (url: string) => { const r = await fetch(url); return r.ok ? new Uint8Array(await r.arrayBuffer()) : null; };
+    const prelude = (await Promise.all(ref.bundles.prelude.map(async path => ({url: `${ref.bundles!.base}/${path}`, bytes: await get(`${ref.bundles!.base}/${path}`)})))).filter((f): f is {url: string; bytes: Uint8Array} => f.bytes !== null);
+    for (const dir of ref.bundles.components) {
+      const indexUrl = `${ref.bundles.base}/${dir}/index.d.ts`, index = await get(indexUrl);
+      if (!index) { console.warn(`  skipped ${dir}: no index.d.ts`); continue; }
+      const locals = [...new Set([...new TextDecoder().decode(index).matchAll(/from\s+['"]\.\/([\w-]+)['"]/g)].map(m => m[1]!))];
+      const files = [{url: indexUrl, bytes: index}];
+      for (const local of locals) { const url = `${ref.bundles.base}/${dir}/${local}.d.ts`, bytes = await get(url) ?? await get(`${ref.bundles.base}/${dir}/${local}/index.d.ts`); if (bytes) files.push({url, bytes}); }
+      files.push(...prelude);
+      const name = dir.replace(/(^|-)(\w)/g, (_, __, c: string) => c.toUpperCase());
+      bundled.push({name: `${name}.d.ts`, text: files.map(f => new TextDecoder().decode(f.bytes)).join('\n'), files});
+    }
+  }
+  for (const bundle of bundled) {
+    const bytes = new TextEncoder().encode(bundle.text);
+    const asset: SourceAsset = {id: `${ref.id}:${bundle.name}`, projectId: 'library', kind: 'code', uri: bundle.files[0]!.url, label: bundle.name,
+      sha256: createHash('sha256').update(bytes).digest('hex'), bytes: bytes.length, budget: {maxPages: bundle.files.length, maxBytes: bytes.length}, createdAt: new Date().toISOString()};
+    sources.push(asset);
+    results.push({asset, result: await createCodeAdapter()({assetId: asset.id, name: bundle.name, uri: asset.uri, bytes}, {signal})});
+  }
   for (const artifact of ref.artifacts) {
     const response = await fetch(artifact.url);
     if (!response.ok) throw new Error(`${artifact.url} returned ${response.status}`);
@@ -35,7 +58,9 @@ for (const ref of REFERENCE_SOURCES.filter(r => !wanted.size || wanted.has(r.id)
     .map(c => { const item = classifyItem({name: c.canonical, kind: 'component'}), isType = c.canonical.toLowerCase().replace(/[-_ ]/g, '') === item.matchedBy.replace(/ /g, '');
       return {...c, category: item.category, tier: item.tier, canonical: isType ? ALIAS_TITLES[item.matchedBy] ?? title(c.canonical) : title(c.canonical).replace(/\bbtn\b/gi, 'button').replace(/^\w/, ch => ch.toUpperCase())}; })
     // CSS references drop utility and unclassified classes as noise; declarations only name real components.
-    .filter(c => c.category !== 'Utilities and tooling' && (ref.kind === 'types' || c.category !== 'Miscellaneous'));
+    .filter(c => c.category !== 'Utilities and tooling' && (ref.kind === 'types' || c.category !== 'Miscellaneous'))
+    // Declaration files also export internals (InternalButton, PurePanel, SizeContext.Provider…); those are not components teams use.
+    .filter(c => ref.kind !== 'types' || !c.rawNames.some(n => /^(Internal|Pure|Wrap|Base)[A-Z]|(Context|Provider|Ref|Props)$/.test(n)));
   // Reference specimens: the library's own rules for each component on generated markup, plus the
   // custom properties those rules use, so the preview renders without the rest of the stylesheet.
   const declared = new Map(system.tokens.filter(t => t.path.startsWith('--')).map(t => [t.path, String(t.value)]));

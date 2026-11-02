@@ -46,3 +46,19 @@ export default Button;`;
   assert.deepEqual(button?.states, ['disabled', 'loading']);
   assert.ok(button?.props.some(p => p.name === 'startIcon'));
 });
+
+test('aliases and const tuples resolve to their literal options (Ant Design style)', () => {
+  const dts = `declare const _ButtonTypes: readonly ["default", "primary", "dashed", "link", "text"];
+export type ButtonType = (typeof _ButtonTypes)[number];
+export type SizeType = 'small' | 'middle' | 'large' | undefined;
+export interface BaseButtonProps { type?: ButtonType; size?: SizeType; loading?: boolean | {delay?: number}; danger?: boolean; disabled?: boolean; htmlType?: 'submit' | 'reset' | 'button' }
+export interface ButtonProps extends BaseButtonProps { href?: string }
+declare const Button: React.ForwardRefExoticComponent<ButtonProps>;
+export default Button;`;
+  const [button] = componentApis(dts, 'Button.d.ts');
+  assert.deepEqual(button?.variants, ['type=default', 'type=primary', 'type=dashed', 'type=link', 'type=text']);
+  assert.deepEqual(button?.sizes, ['small', 'middle', 'large']);
+  assert.deepEqual(button?.states, ['loading', 'disabled']);
+  const html = componentApis(`export interface LinkButtonProps { type?: 'button' | 'submit' } export const LinkButton = (p: LinkButtonProps) => null;`, 'x.tsx')[0];
+  assert.deepEqual(html?.variants, [], 'HTML button types are not style variants');
+});
