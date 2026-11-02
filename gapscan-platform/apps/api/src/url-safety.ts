@@ -50,3 +50,19 @@ export function createUrlGuard(lookup: Lookup): (url: URL) => Promise<boolean> {
     return cache.get(host)!;
   };
 }
+
+// For the browser's egress proxy: the address to connect to for a host, or null. The first
+// vetted answer is pinned for the whole job, so a host can't re-resolve somewhere private
+// between the check and the connection. Every address must be public, as in the guard.
+export function createPinnedResolver(lookup: Lookup): (hostname: string) => Promise<string | null> {
+  const pinned = new Map<string, Promise<string | null>>();
+  return hostname => {
+    const host = hostname.toLowerCase();
+    if (!pinned.has(host)) pinned.set(host, (async () => {
+      try { publicUrl(`https://${host}/`); } catch { return null; }
+      const addresses = await lookup(host).catch(() => []);
+      return addresses.length && addresses.every(a => !isPrivateAddress(a.address)) ? addresses[0]!.address : null;
+    })());
+    return pinned.get(host)!;
+  };
+}

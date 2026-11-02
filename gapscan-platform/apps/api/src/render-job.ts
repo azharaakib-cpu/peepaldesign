@@ -1,4 +1,5 @@
 // The `render` job: brand kit → template → headless Chromium → stored output and checks.
+import {EGRESS_CHROMIUM_ARGS, startEgressProxy} from '@gapscan/adapters';
 import {buildBrandKit, planAsset, renderAsset, renderDeck} from '@gapscan/assets';
 import type {BlobStore, JobHandler, Store} from '@gapscan/infra';
 import {loadExtraction} from './gapscan-job.ts';
@@ -22,7 +23,9 @@ export function createRenderHandler({store, blobs}: {store: Store; blobs: BlobSt
     if (plan.template.output === 'html') return save({file: `${plan.template.id}.html`, contentType: 'text/html; charset=utf-8', bytes: new TextEncoder().encode(plan.html)});
     let playwright: typeof import('playwright');
     try { playwright = await import('playwright'); } catch { throw new Error('Rendering needs Playwright on the server (npx playwright install chromium).'); }
-    const browser = await playwright.chromium.launch();
+    // Templates are self-contained; the browser gets a proxy that refuses everything, as well as the page's own request block.
+    const proxy = await startEgressProxy({resolve: async () => null});
+    const browser = await playwright.chromium.launch({args: EGRESS_CHROMIUM_ARGS, proxy: proxy.launchProxy}).catch(async error => { await proxy.close(); throw error; });
     const stop = () => { void browser.close(); };
     signal.addEventListener('abort', stop, {once: true});
     try {
@@ -31,6 +34,7 @@ export function createRenderHandler({store, blobs}: {store: Store; blobs: BlobSt
     } finally {
       signal.removeEventListener('abort', stop);
       await browser.close().catch(() => undefined);
+      await proxy.close();
     }
   };
 }

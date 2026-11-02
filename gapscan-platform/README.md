@@ -125,8 +125,9 @@ GAPSCAN_STORE=postgres GAPSCAN_DATABASE_URL=… GAPSCAN_BLOBS=s3 … GAPSCAN_CON
 Progress streams from any API instance: events are stored in Postgres and announced
 with `LISTEN/NOTIFY`, and subscribers also poll, so a missed notification only delays
 an event, never loses it. Error messages name a missing setting, never its value; S3
-keys only ever go into the request signature. Still to decide for whoever hosts it: a
-network sandbox for the renderer.
+keys only ever go into the request signature. Run workers somewhere with no route to
+private services; the browser's own egress is already pinned to vetted public addresses
+(see Current limits).
 
 ## Accounts
 
@@ -149,7 +150,10 @@ Pages are rendered in headless Chromium at 1440, 768 and 375px and in dark mode
 (dark mode is recorded only when the page actually changes). The crawl stays on
 the start page's origin and section, and skips other documentation versions.
 Every request the browser makes is checked against the same public-HTTPS policy
-as intake; private addresses, media and downloads are blocked. Contrast is
+as intake; private addresses, media and downloads are blocked. The browser doesn't
+resolve names itself: its traffic goes through GapScan's egress proxy, which connects
+only to the public address it vetted for each host. Asset rendering gets a proxy that
+refuses everything. Contrast is
 measured per element against the background actually behind its text; text over
 images, gradients or translucent layers is skipped rather than guessed.
 
@@ -158,11 +162,12 @@ images, gradients or translucent layers is skipped rather than guessed.
 - **The prototype bridge only reads markup now.** JS/TS components and all
   foundations are read natively; HTML and Markdown components still pass through
   `apps/api/src/legacy-bridge.ts`.
-- **URL safety checks names and resolved addresses.** Every host the browser
-  contacts must resolve only to public addresses (cached per job). The browser
-  resolves names again itself, so a DNS-rebinding attack in between is not fully
-  excluded; run rendering in a network sandbox without private routes when hosting
-  for untrusted users.
+- **The renderer's network is pinned, not isolated.** Chromium sends every request
+  through an in-process proxy that resolves each host once, requires every address to
+  be public, and connects to exactly that address (HTTPS on 443 only; loopback is not
+  exempt; WebRTC and QUIC can't go around it). That closes DNS rebinding. It is not an
+  operating-system sandbox: for untrusted users, also run workers where the network
+  has no route to private services.
 - **Component states on websites** come from stylesheet rules for the
   component's classes (same-origin sheets only); states are not forced at
   runtime yet, and screenshots of specimens are not captured yet.

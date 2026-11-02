@@ -4,11 +4,16 @@
 // request is checked against the public-URL policy; downloads are blocked.
 import type {Adapter, Observation} from './types.ts';
 import {AdapterError} from './types.ts';
+import {EGRESS_CHROMIUM_ARGS, startEgressProxy} from './egress.ts';
+import type {EgressResolver} from './egress.ts';
 
 export type UrlAdapterOptions = {
   maxPages?: number; viewports?: number[]; timeoutMs?: number;
   // Decides which hosts the browser may contact. The API passes its public-URL check.
   allowUrl: (url: URL) => boolean | Promise<boolean>;
+  // Resolves and vets each host for the egress proxy, which pins the browser to those addresses.
+  // Without it the browser resolves names itself and only the per-request check applies.
+  egress?: EgressResolver;
 };
 
 // Runs inside the page. Kept as a string so the server build needs no DOM types.
@@ -107,7 +112,7 @@ export function sameSection(start: URL, link: URL): boolean {
 }
 
 export function createUrlAdapter(options: UrlAdapterOptions): Adapter {
-  const {maxPages = 8, viewports = [1440, 768, 375], timeoutMs = 20_000, allowUrl} = options;
+  const {maxPages = 8, viewports = [1440, 768, 375], timeoutMs = 20_000, allowUrl, egress} = options;
   return async ({uri}, {signal, progress}) => {
     let playwright: typeof import('playwright');
     try { playwright = await import('playwright'); }
@@ -115,7 +120,9 @@ export function createUrlAdapter(options: UrlAdapterOptions): Adapter {
     const start = new URL(uri);
     if (!(await allowUrl(start))) throw new AdapterError('Only public HTTPS websites can be rendered.');
 
-    const browser = await playwright.chromium.launch({headless: true, args: ['--disable-dev-shm-usage']});
+    const proxy = egress ? await startEgressProxy({resolve: egress}) : null;
+    const browser = await playwright.chromium.launch({headless: true, args: ['--disable-dev-shm-usage', ...(proxy ? EGRESS_CHROMIUM_ARGS : [])], ...(proxy ? {proxy: proxy.launchProxy} : {})})
+      .catch(async error => { await proxy?.close(); throw error; });
     const abort = () => { void browser.close(); };
     signal.addEventListener('abort', abort, {once: true});
     const observations: Observation[] = [], failed: {locator: string; reason: string}[] = [], themes = new Set<string>(['light']);
@@ -190,6 +197,7 @@ export function createUrlAdapter(options: UrlAdapterOptions): Adapter {
     } finally {
       signal.removeEventListener('abort', abort);
       await browser.close().catch(() => undefined);
+      await proxy?.close();
     }
     if (!fetched) throw new AdapterError(`The website could not be rendered: ${failed[0]?.reason ?? 'no pages loaded'}.`);
     return {observations, fetched, failed, budgetHit: queue.length > 0, viewports: [...viewports].sort((a, b) => a - b), themes: [...themes]};

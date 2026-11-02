@@ -27,7 +27,7 @@ import {codemodPlan, createCodemodHandler, loadCodemodRun} from './codemod-job.t
 import {buildScript} from '@gapscan/codemod';
 import {registerAuth} from './auth.ts';
 import type {AuthConfig} from './auth.ts';
-import {createUrlGuard, publicUrl, UnsafeUrlError} from './url-safety.ts';
+import {createUrlGuard, publicUrl, UnsafeUrlError, createPinnedResolver} from './url-safety.ts';
 import {lookup} from 'node:dns/promises';
 const lookupAll = (hostname: string) => lookup(hostname, {all: true, verbatim: true});
 
@@ -53,7 +53,7 @@ export function buildApp({infra, handlers = {}, logger = false, heartbeatMs = HE
   // Every page and sub-request the browser makes must pass the same public-URL check as intake.
   // Each extraction gets a fresh guard, so DNS answers are cached for one job only.
   const urlAdapter: Adapter = (input, context) =>
-    createUrlAdapter({allowUrl: createUrlGuard(lookupAll), maxPages: Number(process.env.GAPSCAN_MAX_PAGES) || 8})(input, context);
+    createUrlAdapter({allowUrl: createUrlGuard(lookupAll), egress: createPinnedResolver(lookupAll), maxPages: Number(process.env.GAPSCAN_MAX_PAGES) || 8})(input, context);
   queue.register('extract', handlers.extract ?? createExtractHandler({store, blobs, urlAdapter}));
   queue.register('gapscan', handlers.gapscan ?? createGapScanHandler({store, blobs}));
   queue.register('render', handlers.render ?? createRenderHandler({store, blobs}));

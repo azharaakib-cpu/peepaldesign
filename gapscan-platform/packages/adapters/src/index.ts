@@ -10,5 +10,7 @@ export {codeAdapter, createCodeAdapter, cssComponents, cssDeclarations, inferred
 export type {CodeAdapterOptions} from './code.ts';
 export {createUrlAdapter, sameSection, sharedPrefix} from './url.ts';
 export type {UrlAdapterOptions} from './url.ts';
+export {startEgressProxy, EGRESS_CHROMIUM_ARGS} from './egress.ts';
+export type {EgressProxy, EgressResolver} from './egress.ts';
 export {componentApis, customElementApi, typescriptObservations} from './typescript.ts';
 export type {ComponentApi} from './typescript.ts';
