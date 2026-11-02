@@ -57,7 +57,7 @@ test('diffs turn into the rubric drivers with plain-language summaries', () => {
   assert.deepEqual(by('a11y_fix'), [], 'the reference brings keyboard focus with it');
   assert.deepEqual(by('state_missing'), [], 'every state we use exists in the reference');
   assert.deepEqual(diffs.filter(d => d.driver === null).map(d => d.summary), ['Gains a visible keyboard focus style built into Button', 'Gains the disabled state built into Button', 'Gains the loading state built into Button']);
-  assert.deepEqual(by('prop_rename'), ['Prop “kind” becomes “variant”', 'Prop “isBusy” becomes “loading”'], 'library naming differences are renames, not rewrites');
+  assert.deepEqual(by('prop_rename'), ['Prop “isBusy” becomes “loading”'], 'library naming differences are renames; `kind` values were already compared as styles');
   assert.equal(by('prop_semantic').length, 0);
   const custom = diffComponents(component('s', 'Btn', 'Actions', {states: ['hover', 'selected']}), polarisButton);
   assert.deepEqual(custom.filter(d => d.driver === 'state_missing').map(d => d.summary), ['Your selected state has no equivalent in Button; it must be built or dropped']);
@@ -125,4 +125,13 @@ test('references read from type declarations never conclude anything about hover
   assert.ok(!diffs.some(d => /hover|focus/.test(d.summary)), diffs.map(d => d.summary).join(' | '));
   assert.ok(diffs.some(d => d.summary === 'Style “primary” becomes “filled”'));
   assert.equal(sameOption('checked', 'selected'), 'renamed');
+});
+
+test('style and size props are priced once, and a default size maps to a single-size target', () => {
+  const ours = {...component('s', 'Button', 'Actions', {variants: ['contained', 'text'], sizes: ['small', 'medium'], props: ['variant', 'size', 'startIcon']})};
+  const target = component('t', 'Button', 'Actions', {variants: ['filled', 'text'], props: ['disabled', 'trailingIcon']});
+  const diffs = diffComponents(ours, target);
+  assert.deepEqual(diffs.filter(d => d.driver !== null).map(d => d.summary), [
+    'Style “contained” becomes “filled”', 'Size “small” has no equivalent in Button', 'Prop “startIcon” has no direct equivalent; usage needs rework',
+  ]);
 });

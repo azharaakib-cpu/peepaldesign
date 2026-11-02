@@ -4,6 +4,7 @@ import {randomUUID} from 'node:crypto';
 import {runGapScan} from '@gapscan/gapscan';
 import {loadReference} from '@gapscan/library';
 import {ExtractedDesignSystem, GapScanReport} from '@gapscan/schema';
+import {loadUsageReport} from './usage-job.ts';
 import type {Assumptions, GapScanReport as Report} from '@gapscan/schema';
 import type {BlobStore, JobHandler, Store} from '@gapscan/infra';
 
@@ -20,7 +21,8 @@ export async function computeReport(store: Store, blobs: BlobStore, edsId: strin
   if (!source) throw new Error('The extraction could not be found. Run the extraction again.');
   if (!reference) throw new Error(`Reference system ${referenceId} is not in the library.`);
   const approvals = new Map((await store.listApprovals(source.fingerprint, referenceId)).map(a => [a.sourceId, {targetId: a.targetId, by: a.by}]));
-  return runGapScan({source, reference, assumptions, approvals});
+  const usage = await loadUsageReport(blobs, source.projectId);
+  return runGapScan({source, reference, assumptions, approvals, usage});
 }
 
 export function summarize(report: Omit<Report, 'id'>) {

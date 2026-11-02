@@ -9,7 +9,7 @@ const token = (path: string, value: string, type: Token['type'] = 'color', confi
 const component = (canonical: string, category: string, missing: string[] = []): ComponentObservation => ({id: canonical, canonical, rawNames: [canonical], category, tier: 'primary', variants: [{name: 'primary', tokenRefs: {}}], sizes: ['sm'], statesObserved: ['hover'], statesMissing: missing, a11y: {focusVisible: missing.length ? false : true}, instances: 3, evidence: ['ev:c'], confidence: 0.8});
 const eds: ExtractedDesignSystem = {
   id: 'e1', projectId: 'p', version: 1, fingerprint: 'f', createdAt: new Date().toISOString(), evidence: [], specimens: [], coverage: {perAsset: [], viewports: [], themes: []},
-  sources: [{id: 's', projectId: 'p', kind: 'code', uri: 'inline:a.css', sha256: 'a'.repeat(64), bytes: 1, budget: {maxPages: 1, maxBytes: 1}, createdAt: new Date().toISOString()}],
+  sources: [{id: 's', projectId: 'p', kind: 'code', uri: 'inline:a.css', sha256: 'a'.repeat(64), bytes: 1, budget: {maxPages: 1, maxBytes: 1}, role: 'system', createdAt: new Date().toISOString()}],
   tokens: [token('color.text', '#1A1A1A'), token('color.surface', '#FFFFFF'), token('color.primary', '#4A90E2'), token('color.danger', '#FF6B6B'), token('--brand', '#0B5FD6'),
     token('space.1', '4px', 'dimension'), token('space.2', '8px', 'dimension'), token('space.3', '16px', 'dimension'), token('font.family.body', 'Inter', 'fontFamily'), token('radius.md', '4px', 'radius')],
   components: [component('Button', 'Actions', ['focus-visible']), component('Text field', 'Forms and input'), component('Card', 'Data display')],

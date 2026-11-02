@@ -20,6 +20,8 @@ export const SourceAsset = z.object({
   blobKey: z.string().optional(),          // stored payload for uploads and pasted code
   budget: z.object({maxPages: z.number().int().positive(), maxBytes: z.number().int().positive()}),
   consent: z.boolean().optional(),
+  // `system` sources describe the design system; `application` sources are the product code that uses it.
+  role: z.enum(['system', 'application']).default('system'),
   createdAt: isoDate,
 });
 
@@ -119,6 +121,8 @@ export const GapItem = z.object({
   variantsInScope: z.number().int().min(1).default(1),
   inferredShare: unit.default(0),           // share of evidence with trust = inferred
   instances: z.number().int().min(0).default(0),
+  // From an application scan; absent when no application code was supplied.
+  usage: z.object({usages: z.number().int().min(0), files: z.number().int().min(0), screens: z.number().int().min(0), propUsages: z.record(z.string(), z.number().int().min(0))}).optional(),
   quickWin: z.boolean(), breaking: z.boolean(),
   beforeSpecimenId: z.string().optional(), afterSpecimenId: z.string().optional(),
   acceptance: z.array(z.string()),
@@ -137,6 +141,8 @@ export const GapScanTotals = z.object({
   weeksLow: z.number(), weeksHigh: z.number(), complexity: z.number().nullable(),
   levelCounts: z.record(z.string(), z.number().int()), notEstimatedCount: z.number().int(),
   quickWins: z.number().int(), breakingChanges: z.number().int(), productiveHours: z.number(),
+  // Hours to update call sites in the application, when usage was scanned; included in low/high.
+  consumer: z.object({low: z.number(), high: z.number(), usages: z.number().int(), unusedExcluded: z.number().int()}).nullable().default(null),
 });
 
 export const GapScanReport = z.object({
@@ -160,10 +166,22 @@ export const ArchitecturalObject = z.object({
   kind: ObjectKind, title: z.string(), completeness: unit, edsId: id, sections: z.array(ObjectSection),
 });
 
+// ── Application impact ─────────────────────────────────────────────────────
+export const ComponentUsage = z.object({
+  component: z.string(), usages: z.number().int().min(0), files: z.array(z.string()), screens: z.array(z.string()),
+  propUsages: z.record(z.string(), z.number().int().min(0)), imports: z.array(z.string()),
+  examples: z.array(z.object({file: z.string(), line: z.number().int(), snippet: z.string()})),
+});
+export const UsageReport = z.object({
+  id, projectId: id, createdAt: isoDate, sources: z.array(z.string()),
+  filesScanned: z.number().int().min(0), filesSkipped: z.number().int().min(0), screens: z.number().int().min(0),
+  components: z.array(ComponentUsage),
+});
+
 // ── Part 4: projects and jobs ───────────────────────────────────────────────
 export const Project = z.object({id, name: z.string().min(1).max(200), createdAt: isoDate});
 
-export const JobType = z.enum(['extract', 'gapscan', 'generate', 'render']);
+export const JobType = z.enum(['extract', 'gapscan', 'generate', 'render', 'usage']);
 export const JobStatus = z.enum(['queued', 'running', 'completed', 'failed', 'cancelled']);
 export const TERMINAL_JOB_STATUSES: ReadonlyArray<z.infer<typeof JobStatus>> = ['completed', 'failed', 'cancelled'];
 export const Job = z.object({
@@ -214,6 +232,8 @@ export type ObjectKind = z.infer<typeof ObjectKind>;
 export type Provenance = z.infer<typeof Provenance>;
 export type ObjectSection = z.infer<typeof ObjectSection>;
 export type ArchitecturalObject = z.infer<typeof ArchitecturalObject>;
+export type ComponentUsage = z.infer<typeof ComponentUsage>;
+export type UsageReport = z.infer<typeof UsageReport>;
 export type Project = z.infer<typeof Project>;
 export type JobType = z.infer<typeof JobType>;
 export type JobStatus = z.infer<typeof JobStatus>;

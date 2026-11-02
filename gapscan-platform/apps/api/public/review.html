@@ -17,6 +17,9 @@
   </header>
   <div class="grid stats" id="stats"></div>
   <section class="card" aria-labelledby="compare"><h2 id="compare">Compare against a reference system</h2><p class="muted">Ranked by how many of your components have a likely counterpart. This is a suggestion; choose any.</p><div class="recs" id="recs"><p class="muted">Checking the library…</p></div><div class="log" id="scan-log" hidden aria-live="polite"></div></section>
+  <section class="card" aria-labelledby="impact-title"><h2 id="impact-title">Application impact</h2><p class="muted">Add your product's code to see where each component is used. GapScan then leaves unused components out and prices the call sites that need updating.</p>
+    <form id="impact-form" class="row"><input type="url" name="repo" placeholder="https://github.com/your-org/your-app (public)" style="flex:1 1 280px"><span class="muted">or</span><input type="file" name="zip" accept=".zip"><button type="submit">Add and scan</button></form>
+    <div id="impact-result" style="margin-top:12px"></div></section>
   <section class="card" aria-labelledby="handoff"><h2 id="handoff">Hand-off files</h2><p class="muted">Generated from this extraction. Unresolved values are left out; inferred values are marked.</p><div class="row" id="exports"></div></section>
   <section class="card" aria-labelledby="figma-title"><h2 id="figma-title">Sync to Figma Variables</h2><p class="muted">Preview first: nothing is written until you confirm the exact changes shown.</p>
     <form id="figma-form" class="row"><input type="url" name="fileUrl" placeholder="https://www.figma.com/design/…" required style="flex:1 1 320px"><button type="submit">Preview changes</button></form>

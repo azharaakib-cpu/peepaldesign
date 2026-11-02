@@ -36,7 +36,8 @@ export function createExtractHandler({store, blobs, stageDelayMs = 0, figmaToken
   return async ({job, signal, progress, warn}) => {
     // Stages yield (and can be slowed in tests) so cancellation is honoured between them.
     const checkpoint = async () => { if (stageDelayMs) await sleep(stageDelayMs, undefined, {signal}); signal.throwIfAborted(); };
-    const sources = await store.listSources(job.projectId), results: AssetResult[] = [], documents: CodeDocument[] = [];
+    // Application code is read by the usage job, never as part of the design system.
+    const sources = (await store.listSources(job.projectId)).filter(s => s.role !== 'application'), results: AssetResult[] = [], documents: CodeDocument[] = [];
     await progress('collect', 0, sources.length, `Reading ${sources.length} source${sources.length === 1 ? '' : 's'}…`);
     await checkpoint();
 

@@ -4,6 +4,7 @@
 import {applyEstimates, planningTotals} from '@gapscan/estimate';
 import {colorDistance, parseColor} from '@gapscan/normalize';
 import {classifyItem} from '@gapscan/taxonomy';
+import type {UsageReport} from '@gapscan/schema';
 import type {Assumptions, ComponentMatch, ComponentObservation, Decision, ExtractedDesignSystem, GapDiff, GapItem, GapScanReport, ReferenceDS, Token} from '@gapscan/schema';
 
 export const MATCH_WEIGHTS = Object.freeze({anatomy: 35, capability: 25, role: 20, tokenSlots: 10, name: 10});
@@ -93,7 +94,8 @@ export function diffComponents(source: ComponentObservation, target: ComponentOb
     }
   };
   compare(source.variants.map(v => v.name), target.variants.map(v => v.name), 'variants', 'Style');
-  compare(source.sizes, target.sizes, 'sizes', 'Size');
+  // A target with no size options has one default size: your medium/default size maps to it.
+  compare(target.sizes.length ? source.sizes : source.sizes.filter(s => synonymGroup(s) !== SYNONYMS.findIndex(g => g.includes('medium'))), target.sizes, 'sizes', 'Size');
   // States you rely on that the target lacks must be built; states the target adds come with it.
   // Hover, focus and pressed are styling: a reference read from type declarations cannot show them,
   // so they are compared only when the reference recorded at least one of them.
@@ -110,8 +112,10 @@ export function diffComponents(source: ComponentObservation, target: ComponentOb
       ? {dimension: 'a11y', driver: null, summary: `Gains a visible keyboard focus style built into ${target.canonical}`, after: state}
       : {dimension: 'states', driver: null, summary: `Gains the ${optionName(state)} state built into ${target.canonical}`, after: state});
   }
+  // Props whose values were already compared as styles or sizes are not priced a second time.
+  const OPTION_PROPS = /^(variant|kind|appearance|tone|color|colorScheme|intent|look|size|type|status|severity)$/;
   if (source.props?.length && target.props?.length) for (const prop of source.props) {
-    if (target.props.some(p => p.name === prop.name)) continue;
+    if (target.props.some(p => p.name === prop.name) || OPTION_PROPS.test(prop.name)) continue;
     const similar = target.props.find(p => sameOption(p.name, prop.name) || words(p.name).replace(/ /g, '') === words(prop.name).replace(/ /g, ''));
     diffs.push(similar
       ? {dimension: 'api', driver: 'prop_rename', summary: `Prop “${prop.name}” becomes “${similar.name}”`, before: prop.name, after: similar.name}
@@ -166,8 +170,9 @@ export function projectSpecimen(css: string, mapping: readonly {before: string; 
   return {css: projected, substitutions};
 }
 
-export type GapScanInput = {source: ExtractedDesignSystem; reference: ReferenceDS; assumptions?: Partial<Assumptions>; approvals?: ReadonlyMap<string, {targetId: string | null; by: string}>};
-export function runGapScan({source, reference, assumptions = {}, approvals = new Map()}: GapScanInput): Omit<GapScanReport, 'id'> {
+export type GapScanInput = {source: ExtractedDesignSystem; reference: ReferenceDS; assumptions?: Partial<Assumptions>; approvals?: ReadonlyMap<string, {targetId: string | null; by: string}>; usage?: UsageReport | null};
+export function runGapScan({source, reference, assumptions = {}, approvals = new Map(), usage = null}: GapScanInput): Omit<GapScanReport, 'id'> {
+  const usageOf = new Map((usage?.components ?? []).map(u => [u.component, u]));
   const claimed = new Set<string>();
   const items: GapItem[] = source.components.map(component => {
     const {candidates: _candidates, ...match} = matchComponent(component, reference.components, approvals);
@@ -179,7 +184,8 @@ export function runGapScan({source, reference, assumptions = {}, approvals = new
     const targetSpecimen = target ? reference.specimens.find(s => s.id === `sp:${target.id}`)?.id : undefined;
     return {
       id: `gap:${component.id}`, name: component.canonical, category: component.category, match, decision, diffs,
-      variantsInScope: Math.max(1, component.variants.length + component.sizes.length), inferredShare: component.confidence < 0.5 ? 1 : 0, instances: component.instances,
+      variantsInScope: Math.max(1, component.variants.length + component.sizes.length), inferredShare: component.confidence < 0.5 ? 1 : 0,
+      ...(() => { const u = usageOf.get(component.canonical); return u ? {instances: u.usages, usage: {usages: u.usages, files: u.files.length, screens: u.screens.length, propUsages: u.propUsages}} : {instances: component.instances}; })(),
       effort: {level: null, label: '', drivers: [], low: null, high: null, basis: ''}, quickWin: false, breaking: false,
       ...(sourceSpecimen ? {beforeSpecimenId: sourceSpecimen} : {}), ...(targetSpecimen ? {afterSpecimenId: targetSpecimen} : {}),
       acceptance: [
@@ -204,7 +210,7 @@ export function runGapScan({source, reference, assumptions = {}, approvals = new
     tokenCategories: categories, assumptions: {rate: 75, apps: 1, engineers: 2, qaPct: 20, excluded: [], edited: {}, ...assumptions}, totals,
     exclusions: [
       `${totals.notEstimatedCount} item${totals.notEstimatedCount === 1 ? '' : 's'} need review before they can be estimated`,
-      'Your application code was not scanned, so screen and usage counts are unknown',
+      usage ? `${totals.consumer?.unusedExcluded ?? 0} component${totals.consumer?.unusedExcluded === 1 ? '' : 's'} not used in the scanned application (${usage.filesScanned} files) are left out` : 'Your application code was not scanned, so screen and usage counts are unknown',
       'Optional components from the reference system are not included',
       'Dedicated regression, visual and accessibility testing beyond the QA allowance',
     ],

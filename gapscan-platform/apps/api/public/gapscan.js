@@ -13,18 +13,19 @@ let report, reference, techLoaded = null;
 function complexityWord(c) { return c === null ? 'Not estimated' : c < 1.5 ? 'Trivial' : c < 2.5 ? 'Easy' : c < 3.5 ? 'Moderate' : c < 4.5 ? 'Hard' : 'Very hard'; }
 
 function headline() {
-  const t = report.totals, required = report.items.filter(i => i.decision !== 'optional');
+  const t = report.totals, required = report.items.filter(i => i.decision !== 'optional' && !(i.usage && !i.usage.usages));
   const areas = areaHours();
   const heaviest = Object.entries(areas).sort((a, b) => b[1] - a[1]).slice(0, 2).map(([a]) => a.toLowerCase());
   const same = required.filter(i => i.decision === 'keep').length;
   if (!t.available) return `Nothing can be estimated yet: ${plural(t.notEstimatedCount, 'item')} need a reviewer before the plan is priced.`;
   const word = complexityWord(t.complexity).toLowerCase();
-  return `Moving to ${reference.library} is ${/^[aeiou]/.test(word) ? 'an' : 'a'} ${word} project. ${same ? `${plural(same, 'component')} already match; ` : ''}${heaviest.length ? `most of the work is in ${heaviest.join(' and ')}.` : ''}`;
+  const detail = [same ? `${plural(same, 'component')} already ${same === 1 ? 'matches' : 'match'}` : '', heaviest.length ? `most of the work is in ${heaviest.join(' and ')}` : ''].filter(Boolean).join('; ');
+  return `Moving to ${reference.library} is ${/^[aeiou]/.test(word) ? 'an' : 'a'} ${word} project.${detail ? ` ${detail[0].toUpperCase()}${detail.slice(1)}.` : ''}`;
 }
 
 function areaHours() {
   const areas = {};
-  for (const item of report.items) if (item.decision !== 'optional' && item.effort.low !== null && !report.assumptions.excluded.includes(item.id)) areas[item.category] = (areas[item.category] || 0) + (item.effort.low + item.effort.high) / 2;
+  for (const item of report.items) if (item.decision !== 'optional' && item.effort.low !== null && !report.assumptions.excluded.includes(item.id) && !(item.usage && !item.usage.usages)) areas[item.category] = (areas[item.category] || 0) + (item.effort.low + item.effort.high) / 2;
   return areas;
 }
 
@@ -38,6 +39,7 @@ function renderSummary() {
     kpi(t.available ? range(t.low, t.high) : '—', 'engineering hours'),
     kpi(t.available ? range(t.costLow, t.costHigh, money) : '—', `at ${money(a.rate)}/h`),
     kpi(t.available ? range(t.weeksLow, t.weeksHigh) : '—', `weeks · ${plural(a.engineers, 'engineer')}`),
+    ...(t.consumer ? [kpi(t.consumer.usages.toLocaleString(), `call sites · ${range(t.consumer.low, t.consumer.high)} h to update`)] : []),
   );
   const counts = t.levelCounts, total = Object.values(counts).reduce((s, n) => s + n, 0) || 1;
   const segments = [1, 2, 3, 4, 5].map(l => ({key: String(l), label: `${l} ${LEVELS[l]}`, n: counts[l] || 0})).concat([{key: 'na', label: 'Needs review', n: counts.not_estimated || 0}]);
@@ -46,7 +48,9 @@ function renderSummary() {
   $('#mix-legend').replaceChildren(...segments.map(s => el('span', {class: 'key'}, el('i', {class: `seg l${s.key}`}), `${s.label} ${s.n}`)));
 
   const line = item => el('li', {class: 'source'}, el('a', {href: `#item-${CSS.escape(item.id)}`}, item.name), el('span', {class: 'pill'}, item.effort.label));
-  const wins = report.items.filter(i => i.quickWin), breaking = report.items.filter(i => i.breaking && i.decision !== 'optional');
+  // Components the app never uses are not work, so they are not quick wins or breaking changes either.
+  const inUse = i => !(i.usage && !i.usage.usages);
+  const wins = report.items.filter(i => i.quickWin && inUse(i)), breaking = report.items.filter(i => i.breaking && i.decision !== 'optional' && inUse(i));
   $('#wins').replaceChildren(...(wins.length ? wins.map(line) : [el('li', {class: 'empty'}, 'None found.')]));
   $('#breaking').replaceChildren(...(breaking.length ? breaking.map(i => el('li', {class: 'source'}, el('a', {href: `#item-${CSS.escape(i.id)}`}, i.name), el('span', {class: 'pill major'}, i.decision === 'replace' ? 'No counterpart' : i.effort.label))) : [el('li', {class: 'empty'}, 'None found.')]));
 
@@ -71,7 +75,8 @@ function itemCard(item) {
   const target = reference.components.find(c => c.id === item.match.targetId);
   card.append(el('summary', {}, el('span', {class: 'name'}, item.name),
     el('span', {class: `pill ${item.decision === 'replace' || item.decision === 'check_first' ? 'minor' : ''}`}, DECISION_LABEL[item.decision]),
-    el('span', {class: 'pill'}, item.effort.label), el('span', {class: 'muted'}, item.effort.low === null ? '' : `${range(item.effort.low, item.effort.high)} h`)));
+    el('span', {class: 'pill'}, item.effort.label), el('span', {class: 'muted'}, item.effort.low === null ? '' : `${range(item.effort.low, item.effort.high)} h`),
+    item.usage ? el('span', {class: `pill ${item.usage.usages ? '' : 'ok'}`}, item.usage.usages ? `${plural(item.usage.usages, 'use')} · ${plural(item.usage.screens, 'screen')}` : 'Not used') : null));
   card.addEventListener('toggle', () => { if (card.open && !card.dataset.built) { card.dataset.built = '1'; card.append(itemBody(item, target)); } });
   return card;
 }
@@ -86,6 +91,7 @@ function itemBody(item, target) {
       : el('p', {class: 'empty'}, item.decision === 'optional' ? 'Only in the reference system.' : 'No counterpart in the reference system.'))));
   if (item.diffs.length) body.append(el('h3', {}, 'What changes'), el('ul', {}, item.diffs.map(d => el('li', {}, d.summary))));
   body.append(el('p', {}, el('strong', {}, 'Why this level: '), item.effort.basis || '—'));
+  if (item.usage) body.append(el('p', {}, el('strong', {}, 'In your app: '), item.usage.usages ? `${item.usage.usages} usages in ${plural(item.usage.files, 'file')} (${plural(item.usage.screens, 'screen')}). ${Object.entries(item.usage.propUsages).sort((x, y) => y[1] - x[1]).slice(0, 5).map(([p, n]) => `${p} ×${n}`).join(', ')}` : 'Not used in the scanned code, so it is left out of required work.'));
   if (item.acceptance.length) body.append(el('p', {}, el('strong', {}, 'Done when: '), item.acceptance.join(' · ')));
   body.append(el('p', {class: 'muted'}, `Match: ${item.match.status} (score ${item.match.score}) — ${item.match.reasons.join('; ')}${item.match.approvedBy ? ` · approved by ${item.match.approvedBy}` : ''}`));
   if (['replace', 'check_first'].includes(item.decision) || item.match.status !== 'confirmed') body.append(reviewForm(item));

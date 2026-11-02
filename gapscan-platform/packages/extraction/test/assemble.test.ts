@@ -9,7 +9,7 @@ import type {SourceAsset} from '@gapscan/schema';
 import {pptx} from '../../adapters/test/fixtures.ts';
 
 const signal = new AbortController().signal;
-const asset = (id: string, kind: SourceAsset['kind'], label: string): SourceAsset => ({id, projectId: 'p', kind, uri: `inline:${label}`, label, sha256: 'a'.repeat(64), bytes: 1, budget: {maxPages: 1, maxBytes: 1}, createdAt: new Date().toISOString()});
+const asset = (id: string, kind: SourceAsset['kind'], label: string): SourceAsset => ({id, projectId: 'p', kind, uri: `inline:${label}`, label, sha256: 'a'.repeat(64), bytes: 1, budget: {maxPages: 1, maxBytes: 1}, role: 'system', createdAt: new Date().toISOString()});
 
 const SITE_CSS = `
 :root { --brand: #0B5FD6; --surface: #FFFFFF; --link: var(--brand); --gutter: calc(var(--x) * 2) }

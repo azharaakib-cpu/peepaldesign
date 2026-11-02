@@ -89,3 +89,19 @@ test('nothing estimable reads as unavailable rather than a $0 quote', () => {
   assert.equal(totals.available, false);
   assert.equal(totals.complexity, null);
 });
+
+test('application usage adds consumer hours, prices prop renames by the usages that pass them, and drops unused components', async () => {
+  const {consumerRange} = await import('@gapscan/estimate');
+  const usage = (usages: number, propUsages: Record<string, number> = {}) => ({usages, files: 3, screens: 2, propUsages});
+  const rename = {dimension: 'api' as const, summary: 'kind → variant', driver: 'prop_rename' as const, before: 'kind', after: 'variant'};
+  const renamed = item('btn', [], {diffs: [rename], usage: usage(200, {kind: 40})});
+  assert.deepEqual(consumerRange(renamed), {low: 2, high: 6, affected: 40}, 'only the 40 usages that pass `kind`, at codemod rates');
+  const semantic = item('table', ['anatomy_change'], {usage: usage(10)});
+  assert.deepEqual(consumerRange(semantic), {low: 2.5, high: 5, affected: 10});
+  assert.equal(consumerRange(item('card', [], {decision: 'keep', usage: usage(50)})), null, 'kept components need no call-site changes');
+  const items = applyEstimates([renamed, semantic, item('ghost', ['token_value'], {usage: usage(0)})]);
+  const totals = planningTotals(items, [], {qaPct: 0});
+  assert.deepEqual(totals.consumer, {low: 4.5, high: 11, usages: 210, unusedExcluded: 1});
+  const withoutUsage = planningTotals(applyEstimates([item('btn', [], {diffs: [rename]})]), [], {qaPct: 0});
+  assert.equal(withoutUsage.consumer, null, 'no scan, no consumer estimate and no exclusions');
+});

@@ -20,6 +20,7 @@ import type {ExistingVariables} from '@gapscan/exports';
 import {buildObjects, contentHash} from '@gapscan/objects';
 import type {StoredApproval} from '@gapscan/objects';
 import {assetKey, createRenderHandler} from './render-job.ts';
+import {createUsageHandler, githubRepo, loadUsageReport} from './usage-job.ts';
 import {buildBrandKit, TEMPLATES} from '@gapscan/assets';
 import {approvalKey, computeReport, createGapScanHandler, loadExtraction, saveReport, summarize} from './gapscan-job.ts';
 import {createUrlGuard, publicUrl, UnsafeUrlError} from './url-safety.ts';
@@ -32,11 +33,12 @@ export const MAX_FILE_BYTES = 40_000_000;
 const FILE_KINDS: [RegExp, 'pptx' | 'docx' | 'pdf' | 'zip' | 'image' | 'code'][] = [[/\.pptx$/i, 'pptx'], [/\.docx$/i, 'docx'], [/\.pdf$/i, 'pdf'], [/\.zip$/i, 'zip'], [/\.(png|jpe?g|webp|gif)$/i, 'image'], [CODE_FILE, 'code']];
 const HEARTBEAT_MS = 15_000;
 
+const SourceRole = z.enum(['system', 'application']).default('system');
 const CreateProjectBody = z.object({name: z.string().trim().min(1).max(200)});
 const AddSourceBody = z.discriminatedUnion('kind', [
-  z.object({kind: z.literal('url'), uri: z.string().min(1).max(2048), consent: z.boolean().optional()}),
-  z.object({kind: z.literal('code'), name: z.string().trim().min(1).max(200).regex(/^[\w .()-]+$/, 'Use letters, numbers, spaces, dots, dashes or underscores.'), content: z.string().min(1)}),
-  z.object({kind: z.literal('file'), name: z.string().trim().min(1).max(200).regex(/^[\w .()-]+$/, 'Use letters, numbers, spaces, dots, dashes or underscores.'), base64: z.string().min(1)}),
+  z.object({kind: z.literal('url'), uri: z.string().min(1).max(2048), consent: z.boolean().optional(), role: SourceRole}),
+  z.object({kind: z.literal('code'), name: z.string().trim().min(1).max(200).regex(/^[\w .()-]+$/, 'Use letters, numbers, spaces, dots, dashes or underscores.'), content: z.string().min(1), role: SourceRole}),
+  z.object({kind: z.literal('file'), name: z.string().trim().min(1).max(200).regex(/^[\w .()-]+$/, 'Use letters, numbers, spaces, dots, dashes or underscores.'), base64: z.string().min(1), role: SourceRole}),
 ]);
 const IdParams = z.object({id: z.string().min(1)});
 
@@ -51,6 +53,7 @@ export function buildApp({infra, handlers = {}, logger = false, heartbeatMs = HE
   queue.register('extract', handlers.extract ?? createExtractHandler({store, blobs, urlAdapter}));
   queue.register('gapscan', handlers.gapscan ?? createGapScanHandler({store, blobs}));
   queue.register('render', handlers.render ?? createRenderHandler({store, blobs}));
+  queue.register('usage', handlers.usage ?? createUsageHandler({store, blobs, allowUrl: url => createUrlGuard(lookupAll)(url)}));
   const app = Fastify({logger, bodyLimit: Math.ceil(MAX_FILE_BYTES * 1.4)});
   // Action endpoints like POST /extractions take no body; clients that still send
   // `content-type: application/json` with nothing in it should not get a 400.
@@ -102,9 +105,10 @@ export function buildApp({infra, handlers = {}, logger = false, heartbeatMs = HE
     if (body.kind === 'url') {
       let url: URL;
       try { url = publicUrl(body.uri); } catch (error) { return fail(reply, 400, error instanceof UnsafeUrlError ? error.message : 'Invalid URL.'); }
+      if (body.role === 'application' && !githubRepo(url.href)) return fail(reply, 400, 'Application code links must be public github.com repositories (https://github.com/owner/repo).');
       const kind = /^(www\.)?figma\.com$/.test(url.hostname) ? 'figma' as const : 'url' as const;
       const source = {id, projectId, kind, uri: url.href, label: url.hostname, sha256: createHash('sha256').update(url.href).digest('hex'),
-        bytes: 0, budget: {maxPages: 40, maxBytes: 20_000_000}, ...(body.consent !== undefined ? {consent: body.consent} : {}), createdAt};
+        bytes: 0, budget: {maxPages: 40, maxBytes: 20_000_000}, ...(body.consent !== undefined ? {consent: body.consent} : {}), role: body.role, createdAt};
       await store.addSource(source);
       return reply.code(201).send(source);
     }
@@ -116,7 +120,7 @@ export function buildApp({infra, handlers = {}, logger = false, heartbeatMs = HE
       if (data.length > MAX_FILE_BYTES) return fail(reply, 413, `${body.name} is ${data.length} bytes; the limit is ${MAX_FILE_BYTES}.`);
       const blobKey = await blobs.put(`sources/${projectId}/${id}`, data);
       const source = {id, projectId, kind, uri: `upload:${body.name}`, label: body.name, sha256: createHash('sha256').update(data).digest('hex'),
-        bytes: data.length, blobKey, budget: {maxPages: 200, maxBytes: MAX_FILE_BYTES}, createdAt};
+        bytes: data.length, blobKey, budget: {maxPages: 200, maxBytes: MAX_FILE_BYTES}, role: body.role, createdAt};
       await store.addSource(source);
       return reply.code(201).send(source);
     }
@@ -124,7 +128,7 @@ export function buildApp({infra, handlers = {}, logger = false, heartbeatMs = HE
     if (bytes > MAX_CODE_BYTES) return fail(reply, 413, `Pasted code is ${bytes} bytes; the limit is ${MAX_CODE_BYTES}. Upload a smaller file.`);
     const blobKey = await blobs.put(`sources/${projectId}/${id}`, body.content);
     const source = {id, projectId, kind: 'code' as const, uri: `inline:${body.name}`, label: body.name, sha256: createHash('sha256').update(body.content).digest('hex'),
-      bytes, blobKey, budget: {maxPages: 1, maxBytes: MAX_CODE_BYTES}, createdAt};
+      bytes, blobKey, budget: {maxPages: 1, maxBytes: MAX_CODE_BYTES}, role: body.role, createdAt};
     await store.addSource(source);
     return reply.code(201).send(source);
   });
@@ -232,6 +236,19 @@ export function buildApp({infra, handlers = {}, logger = false, heartbeatMs = HE
     await blobs.put(approvalsKey(params.data.id), JSON.stringify(approvals));
     return buildObjects(eds, approvals).find(o => o.kind === params.data.kind);
   });
+
+  // ── Application impact ────────────────────────────────────────────────────
+  app.post('/v1/projects/:id/usage', async (request, reply) => {
+    const {id: projectId} = IdParams.parse(request.params);
+    const body = parse(z.object({edsId: z.string().min(1)}), request.body, reply); if (!body) return reply;
+    const extraction = await store.getExtraction(body.edsId);
+    if (!extraction || extraction.projectId !== projectId) return fail(reply, 404, 'Extraction not found in this project.');
+    if (!(await store.listSources(projectId)).some(s => s.role === 'application')) return fail(reply, 400, 'Add application code to this project first.');
+    const job = await store.createJob({type: 'usage', projectId, subjectId: body.edsId, payload: body});
+    await queue.enqueue(job);
+    return reply.code(202).send({jobId: job.id, events: `/v1/jobs/${job.id}/events`});
+  });
+  app.get('/v1/projects/:id/usage', async (request, reply) => (await loadUsageReport(blobs, IdParams.parse(request.params).id)) ?? fail(reply, 404, 'No usage scan yet.'));
 
   // ── Figma Variables sync: preview first, then a confirmed apply of that exact plan ──
   const FigmaSync = z.object({fileUrl: z.string().url(), collection: z.string().trim().min(1).max(80).default('GapScan tokens')});

@@ -1,4 +1,4 @@
-# GapScan platform (Phases 1–5)
+# GapScan platform (Phases 1–6)
 
 The TypeScript monorepo that replaces the prototype in `../gapscan`, following
 the architecture plan. Phase 1 added the shared contracts, the single estimation
@@ -12,6 +12,8 @@ SCSS) and the missing-object generator (accessibility, guidelines, principles,
 tooling, content, brand), with drafts that count only once approved. Phase 5
 starts the asset engine: a brand kit and rendered business cards (print PDF
 with bleed), OpenGraph images and social banners, each with its checks.
+Phase 6 adds application impact: scan the product's own code to count where each
+component is used, leave unused components out and price the call sites to update.
 
 Requires Node 24+ (it runs TypeScript directly; there is no build step).
 
@@ -40,6 +42,7 @@ review the result, then compare it against a reference system.
 | `packages/exports` | Figma Variables sync planner (create / update / unchanged / skipped, with modes and aliases, bound to a plan hash) and token exporters from one canonical list: W3C DTCG `tokens.json` (with provenance in `$extensions`), CSS custom properties (with theme-mode blocks), Tailwind v4 `@theme`, SCSS. Unresolved values are never exported as known. |
 | `packages/objects` | Missing-object generator. Each section is labelled extracted, inferred or drafted; contrast pairs come with fixes that pass; approvals are tied to a content hash and go stale if the content changes. No language model is called. |
 | `packages/assets` | Brand kit from token slots (reports which slots fell back to defaults), self-contained templates (business card 85×55 mm + 3 mm bleed, OpenGraph 1200×630, LinkedIn banner, PowerPoint deck template with a branded theme, HTML email newsletter with dark mode), contrast checks, offline rendering in Chromium. |
+| `packages/usage` | Application impact: JSX usages through import aliases (with the props each passes), class names in markup and HTML, custom-element tags, files and screens per component. Tests, dependencies and docs are skipped. |
 | `packages/infra` | `Store`, `BlobStore`, `Queue` and `EventBus` interfaces with zero-install local adapters (Node's built-in SQLite, filesystem blobs, in-process queue). |
 | `apps/api` | Fastify API and the extraction UI (`public/`): projects, sources, extraction jobs, SSE progress with resume, cancellation. |
 
@@ -64,6 +67,8 @@ review the result, then compare it against a reference system.
 | `GET /v1/templates`, `GET /v1/extractions/:id/brandkit` | Asset templates and the brand kit they read |
 | `POST /v1/extractions/:id/assets` `{template, brandName?, data}` | Starts a `render` job |
 | `GET /v1/assets/:jobId`, `GET /v1/assets/:jobId/file` | Checks and the rendered file (`?download=1` to save) |
+| `POST /v1/projects/:id/sources` with `role: "application"` | Add the product's code (pasted, ZIP, or a public `github.com` repository) |
+| `POST /v1/projects/:id/usage` `{edsId}`, `GET /v1/projects/:id/usage` | Scan usage and read the latest report; GapScan picks it up automatically |
 | `GET /v1/library`, `GET /v1/library/:id` | Reference systems and their components |
 | `GET /v1/extractions/:id/recommendations` | References ranked by how many of your components have a counterpart |
 | `POST /v1/gapscans` `{edsId, referenceId, assumptions?}` | Starts a `gapscan` job |
@@ -123,6 +128,10 @@ images, gradients or translucent layers is skipped rather than guessed.
 - **Drafted sections are templates, not writing.** Prose sections (principles,
   voice, keyboard behaviour) are deterministic drafts for a person to edit and
   approve; an LLM drafting step with citations is not wired in yet.
+- **Usage is a static scan.** It finds components by name, import alias and class;
+  dynamic patterns (components chosen at runtime, class names built in code) are
+  not counted, and screens are recognised by common routing conventions. Only
+  public GitHub repositories can be fetched; private code must be uploaded as a ZIP.
 - **Print colour is RGB.** Business-card PDFs are RGB with bleed; CMYK conversion
   with an ICC profile, Pantone matching and PDF/X preflight are not done yet.
 - **Decks use the brand fonts by name.** PowerPoint cannot carry a fallback stack;
