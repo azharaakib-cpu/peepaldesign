@@ -8,6 +8,11 @@ export type ExtractionRecord = {
   blobKey: string; summary: Record<string, unknown>; createdAt: string;
 };
 
+export type GapScanRecord = {id: string; projectId: string; extractionId: string; referenceId: string; blobKey: string; summary: Record<string, unknown>; createdAt: string; updatedAt: string};
+// A reviewer's mapping decision. The key ties it to the exact evidence it was made on,
+// so a new extraction or reference version makes it stale instead of silently reused.
+export type MatchApproval = {key: string; edsFingerprint: string; referenceId: string; sourceId: string; targetId: string | null; by: string; reason: string; at: string};
+
 export interface Store {
   createProject(name: string): Promise<Project>;
   getProject(id: string): Promise<Project | null>;
@@ -23,6 +28,10 @@ export interface Store {
   saveExtraction(record: ExtractionRecord): Promise<void>;
   getExtraction(id: string): Promise<ExtractionRecord | null>;
   latestExtractionVersion(projectId: string): Promise<number>;
+  saveGapScan(record: GapScanRecord): Promise<void>;
+  getGapScan(id: string): Promise<GapScanRecord | null>;
+  saveApproval(approval: MatchApproval): Promise<void>;
+  listApprovals(edsFingerprint: string, referenceId: string): Promise<MatchApproval[]>;
   close(): Promise<void>;
 }
 

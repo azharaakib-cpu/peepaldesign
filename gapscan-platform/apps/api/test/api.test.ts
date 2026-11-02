@@ -5,6 +5,7 @@ import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {configFromEnv, createInfra} from '@gapscan/infra';
 import type {Infra} from '@gapscan/infra';
+import {GapScanReport} from '@gapscan/schema';
 import type {ExtractedDesignSystem, JobEvent} from '@gapscan/schema';
 import {buildApp, MAX_CODE_BYTES} from '../src/app.ts';
 import {createExtractHandler} from '../src/extract-job.ts';
@@ -109,7 +110,7 @@ test('unreadable sources are reported honestly: alone they fail the job, alongsi
     const job = (await h.json('GET', `/v1/jobs/${mixed.body.jobId}`)).body;
     assert.equal(job.status, 'completed');
     const eds = (await h.json<ExtractedDesignSystem>('GET', `/v1/extractions/${job.resultId}?include=full`)).body;
-    assert.ok(eds.quirks.some(q => q.kind === 'coverage_gap' && /Phase 2/.test(q.summary)));
+    assert.ok(eds.quirks.some(q => q.kind === 'coverage_gap' && /not configured/.test(q.summary)));
     const events = await h.infra.store.listEvents(job.id);
     assert.ok(events.some(e => e.body.type === 'progress' && /^Skipped polaris/.test(e.body.message)), 'a skipped source is never reported as read');
     assert.equal(eds.coverage.perAsset.filter(a => a.failed.length).length, 1);
@@ -150,5 +151,152 @@ test('a running extraction can be cancelled, and the stream ends with a cancelle
     assert.equal(events.at(-1)?.body.type, 'cancelled');
     assert.equal((await h.json('GET', `/v1/jobs/${jobId}`)).body.status, 'cancelled');
     assert.equal((await h.json('DELETE', `/v1/jobs/${jobId}`)).status, 409, 'cannot cancel twice');
+  } finally { await h.close(); }
+});
+
+test('uploaded PPTX, PDF and zipped code go through their adapters into one extraction', async () => {
+  const {pptx} = await import('../../../packages/adapters/test/fixtures.ts');
+  const {brandPdf} = await import('../../../packages/adapters/test/pdf-fixture.ts');
+  const {writeZip} = await import('@gapscan/adapters');
+  const h = await harness();
+  try {
+    const upload = (name: string, data: Uint8Array) => h.json('POST', `/v1/projects/${h.project.id}/sources`, {kind: 'file', name, base64: Buffer.from(data).toString('base64')});
+    assert.equal((await upload('brand.pptx', pptx())).body.kind, 'pptx');
+    assert.equal((await upload('guide.pdf', brandPdf([{lines: [[28, 'Colour'], [11, 'Primary Blue'], [11, 'HEX #0052CC']]}]))).body.kind, 'pdf');
+    assert.equal((await upload('site.zip', writeZip({'src/tokens.css': ':root{--brand:#0B5FD6} .btn{background:#0B5FD6;color:#fff;padding:8px 16px}', 'node_modules/x/y.css': '.junk{color:red}'}))).body.kind, 'zip');
+    assert.equal((await upload('photo.heic', new Uint8Array([1]))).status, 415);
+    const figma = await h.json('POST', `/v1/projects/${h.project.id}/sources`, {kind: 'url', uri: 'https://www.figma.com/design/AbCdEf1234567890/Acme'});
+    assert.equal(figma.body.kind, 'figma');
+
+    const {jobId} = (await h.json('POST', `/v1/projects/${h.project.id}/extractions`)).body;
+    await h.infra.queue.idle();
+    const job = (await h.json('GET', `/v1/jobs/${jobId}`)).body;
+    assert.equal(job.status, 'completed', JSON.stringify(job.error));
+    const eds = (await h.json<ExtractedDesignSystem>('GET', `/v1/extractions/${job.resultId}?include=full`)).body;
+    assert.ok(eds.tokens.some(t => t.path === 'font.family.heading' && t.value === 'Inter Display'), 'deck heading font');
+    assert.ok(eds.tokens.some(t => t.path === '--brand'), 'zipped CSS token');
+    assert.ok(!eds.evidence.some(e => /node_modules/.test(e.locator)), 'dependency folders are skipped');
+    assert.ok(eds.quirks.some(q => q.kind === 'declared_observed_drift'), 'guide and deck blue differ from the site blue');
+    assert.ok(eds.quirks.some(q => q.kind === 'coverage_gap' && /Figma is not connected/.test(q.summary)));
+    const scales = (await h.json('GET', `/v1/extractions/${job.resultId}/scales`)).body;
+    assert.ok(Array.isArray(scales.colors) && scales.colors.length > 0);
+  } finally { await h.close(); }
+});
+
+test('the extraction UI is served with a CSP and nothing outside its folder is reachable', async () => {
+  const h = await harness();
+  try {
+    const page = await h.app.inject({method: 'GET', url: '/app/'});
+    assert.equal(page.statusCode, 200);
+    assert.match(page.headers['content-security-policy'] as string, /default-src 'self'/);
+    assert.match(page.body, /Extract a design system/);
+    assert.equal((await h.app.inject({method: 'GET', url: '/app/review.js'})).statusCode, 200);
+    for (const url of ['/app/../src/app.ts', '/app/..%2Fpackage.json', '/app/secret.txt', '/app/%2e%2e/%2e%2e/package.json'])
+      assert.equal((await h.app.inject({method: 'GET', url})).statusCode, 404, url);
+    assert.equal((await h.app.inject({method: 'GET', url: '/'})).headers.location, '/app/');
+  } finally { await h.close(); }
+});
+
+test('GapScan: recommend a reference, run the scan, adjust assumptions server-side and approve a mapping', async () => {
+  const h = await harness();
+  try {
+    const css = `:root { --brand: #0B5FD6 }
+.btn { padding: 8px 16px; border-radius: 4px } .btn-primary { background: #0B5FD6; color: #fff } .btn-ghost { background: none } .btn-sm { padding: 4px 8px } .btn-lg { padding: 12px 24px }
+.btn:hover { opacity: .9 } .btn:disabled { opacity: .5 }
+.text-field { border: 1px solid #ccc } .text-field:focus-visible { outline: 2px solid #0B5FD6 } .text-field:disabled { opacity: .5 }
+.carousel { display: flex } .carousel-item { flex: 1 } .carousel-item-next {}`;
+    await h.json('POST', `/v1/projects/${h.project.id}/sources`, {kind: 'code', name: 'acme.css', content: css});
+    const {jobId} = (await h.json('POST', `/v1/projects/${h.project.id}/extractions`)).body;
+    await h.infra.queue.idle();
+    const edsId = (await h.json('GET', `/v1/jobs/${jobId}`)).body.resultId;
+
+    const library = (await h.json('GET', '/v1/library')).body;
+    assert.ok(library.some((r: {id: string}) => r.id === 'polaris-13.9.5'));
+    const ranked = (await h.json('GET', `/v1/extractions/${edsId}/recommendations`)).body;
+    assert.equal(ranked.length, library.length);
+    assert.ok(ranked.every((r: {fit: number}, i: number) => i === 0 || ranked[i - 1].fit >= r.fit), 'ranked by fit');
+
+    assert.equal((await h.json('POST', '/v1/gapscans', {edsId, referenceId: 'nope'})).status, 400);
+    const started = await h.json('POST', '/v1/gapscans', {edsId, referenceId: 'polaris-13.9.5', assumptions: {rate: 100}});
+    assert.equal(started.status, 202);
+    await h.infra.queue.idle();
+    const gapscanJob = (await h.json('GET', `/v1/jobs/${started.body.jobId}`)).body;
+    assert.equal(gapscanJob.status, 'completed', JSON.stringify(gapscanJob.error));
+    const reportId = gapscanJob.resultId;
+
+    const executive = (await h.json('GET', `/v1/gapscans/${reportId}`)).body;
+    GapScanReport.parse(executive);
+    assert.ok(executive.items.every((i: {tech?: unknown}) => i.tech === undefined), 'technical detail is opt-in');
+    const button = executive.items.find((i: {name: string}) => /btn/i.test(i.name));
+    assert.ok(button, 'the button was compared');
+    assert.notEqual(button.match.targetId, null);
+    assert.equal(executive.assumptions.rate, 100);
+    const withTech = (await h.json('GET', `/v1/gapscans/${reportId}?include=tech`)).body;
+    assert.ok(withTech.items.some((i: {tech?: unknown}) => i.tech));
+
+    const before = executive.totals;
+    const changed = (await h.json('PUT', `/v1/gapscans/${reportId}/assumptions`, {apps: 3})).body;
+    assert.equal(changed.assumptions.apps, 3);
+    assert.ok(changed.totals.low === 0 || changed.totals.low > before.low, 'more applications, more hours');
+    assert.equal((await h.json('GET', `/v1/gapscans/${reportId}`)).body.totals.low, changed.totals.low, 'saved, not just returned');
+
+    const unresolved = executive.items.find((i: {decision: string}) => i.decision === 'replace' || i.decision === 'check_first');
+    if (unresolved) {
+      const approved = (await h.json('PUT', `/v1/gapscans/${reportId}/matches/${encodeURIComponent(unresolved.match.sourceId)}`, {targetId: null, by: 'pm@example.com', reason: 'Build a custom carousel'})).body;
+      assert.equal(approved.item.match.status, 'confirmed');
+      assert.equal(approved.item.match.approvedBy, 'pm@example.com');
+    }
+    assert.equal((await h.json('PUT', `/v1/gapscans/${reportId}/matches/unknown`, {targetId: null, by: 'x', reason: 'y'})).status, 404);
+  } finally { await h.close(); }
+});
+
+test('token exports download in every format, and object sections can be approved', async () => {
+  const h = await harness();
+  try {
+    await h.json('POST', `/v1/projects/${h.project.id}/sources`, {kind: 'code', name: 'acme.css', content: CSS});
+    const {jobId} = (await h.json('POST', `/v1/projects/${h.project.id}/extractions`)).body;
+    await h.infra.queue.idle();
+    const edsId = (await h.json('GET', `/v1/jobs/${jobId}`)).body.resultId;
+    for (const [format, pattern] of [['dtcg', /"brand"/], ['css', /:root \{/], ['tailwind4', /@theme \{/], ['scss', /\$brand: /]] as const) {
+      const response = await h.app.inject({method: 'GET', url: `/v1/extractions/${edsId}/export?format=${format}`});
+      assert.equal(response.statusCode, 200, format);
+      assert.match(response.headers['content-disposition'] as string, /attachment; filename=/);
+      assert.match(response.body, pattern, format);
+    }
+    assert.equal((await h.app.inject({method: 'GET', url: `/v1/extractions/${edsId}/export?format=xml`})).statusCode, 400);
+
+    const objects = (await h.json('GET', `/v1/extractions/${edsId}/objects`)).body;
+    assert.equal(objects.length, 6);
+    const before = objects.find((o: {kind: string}) => o.kind === 'accessibility').completeness;
+    const approved = (await h.json('PUT', `/v1/extractions/${edsId}/objects/accessibility/sections/target/approval`, {by: 'pm@example.com'})).body;
+    assert.equal(approved.sections.find((s: {id: string}) => s.id === 'target').approval.by, 'pm@example.com');
+    assert.ok(approved.completeness > before);
+    assert.equal((await h.json('GET', `/v1/extractions/${edsId}/objects`)).body.find((o: {kind: string}) => o.kind === 'accessibility').completeness, approved.completeness, 'saved');
+    assert.equal((await h.json('PUT', `/v1/extractions/${edsId}/objects/nope/sections/target/approval`, {by: 'x'})).status, 404);
+  } finally { await h.close(); }
+});
+
+test('brand assets render through the job system with their checks', {timeout: 90_000}, async t => {
+  const hasBrowser = await import('playwright').then(p => p.chromium.launch().then(b => b.close()).then(() => true)).catch(() => false);
+  if (!hasBrowser) { t.skip('Chromium for Playwright is not installed'); return; }
+  const h = await harness();
+  try {
+    await h.json('POST', `/v1/projects/${h.project.id}/sources`, {kind: 'code', name: 'acme.css', content: CSS});
+    const {jobId} = (await h.json('POST', `/v1/projects/${h.project.id}/extractions`)).body;
+    await h.infra.queue.idle();
+    const edsId = (await h.json('GET', `/v1/jobs/${jobId}`)).body.resultId;
+    assert.ok((await h.json('GET', '/v1/templates')).body.some((t: {id: string}) => t.id === 'business-card'));
+    assert.equal((await h.json('POST', `/v1/extractions/${edsId}/assets`, {template: 'poster'})).status, 400);
+    const started = await h.json('POST', `/v1/extractions/${edsId}/assets`, {template: 'business-card', brandName: 'Acme', data: {name: 'Jordan Lee', role: 'Product Lead'}});
+    assert.equal(started.status, 202);
+    await h.infra.queue.idle();
+    assert.equal((await h.json('GET', `/v1/jobs/${started.body.jobId}`)).body.status, 'completed');
+    const manifest = (await h.json('GET', `/v1/assets/${started.body.jobId}`)).body;
+    assert.equal(manifest.file, 'business-card.pdf');
+    assert.ok(manifest.checks.some((c: {rule: string}) => c.rule === 'name-contrast'));
+    const file = await h.app.inject({method: 'GET', url: `/v1/assets/${started.body.jobId}/file?download=1`});
+    assert.equal(file.headers['content-type'], 'application/pdf');
+    assert.match(file.headers['content-disposition'] as string, /attachment/);
+    assert.equal(file.rawPayload.subarray(0, 5).toString(), '%PDF-');
   } finally { await h.close(); }
 });

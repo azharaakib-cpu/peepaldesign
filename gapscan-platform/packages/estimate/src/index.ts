@@ -44,7 +44,7 @@ export function effortLabel(level: EffortLevel | null): string {
 // the level is the larger of the points band and the most severe driver's floor.
 export function levelForDiffs(diffs: readonly Pick<GapDiff, 'driver'>[]): EffortLevel {
   const perDriver = new Map<EffortDriver, number>();
-  for (const diff of diffs) perDriver.set(diff.driver, (perDriver.get(diff.driver) ?? 0) + 1);
+  for (const diff of diffs) if (diff.driver) perDriver.set(diff.driver, (perDriver.get(diff.driver) ?? 0) + 1);
   let points = 0, floor: EffortLevel = 1;
   for (const [driver, count] of perDriver) {
     const rule = RUBRIC.drivers[driver];
@@ -68,11 +68,11 @@ type EstimateInput = Pick<GapItem, 'decision' | 'match' | 'diffs'> & Partial<Pic
 // Unresolved matches and unreviewed replacements return null hours: absence from
 // captured evidence is not proof of work, and is never shown as free work.
 export function estimateItem(item: EstimateInput): EffortEstimate {
-  const drivers = [...new Set(item.diffs.map(diff => diff.driver))];
+  const priced = item.diffs.filter((d): d is typeof d & {driver: EffortDriver} => d.driver !== null), drivers = [...new Set(priced.map(diff => diff.driver))];
   const notEstimated = (basis: string): EffortEstimate => ({level: null, label: NOT_ESTIMATED, drivers, low: null, high: null, basis});
   if (item.decision === 'check_first' || item.match.status === 'unresolved') return notEstimated('Match or evidence unresolved; review before estimating.');
   if (item.decision === 'replace' && !item.match.approvedBy) return notEstimated('No counterpart in captured evidence; a reviewer must approve the replacement scope first.');
-  const diffs = item.decision === 'replace' && !drivers.includes('no_counterpart') ? [...item.diffs, {driver: 'no_counterpart' as const}] : item.diffs;
+  const diffs = item.decision === 'replace' && !drivers.includes('no_counterpart') ? [...priced, {driver: 'no_counterpart' as const}] : priced;
   const level = diffs.length ? levelForDiffs(diffs) : 1;
   const [baseLow, baseHigh] = RUBRIC.base[level], factor = variantFactor(item.variantsInScope ?? 1);
   const low = halfHourUp(baseLow * factor), high = halfHourUp(baseHigh * factor * uncertaintyFactor(item.inferredShare ?? 0));
@@ -95,7 +95,7 @@ export function tokenCategoryRange(remappedTokens: number): {low: number; high: 
 
 export function isQuickWin(item: Pick<GapItem, 'diffs' | 'instances'>, effort: EffortEstimate): boolean {
   return effort.level !== null && effort.level <= RUBRIC.quickWin.maxLevel
-    && (item.diffs.some(diff => diff.driver === 'a11y_fix') || (item.instances ?? 0) >= RUBRIC.quickWin.minInstances);
+    && (item.diffs.some(diff => diff.driver === 'a11y_fix' || (diff.driver === null && diff.dimension === 'a11y')) || (item.instances ?? 0) >= RUBRIC.quickWin.minInstances);
 }
 
 export function isBreaking(item: Pick<GapItem, 'diffs' | 'decision'>, effort: EffortEstimate): boolean {

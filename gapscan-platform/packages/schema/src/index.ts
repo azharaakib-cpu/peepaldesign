@@ -100,9 +100,10 @@ export const EffortDriver = z.enum([
   'token_value', 'token_rename', 'variant_renamed', 'variant_missing', 'state_missing', 'a11y_fix',
   'prop_rename', 'prop_semantic', 'anatomy_change', 'behaviour_change', 'no_counterpart', 'framework_switch',
 ]);
+// A diff with no driver is a gain the target brings for free (e.g. a built-in loading state): shown, never priced.
 export const GapDiff = z.object({
   dimension: DiffDimension, summary: z.string(), before: z.unknown().optional(), after: z.unknown().optional(),
-  driver: EffortDriver,
+  driver: EffortDriver.nullable(),
 });
 
 export const EffortLevel = z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4), z.literal(5)]);
@@ -143,6 +144,20 @@ export const GapScanReport = z.object({
   items: z.array(GapItem),
   tokenCategories: z.array(z.object({name: z.string(), remappedTokens: z.number().int().min(0)})),
   assumptions: Assumptions, totals: GapScanTotals, exclusions: z.array(z.string()),
+});
+
+// ── Part 3: missing architectural objects ──────────────────────────────────
+export const ObjectKind = z.enum(['guidelines', 'principles', 'tooling', 'brand', 'accessibility', 'content']);
+export const Provenance = z.enum(['extracted', 'inferred', 'drafted']);
+export const ObjectSection = z.object({
+  id, title: z.string(), status: z.enum(['present', 'partial', 'missing']),
+  content: z.string(),                       // Markdown
+  provenance: Provenance, evidence: z.array(z.string()),
+  approval: z.object({by: z.string(), at: isoDate}).optional(),
+  stale: z.boolean().optional(),
+});
+export const ArchitecturalObject = z.object({
+  kind: ObjectKind, title: z.string(), completeness: unit, edsId: id, sections: z.array(ObjectSection),
 });
 
 // ── Part 4: projects and jobs ───────────────────────────────────────────────
@@ -195,6 +210,10 @@ export type GapItem = z.infer<typeof GapItem>;
 export type Assumptions = z.infer<typeof Assumptions>;
 export type GapScanTotals = z.infer<typeof GapScanTotals>;
 export type GapScanReport = z.infer<typeof GapScanReport>;
+export type ObjectKind = z.infer<typeof ObjectKind>;
+export type Provenance = z.infer<typeof Provenance>;
+export type ObjectSection = z.infer<typeof ObjectSection>;
+export type ArchitecturalObject = z.infer<typeof ArchitecturalObject>;
 export type Project = z.infer<typeof Project>;
 export type JobType = z.infer<typeof JobType>;
 export type JobStatus = z.infer<typeof JobStatus>;

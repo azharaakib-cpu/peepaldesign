@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Extraction Review</title>
+  <link rel="stylesheet" href="/app/styles.css">
+</head>
+<body>
+<main>
+  <header class="top">
+    <div>
+      <h1 id="title">Your design system, extracted</h1>
+      <p class="lead" id="subtitle">Loading…</p>
+    </div>
+    <div class="row"><a class="button" href="/app/">New extraction</a><button class="theme-toggle" id="theme" type="button">Toggle theme</button></div>
+  </header>
+  <div class="grid stats" id="stats"></div>
+  <section class="card" aria-labelledby="compare"><h2 id="compare">Compare against a reference system</h2><p class="muted">Ranked by how many of your components have a likely counterpart. This is a suggestion; choose any.</p><div class="recs" id="recs"><p class="muted">Checking the library…</p></div><div class="log" id="scan-log" hidden aria-live="polite"></div></section>
+  <section class="card" aria-labelledby="handoff"><h2 id="handoff">Hand-off files</h2><p class="muted">Generated from this extraction. Unresolved values are left out; inferred values are marked.</p><div class="row" id="exports"></div></section>
+  <section class="card" aria-labelledby="assets-title"><h2 id="assets-title">Brand assets</h2><p class="muted">Rendered from your brand kit. Each file lists the checks it passed.</p>
+    <form id="asset-form" class="assumptions"><label>Template<select name="template" id="asset-template"></select></label><label>Brand name<input type="text" name="brandName" value="Your brand"></label><div id="asset-fields" style="display:contents"></div><button class="primary" type="submit">Generate</button></form>
+    <div id="asset-result" style="margin-top:12px"></div></section>
+  <section class="card" aria-labelledby="objects-title"><h2 id="objects-title">System completeness</h2><p class="muted">What a complete design system documents, and how much of it exists today. Drafts only count once someone approves them.</p>
+    <label for="reviewer">Your name or email (for approvals)</label><input id="reviewer" type="text" autocomplete="email" placeholder="you@company.com"><div id="objects" style="margin-top:12px"></div></section>
+  <section class="card" aria-labelledby="noticed"><h2 id="noticed">What we noticed</h2><div id="findings"></div></section>
+  <section class="card" aria-labelledby="colours"><h2 id="colours">Colours</h2><h3>Roles</h3><div class="swatches" id="roles"></div><h3>Palette</h3><div class="swatches" id="palette"></div></section>
+  <section class="card" aria-labelledby="type"><h2 id="type">Typography</h2><p class="muted" id="type-summary"></p><div id="type-scale"></div></section>
+  <section class="card" aria-labelledby="space"><h2 id="space">Spacing, shape and elevation</h2><p class="muted" id="space-summary"></p><div class="scale" id="spacing"></div><h3>Corner radius</h3><div class="shapes" id="radius"></div><h3>Elevation</h3><div class="shapes" id="shadows"></div></section>
+  <section class="card" aria-labelledby="components"><h2 id="components">Components</h2><div class="table-wrap"><table id="component-table"></table></div></section>
+  <section class="card" aria-labelledby="coverage"><h2 id="coverage">What was read</h2><ul class="plain" id="coverage-list"></ul></section>
+  <section class="card"><details id="technical"><summary>Technical details: tokens, provenance and evidence</summary>
+    <label for="token-filter">Filter tokens</label><input id="token-filter" type="text" placeholder="color, --brand, space…">
+    <div class="table-wrap"><table id="token-table"></table></div><div class="row" style="margin-top:8px"><button id="more-tokens" type="button" hidden>Show more</button></div>
+  </details></section>
+</main>
+<script src="/app/common.js"></script>
+<script src="/app/review.js"></script>
+</body>
+</html>
