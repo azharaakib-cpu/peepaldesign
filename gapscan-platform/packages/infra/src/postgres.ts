@@ -5,7 +5,7 @@ import {randomUUID} from 'node:crypto';
 import {EventEmitter} from 'node:events';
 import {Job as JobSchema, JobEvent as JobEventSchema, Project as ProjectSchema, SourceAsset as SourceAssetSchema} from '@gapscan/schema';
 import type {Job, JobEvent, JobType} from '@gapscan/schema';
-import type {EventBus, JobHandler, Queue, Role, Store} from './types.ts';
+import type {EventBus, GapScanRecord, JobHandler, Queue, Role, Store} from './types.ts';
 import {recordEvent} from './local.ts';
 
 export type SqlRow = Record<string, unknown>;
@@ -127,6 +127,8 @@ export async function migrate(sql: SqlClient): Promise<number> {
 export const EVENTS_CHANNEL = 'gapscan_events', JOBS_CHANNEL = 'gapscan_jobs', CANCEL_CHANNEL = 'gapscan_cancel';
 const str = (row: SqlRow, column: string) => String(row[column] ?? '');
 const json = (value: unknown) => typeof value === 'string' ? JSON.parse(value) as unknown : value;
+const gapScanRow = (row: SqlRow): GapScanRecord => ({id: str(row, 'id'), projectId: str(row, 'project_id'), extractionId: str(row, 'extraction_id'), referenceId: str(row, 'reference_id'), blobKey: str(row, 'blob_key'),
+  summary: json(row.summary) as Record<string, unknown>, createdAt: str(row, 'created_at'), updatedAt: str(row, 'updated_at')});
 
 export function createPostgresStore(sql: SqlClient): Store {
   const now = () => new Date().toISOString();
@@ -214,8 +216,10 @@ export function createPostgresStore(sql: SqlClient): Store {
     },
     async getGapScan(id) {
       const [row] = await sql.query('SELECT * FROM gapscans WHERE id = $1', [id]);
-      return row ? {id: str(row, 'id'), projectId: str(row, 'project_id'), extractionId: str(row, 'extraction_id'), referenceId: str(row, 'reference_id'), blobKey: str(row, 'blob_key'),
-        summary: json(row.summary) as Record<string, unknown>, createdAt: str(row, 'created_at'), updatedAt: str(row, 'updated_at')} : null;
+      return row ? gapScanRow(row) : null;
+    },
+    async listGapScans(extractionId) {
+      return (await sql.query('SELECT * FROM gapscans WHERE extraction_id = $1 ORDER BY created_at DESC', [extractionId])).map(gapScanRow);
     },
     async saveApproval(a) {
       await sql.query(`INSERT INTO match_approvals (key, eds_fingerprint, reference_id, source_id, target_id, approved_by, reason, at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)

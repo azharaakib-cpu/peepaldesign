@@ -56,6 +56,7 @@ test('hosted mode: an API-only instance and a worker share Postgres and S3, and 
     await apiInfra.queue.idle();
     const report = await json('GET', `/v1/gapscans/${(await json('GET', `/v1/jobs/${scan.jobId}`)).resultId}`);
     assert.ok(report.items.some((i: {name: string}) => i.name === 'Button'));
+    assert.deepEqual((await json('GET', `/v1/extractions/${job.resultId}/gapscans`)).map((r: {id: string}) => r.id), [report.id], 'listed from Postgres too');
   } finally {
     await api.close(); await worker.close(); await apiInfra.close(); await workerInfra.close(); await sql.close();
   }

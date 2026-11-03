@@ -33,6 +33,8 @@ CREATE INDEX IF NOT EXISTS members_user ON project_members(user_id);
 
 type Row = Record<string, unknown>;
 const text = (row: Row | undefined, column: string) => String(row?.[column] ?? '');
+const gapScanRow = (row: Row): GapScanRecord => ({id: text(row, 'id'), projectId: text(row, 'project_id'), extractionId: text(row, 'extraction_id'), referenceId: text(row, 'reference_id'), blobKey: text(row, 'blob_key'),
+  summary: JSON.parse(text(row, 'summary')) as Record<string, unknown>, createdAt: text(row, 'created_at'), updatedAt: text(row, 'updated_at')});
 
 export function createSqliteStore(path: string): Store {
   if (path !== ':memory:') mkdirSync(dirname(path), {recursive: true});
@@ -123,10 +125,12 @@ export function createSqliteStore(path: string): Store {
       db.prepare('INSERT OR REPLACE INTO gapscans (id, project_id, extraction_id, reference_id, blob_key, summary, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
         .run(record.id, record.projectId, record.extractionId, record.referenceId, record.blobKey, JSON.stringify(record.summary), record.createdAt, record.updatedAt);
     },
+    async listGapScans(extractionId) {
+      return (db.prepare('SELECT * FROM gapscans WHERE extraction_id = ? ORDER BY created_at DESC').all(extractionId) as Row[]).map(gapScanRow);
+    },
     async getGapScan(id) {
       const row = db.prepare('SELECT * FROM gapscans WHERE id = ?').get(id) as Row | undefined;
-      return row ? {id: text(row, 'id'), projectId: text(row, 'project_id'), extractionId: text(row, 'extraction_id'), referenceId: text(row, 'reference_id'), blobKey: text(row, 'blob_key'),
-        summary: JSON.parse(text(row, 'summary')) as Record<string, unknown>, createdAt: text(row, 'created_at'), updatedAt: text(row, 'updated_at')} : null;
+      return row ? gapScanRow(row) : null;
     },
     async saveApproval(a: MatchApproval) {
       db.prepare('INSERT OR REPLACE INTO match_approvals (key, eds_fingerprint, reference_id, source_id, target_id, approved_by, reason, at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')

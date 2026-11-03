@@ -5,6 +5,35 @@ const band = c => c >= 0.8 ? 'Confirmed' : c >= 0.5 ? 'Likely' : 'Inferred';
 const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
 const swatch = (hex, title, note) => el('figure', {class: 'swatch', style: 'margin:0'}, el('i', {style: `background:${hex}`, 'aria-hidden': 'true'}), el('div', {}, el('strong', {}, title), el('br'), el('code', {}, hex), note ? el('div', {class: 'muted'}, note) : null));
 
+// ── Tabs: one view at a time; the address keeps the tab (#foundations) so it can be shared or bookmarked ──
+const VIEWS = ['overview', 'foundations', 'components', 'documentation', 'deliver', 'migrate'];
+const tabs = [...document.querySelectorAll('.page-tabs [role="tab"]')];
+function showView(view, {focus = false, push = true} = {}) {
+  if (!VIEWS.includes(view)) view = 'overview';
+  for (const tab of tabs) {
+    const on = tab.dataset.view === view;
+    tab.setAttribute('aria-selected', String(on)); tab.tabIndex = on ? 0 : -1;
+    if (on && focus) tab.focus();
+  }
+  for (const v of VIEWS) $(`#view-${v}`).hidden = v !== view;
+  if (push) history.replaceState(null, '', view === 'overview' ? location.pathname + location.search : `#${view}`);
+}
+tabs.forEach((tab, i) => {
+  tab.addEventListener('click', () => showView(tab.dataset.view));
+  // Arrow keys move between tabs, as for any tab list.
+  tab.addEventListener('keydown', event => {
+    const step = {ArrowRight: 1, ArrowLeft: -1}[event.key];
+    if (step) { event.preventDefault(); showView(tabs[(i + step + tabs.length) % tabs.length].dataset.view, {focus: true}); }
+    if (event.key === 'Home' || event.key === 'End') { event.preventDefault(); showView(tabs[event.key === 'Home' ? 0 : tabs.length - 1].dataset.view, {focus: true}); }
+  });
+});
+document.addEventListener('click', event => {
+  const link = event.target.closest('[data-go]');
+  if (link) { event.preventDefault(); showView(link.dataset.go); scrollTo({top: 0}); }
+});
+addEventListener('hashchange', () => showView(location.hash.slice(1), {push: false}));
+showView(location.hash.slice(1), {push: false});
+
 async function load() {
   if (!id) { $('#subtitle').textContent = 'No extraction id in the link.'; return; }
   let eds, scales;
@@ -25,8 +54,15 @@ async function load() {
     stat(eds.quirks.length, 'findings'),
   );
 
+  $('#count-components').textContent = eds.components.length || '';
   const findings = [...eds.quirks].sort((a, b) => SEVERITY[a.severity] - SEVERITY[b.severity]);
-  $('#findings').replaceChildren(...(findings.length ? findings.map(q => el('div', {class: 'finding'},
+  const important = findings.filter(q => q.severity === 'major').length;
+  $('#findings-count').textContent = findings.length ? `${plural(findings.length, 'finding')}${important ? `, ${important} important` : ''}` : '';
+  const FIRST = 5;
+  $('#more-findings').hidden = findings.length <= FIRST;
+  $('#more-findings').textContent = `Show all ${findings.length}`;
+  $('#more-findings').onclick = () => { $('#findings').querySelectorAll('.finding[hidden]').forEach(f => { f.hidden = false; }); $('#more-findings').hidden = true; };
+  $('#findings').replaceChildren(...(findings.length ? findings.map((q, index) => el('div', {class: 'finding', hidden: index >= FIRST},
     el('span', {class: `pill ${q.severity}`}, q.severity === 'major' ? 'Important' : q.severity === 'minor' ? 'Worth a look' : 'Note'),
     el('div', {}, el('div', {}, q.summary), q.evidence.length ? el('details', {}, el('summary', {class: 'muted'}, `Evidence (${q.evidence.length})`),
       el('ul', {}, q.evidence.slice(0, 12).map(id => { const e = evidence.get(id); return el('li', {}, el('code', {}, e ? `${e.locator} — ${e.raw.slice(0, 160)}` : id)); }))) : null),
@@ -89,10 +125,25 @@ async function recommendations() {
   if (!id) return;
   try {
     const ranked = await api(`/v1/extractions/${id}/recommendations`);
+    if (ranked[0]) $('#next-migrate').textContent = `Closest fit: ${ranked[0].library} (${ranked[0].reason.charAt(0).toLowerCase()}${ranked[0].reason.slice(1)}). Priced component by component.`;
+    reports(ranked);
     $('#recs').replaceChildren(...ranked.map((r, i) => el('div', {class: 'rec'},
       el('div', {}, el('strong', {}, `${r.library} ${r.version}`), i === 0 ? el('span', {class: 'pill ok', style: 'margin-left:8px'}, 'Closest fit') : null, el('div', {class: 'muted'}, `${r.reason} · ${r.framework}`)),
       el('button', {class: i === 0 ? 'primary' : '', type: 'button', onclick: () => startScan(r.id)}, 'Run GapScan'))));
   } catch (error) { $('#recs').replaceChildren(el('p', {class: 'error'}, error.message)); }
+}
+// Reports already run on this extraction, so they can be reopened.
+async function reports(ranked) {
+  try {
+    const list = await api(`/v1/extractions/${id}/gapscans`), names = new Map(ranked.map(r => [r.id, `${r.library} ${r.version}`]));
+    $('#count-migrate').textContent = list.length || '';
+    $('#reports-card').hidden = !list.length;
+    $('#reports').replaceChildren(...list.map(r => {
+      const totals = r.summary?.totals, hours = totals?.available ? `${Math.round(totals.low)}–${Math.round(totals.high)} h` : 'Not estimated';
+      return el('li', {class: 'source'}, el('a', {href: `/app/gapscan.html?id=${r.id}`}, names.get(r.referenceId) ?? r.referenceId),
+        el('span', {class: 'muted'}, `${hours} · ${new Date(r.updatedAt).toLocaleDateString(undefined, {day: 'numeric', month: 'short', year: 'numeric'})}`));
+    }));
+  } catch {}
 }
 async function startScan(referenceId) {
   const box = $('#scan-log'); box.hidden = false; box.textContent = 'Starting…\n';
@@ -155,7 +206,10 @@ function objectBlock(object) {
 }
 async function objects() {
   if (!id) return;
-  try { aiEnabled = (await aiStatus).enabled; const list = await api(`/v1/extractions/${id}/objects`); $('#objects').replaceChildren(...list.map(objectBlock)); }
+  try { aiEnabled = (await aiStatus).enabled; const list = await api(`/v1/extractions/${id}/objects`); $('#objects').replaceChildren(...list.map(objectBlock));
+    const pct = Math.round(list.reduce((sum, o) => sum + o.completeness, 0) / Math.max(1, list.length) * 100);
+    $('#count-documentation').textContent = `${pct}%`;
+    $('#next-documentation').textContent = `${pct}% documented today across accessibility, guidelines, principles, tooling, content and brand. Drafts are ready to review and approve.`; }
   catch (error) { $('#objects').replaceChildren(el('p', {class: 'error'}, error.message)); }
 }
 objects();
@@ -264,4 +318,9 @@ $('#impact-form').addEventListener('submit', async event => {
 });
 impact();
 // The Figma-style library view of this extraction (also saved as a self-contained file with ?download=1).
-if (id) { $("#design-system").href = `/v1/extractions/${id}/design-system.html`; $("#figma-export").href = `/v1/extractions/${id}/figma-export.json`; }
+if (id) { $("#design-system").href = $("#design-system-components").href = `/v1/extractions/${id}/design-system.html`; $("#figma-export").href = `/v1/extractions/${id}/figma-export.json`; }
+// Figma: one card, two ways in.
+document.querySelectorAll('input[name="figma-mode"]').forEach(radio => radio.addEventListener('change', () => {
+  const mode = document.querySelector('input[name="figma-mode"]:checked').value;
+  $('#figma-library').hidden = mode !== 'library'; $('#figma-sync').hidden = mode !== 'sync';
+}));

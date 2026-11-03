@@ -39,6 +39,7 @@ export interface Store {
   listExtractions(projectId: string): Promise<ExtractionRecord[]>;   // newest first
   saveGapScan(record: GapScanRecord): Promise<void>;
   getGapScan(id: string): Promise<GapScanRecord | null>;
+  listGapScans(extractionId: string): Promise<GapScanRecord[]>;   // newest first
   saveApproval(approval: MatchApproval): Promise<void>;
   listApprovals(edsFingerprint: string, referenceId: string): Promise<MatchApproval[]>;
   ensureUser(email: string): Promise<User>;

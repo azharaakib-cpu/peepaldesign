@@ -448,6 +448,13 @@ export function buildApp({infra, handlers = {}, logger = false, heartbeatMs = HE
     return ranked.sort((a, b) => b.fit - a.fit || (a.complexity ?? 9) - (b.complexity ?? 9));
   });
 
+  // Reports already run on this extraction, newest first, so people can get back to them.
+  app.get('/v1/extractions/:id/gapscans', async (request, reply) => {
+    const {id} = IdParams.parse(request.params);
+    if (!await store.getExtraction(id)) return fail(reply, 404, 'Extraction not found.');
+    return (await store.listGapScans(id)).map(r => ({id: r.id, referenceId: r.referenceId, createdAt: r.createdAt, updatedAt: r.updatedAt, summary: r.summary}));
+  });
+
   app.post('/v1/gapscans', async (request, reply) => {
     const body = parse(StartGapScan, request.body, reply); if (!body) return reply;
     const extraction = await store.getExtraction(body.edsId);

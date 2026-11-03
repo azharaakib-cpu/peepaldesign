@@ -223,6 +223,8 @@ test('GapScan: recommend a reference, run the scan, adjust assumptions server-si
     const gapscanJob = (await h.json('GET', `/v1/jobs/${started.body.jobId}`)).body;
     assert.equal(gapscanJob.status, 'completed', JSON.stringify(gapscanJob.error));
     const reportId = gapscanJob.resultId;
+    assert.deepEqual((await h.json('GET', `/v1/extractions/${edsId}/gapscans`)).body.map((r: {id: string; referenceId: string}) => [r.id, r.referenceId]), [[reportId, 'polaris-13.9.5']], 'reports are listed on their extraction');
+    assert.equal((await h.json('GET', '/v1/extractions/nope/gapscans')).status, 404);
 
     const executive = (await h.json('GET', `/v1/gapscans/${reportId}`)).body;
     GapScanReport.parse(executive);
