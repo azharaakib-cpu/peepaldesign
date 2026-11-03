@@ -93,7 +93,15 @@ for (const ref of REFERENCE_SOURCES.filter(r => !wanted.size || wanted.has(r.id)
     .filter(c => ref.kind !== 'types' || !c.rawNames.some(n => /^(Internal|Pure|Wrap|Base)[A-Z]|(Context|Provider|Ref|Props)$/.test(n)))
     // Compound parts (DialogTitle, TableRow, MenuTrigger…) belong to their component; they are not separate adoptions.
     // Groups and lists stay: RadioGroup, TabList and ButtonGroup are the components people use.
-    .filter((c, _, all) => ref.kind !== 'types' || !c.rawNames.some(n => all.some(o => o !== c && o.rawNames.some(base => n.startsWith(base) && PART.test(n.slice(base.length))))));
+    .filter((c, _, all) => ref.kind !== 'types' || !c.rawNames.some(n => all.some(o => o !== c && o.rawNames.some(base => n.startsWith(base) && PART.test(n.slice(base.length))))))
+    // One component per file: the one named after the file (card.tsx → Card), else the file's first.
+    .filter((c, _, all) => {
+      if (!ref.onePerFile) return true;
+      const fileOf = (x: typeof c) => system.evidence.find(e => x.evidence.includes(e.id))?.locator.match(/([\w-]+)\.tsx/)?.[1] ?? '';
+      const file = fileOf(c), named = title(file).replace(/ /g, '');
+      const inFile = all.filter(o => fileOf(o) === file);
+      return inFile.some(o => o.rawNames[0] === named) ? c.rawNames[0] === named : inFile[0] === c;
+    });
   // Reference specimens: the library's own rules for each component on generated markup, plus the
   // custom properties those rules use, so the preview renders without the rest of the stylesheet.
   const declared = new Map(system.tokens.filter(t => t.path.startsWith('--')).map(t => [t.path, String(t.value)]));

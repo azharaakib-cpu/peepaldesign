@@ -3,6 +3,7 @@
 // props interfaces, then reads variants, sizes and states from the prop types.
 import ts from 'typescript';
 import type {Observation} from './types.ts';
+import {variantRecipes} from './recipes.ts';
 
 export type ComponentApi = {
   name: string; line: number;
@@ -110,7 +111,17 @@ export function componentApis(source: string, fileName: string): ComponentApi[] 
 }
 
 export function typescriptObservations(source: string, fileName: string): Observation[] {
-  return componentApis(source, fileName).map(c => ({
+  // Prop types and variant recipes describe the same components; a recipe adds the variants and styled states.
+  const apis = componentApis(source, fileName);
+  for (const recipe of variantRecipes(source, fileName)) {
+    const same = apis.find(a => a.name === recipe.name);
+    if (!same) { apis.push(recipe); continue; }
+    same.props = [...same.props, ...recipe.props.filter(p => !same.props.some(q => q.name === p.name))];
+    same.variants = [...new Set([...same.variants, ...recipe.variants])];
+    same.sizes = [...new Set([...same.sizes, ...recipe.sizes])];
+    same.states = [...new Set([...same.states, ...recipe.states])];
+  }
+  return apis.map(c => ({
     type: 'component' as const, channel: 'code_tokens' as const, name: c.name, variants: [...c.variants, ...c.sizes.map(s => `size=${s}`)], states: c.states,
     props: c.props.map(p => ({name: p.name, type: p.type, ...(p.values ? {values: p.values} : {})})), locator: `${fileName}:${c.line}`, raw: `${c.props.length} props`,
   }));

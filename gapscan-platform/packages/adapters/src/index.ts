@@ -18,3 +18,4 @@ export {componentApis, customElementApi, typescriptObservations} from './typescr
 export type {ComponentApi} from './typescript.ts';
 export {analyzePixels, decodeImage, imageAdapter, imageInfo, IMAGE_LIMITS} from './image.ts';
 export type {ImageAnalysis, ImageBox, ImageInfo, Pixels} from './image.ts';
+export {variantRecipes} from './recipes.ts';

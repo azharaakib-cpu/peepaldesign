@@ -8,8 +8,11 @@ test('every configured reference has a pinned, schema-valid snapshot with checks
   for (const summary of list) {
     const reference = (await loadReference(summary.id))!;
     assert.ok(reference.components.length >= 10, `${summary.id} has components`);
-    if (summary.kind === 'types') assert.ok(reference.components.filter(c => c.props?.length).length >= reference.components.length * 0.8, `${summary.id} components carry their props`);
-    assert.ok(reference.sources.every(s => /^[0-9a-f]{64}$/.test(s.sha256) && s.uri.startsWith('https://cdn.jsdelivr.net/npm/')), 'pinned CDN artifacts with checksums');
+    // Per-file libraries (shadcn) forward the native element's props, so most components declare none of their own.
+    const perFile = REFERENCE_SOURCES.find(r => r.id === summary.id)?.onePerFile;
+    if (summary.kind === 'types' && !perFile) assert.ok(reference.components.filter(c => c.props?.length).length >= reference.components.length * 0.8, `${summary.id} components carry their props`);
+    // Pinned: an exact npm version on jsDelivr, or a full 40-character commit on GitHub.
+    assert.ok(reference.sources.every(s => /^[0-9a-f]{64}$/.test(s.sha256) && (s.uri.startsWith('https://cdn.jsdelivr.net/npm/') || /^https:\/\/raw\.githubusercontent\.com\/[\w.-]+\/[\w.-]+\/[0-9a-f]{40}\//.test(s.uri))), `${summary.id}: pinned artifacts with checksums`);
     assert.ok(reference.components.every(c => c.category !== 'Utilities and tooling' && (summary.kind === 'types' || c.category !== 'Miscellaneous')), 'CSS noise is filtered; declared components are kept');
     assert.ok(reference.components.some(c => c.canonical === 'Button' && c.category === 'Actions'), `${summary.id} has a Button`);
   }
@@ -47,4 +50,15 @@ test('Material Design 3 buttons carry the five published button types', async ()
   const button = (await loadReference('material-web-2.3.0'))!.components.find(c => c.canonical === 'Button')!;
   assert.deepEqual(button.variants.map(v => v.name).sort(), ['elevated', 'filled', 'filled-tonal', 'outlined', 'text']);
   assert.ok(button.statesObserved.includes('disabled'));
+});
+
+test('shadcn/ui and Chakra read their variants from recipes, with the states their styles cover', async () => {
+  const shadcn = (await loadReference('shadcn-ui-2026-10'))!, chakra = (await loadReference('chakra-3.37.0'))!;
+  const button = (r: typeof shadcn) => r.components.find(c => c.canonical === 'Button')!;
+  assert.deepEqual(button(shadcn).variants.map(v => v.name), ['default', 'destructive', 'outline', 'secondary', 'ghost', 'link']);
+  assert.ok(['hover', 'focus-visible', 'disabled'].every(s => button(shadcn).statesObserved.includes(s)), 'from hover:, focus-visible: and disabled: classes');
+  assert.deepEqual(button(chakra).variants.map(v => v.name), ['solid', 'subtle', 'surface', 'outline', 'ghost', 'plain']);
+  assert.ok(button(chakra).statesObserved.includes('focus-visible'), 'from focusVisibleRing');
+  assert.ok(!shadcn.components.some(c => /Portal|Overlay|Trigger|Header|Content$/.test(c.rawNames[0]!)), 'one component per file, parts dropped');
+  assert.equal(shadcn.components.find(c => c.canonical === 'Sheet')?.category, 'Overlays');
 });

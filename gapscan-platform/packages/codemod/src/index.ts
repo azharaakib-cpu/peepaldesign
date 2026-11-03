@@ -47,8 +47,13 @@ export function buildPlan({report, source, reference, usage, binding}: PlanInput
     const imports = usageOf.get(item.name)?.imports.filter(m => m !== 'custom element') ?? [];
     if (imports.length) {
       // 'all': the package re-exports every component the reference read (Fluent's react-components).
-      const exportName = binding.package ? target.rawNames.find(n => binding.exports === 'all' ? /^[A-Z][A-Za-z0-9]*$/.test(n) : binding.exports?.includes(n)) ?? null : null;
-      const alreadyThere = binding.package !== undefined && imports.every(m => m === binding.package || m.startsWith(binding.package + '/'));
+      const exportName = binding.package || binding.modulePattern ? target.rawNames.find(n => binding.exports === 'all' ? /^[A-Z][A-Za-z0-9]*$/.test(n) : binding.exports?.includes(n)) ?? null : null;
+      // Per-file libraries (shadcn) import each component from its own module: Button → @/components/ui/button.
+      // The reference records which file each component came from (sonner.tsx holds Toaster).
+      const sourceFile = reference.evidence.find(e => target.evidence.includes(e.id))?.locator.match(/([\w-]+)\.[jt]sx?\b/)?.[1];
+      const fileOf = (n: string) => sourceFile ?? n.replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase();
+      const targetModule = binding.package ?? (binding.modulePattern && exportName ? binding.modulePattern.replace('{file}', fileOf(exportName)) : undefined);
+      const alreadyThere = targetModule !== undefined && imports.every(m => m === targetModule || m.startsWith(targetModule + '/'));
       if (exportName || alreadyThere) {
         const sourceOptions = optionsOf(component, 'variant'), targetOptions = optionsOf(target, 'variant');
         const options: OptionRule[] = sourceOptions.map(o => { const t = mapOption(o, targetOptions); return {prop: o.prop, value: o.value, toProp: t?.prop ?? null, toValue: t?.value ?? null}; });
@@ -57,7 +62,7 @@ export function buildPlan({report, source, reference, usage, binding}: PlanInput
           if (d.driver === 'prop_rename' && typeof d.before === 'string' && typeof d.after === 'string') props[d.before] = d.after;
           if (d.driver === 'prop_semantic' && typeof d.before === 'string') manualProps.push(d.before);
         }
-        const jsx: JsxRule = {names: [...(targetsFor([component])[0]?.tagNames ?? [])], modules: imports, package: exportName ? binding.package! : null, exportName,
+        const jsx: JsxRule = {names: [...(targetsFor([component])[0]?.tagNames ?? [])], modules: imports, package: exportName && targetModule ? targetModule : null, exportName,
           props, options, optionProps: [...new Set(options.map(o => o.prop))], manualProps,
           targetValues: Object.fromEntries((target.props ?? []).filter(p => p.values?.length).map(p => [p.name, p.values!]))};
         rule.jsx = jsx;

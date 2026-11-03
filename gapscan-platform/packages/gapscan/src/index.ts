@@ -17,7 +17,7 @@ const ITEM_ALIASES: Record<string, string> = {
   btn: 'button', 'btn group': 'button group', textfield: 'text field', 'text input': 'text field', input: 'text field', textarea: 'text area',
   img: 'image', sidenav: 'side nav', 'nav drawer': 'side nav', modal: 'dialog', snackbar: 'toast', flag: 'toast', switch: 'toggle', offcanvas: 'drawer', fab: 'floating action button',
   tag: 'chip', pill: 'chip', collapse: 'accordion', 'message bar': 'alert', notification: 'toast', combobox: 'autocomplete', 'search field': 'search box',
-  'number input': 'spin button', 'data grid': 'table', 'tab list': 'tabs', tab: 'tabs',
+  'number input': 'spin button', 'data grid': 'table', 'tab list': 'tabs', tab: 'tabs', sheet: 'drawer', sidebar: 'side nav',
 };
 const itemOf = (c: ComponentObservation) => { const alias = classifyItem({name: c.canonical, kind: 'component'}).matchedBy; return ITEM_ALIASES[alias] ?? alias; };
 function jaccard(a: readonly string[], b: readonly string[]): number {
@@ -27,8 +27,10 @@ function jaccard(a: readonly string[], b: readonly string[]): number {
 }
 
 // Common naming differences between libraries; used to tell a rename from a missing option.
+// A word may sit in several groups ("default" is the filled button in shadcn and Chakra, the neutral
+// one in Polaris and Ant Design, and the medium size): a pairing needs one shared group.
 const SYNONYMS: string[][] = [
-  ['primary', 'filled', 'solid', 'contained', 'brand'], ['secondary', 'outline', 'outlined', 'tonal', 'default'], ['tertiary', 'ghost', 'plain', 'text', 'link', 'subtle'],
+  ['primary', 'filled', 'solid', 'contained', 'brand', 'default'], ['secondary', 'outline', 'outlined', 'tonal', 'default'], ['tertiary', 'ghost', 'plain', 'text', 'link', 'subtle'],
   ['danger', 'critical', 'destructive', 'error', 'negative'], ['success', 'positive'], ['warning', 'caution'], ['info', 'informational', 'highlight'],
   ['sm', 'small', 'slim', 'compact'], ['md', 'medium', 'middle', 'default', 'regular'], ['lg', 'large', 'big'], ['xs', 'micro', 'extra small'], ['xl', 'extra large'],
   ['focus', 'focus visible', 'focused'], ['pressed', 'active'], ['hover', 'hovered'], ['loading', 'busy', 'pending'], ['checked', 'selected', 'on', 'toggled'],
@@ -38,12 +40,14 @@ const SYNONYMS: string[][] = [
   ['full width', 'block', 'fluid', 'stretch'], ['helper text', 'hint', 'description', 'help text'], ['label', 'title'],
 ];
 const optionName = (value: string) => words(value.replace(/^[\w ]+=/, '')).replace(/^is /, '');
-const synonymGroup = (value: string) => SYNONYMS.findIndex(group => group.includes(optionName(value)));
+const groupsOf = (value: string) => SYNONYMS.flatMap((group, i) => group.includes(optionName(value)) ? [i] : []);
 export function sameOption(a: string, b: string): 'same' | 'renamed' | null {
   if (optionName(a) === optionName(b)) return 'same';
-  const g = synonymGroup(a);
-  return g >= 0 && g === synonymGroup(b) ? 'renamed' : null;
+  const gb = groupsOf(b);
+  return groupsOf(a).some(g => gb.includes(g)) ? 'renamed' : null;
 }
+// outline/outlined, success/successful: one word grown from the other.
+const sameStem = (a: string, b: string) => { const x = optionName(a), y = optionName(b); return x.length >= 4 && y.length >= 4 && (x.startsWith(y) || y.startsWith(x)); };
 
 // The closest option in `targets`: an identical value wins over a synonym, and among equals the one
 // on the same (or a synonymous) prop. Bare values belong to `variant`. GapScan's diff and the codemod
@@ -55,7 +59,7 @@ export function pairOption(option: string, targets: readonly string[], bare = 'v
   for (const t of targets) {
     const kind = sameOption(option, t);
     if (!kind) continue;
-    const score = (kind === 'same' ? 4 : 2) + (propOf(t) === propOf(option) || sameOption(propOf(t), propOf(option)) ? 1 : 0);
+    const score = (kind === 'same' ? 4 : sameStem(option, t) ? 3 : 2) + (propOf(t) === propOf(option) || sameOption(propOf(t), propOf(option)) ? 1 : 0);
     if (score > bestScore) { best = {option: t, kind}; bestScore = score; }
   }
   return best;
@@ -112,7 +116,7 @@ export function diffComponents(source: ComponentObservation, target: ComponentOb
   };
   compare(source.variants.map(v => v.name), target.variants.map(v => v.name), 'variants', 'Style');
   // A target with no size options has one default size: your medium/default size maps to it.
-  compare(target.sizes.length ? source.sizes : source.sizes.filter(s => synonymGroup(s) !== SYNONYMS.findIndex(g => g.includes('medium'))), target.sizes, 'sizes', 'Size');
+  compare(target.sizes.length ? source.sizes : source.sizes.filter(s => !groupsOf(s).includes(SYNONYMS.findIndex(g => g.includes('medium')))), target.sizes, 'sizes', 'Size');
   // States you rely on that the target lacks must be built; states the target adds come with it.
   // Hover, focus and pressed are styling: a reference read from type declarations cannot show them,
   // so they are compared only when the reference recorded at least one of them.
