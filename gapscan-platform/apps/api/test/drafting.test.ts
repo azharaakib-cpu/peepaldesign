@@ -78,6 +78,7 @@ test('a drafted section replaces the template, waits for approval, and can be di
     assert.match(section.content, /WCAG 2\.2 AA/);
     assert.equal(section.provenance, 'drafted');
     assert.deepEqual(section.draftedBy?.openQuestions, ['AA or AAA?']);
+    assert.match(section.draftedBy?.original ?? '', /WCAG 2\.1 level AA/, 'GapScan\'s own text is kept for comparison');
     assert.equal(drafted.completeness, before.completeness, 'an unapproved draft counts for nothing');
 
     const approved = (await h.json('PUT', `/v1/extractions/${h.edsId}/objects/accessibility/sections/target/approval`, {by: 'pm@example.com'})).body;

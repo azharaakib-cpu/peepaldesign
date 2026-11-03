@@ -167,7 +167,8 @@ export const ObjectSection = z.object({
   approval: z.object({by: z.string(), at: isoDate}).optional(),
   stale: z.boolean().optional(),
   // Written by a language model at a person's request; counts for nothing until approved.
-  draftedBy: z.object({model: z.string(), at: isoDate, openQuestions: z.array(z.string())}).optional(),
+  // `original` is GapScan's own text that the draft replaced, so reviewers can compare.
+  draftedBy: z.object({model: z.string(), at: isoDate, openQuestions: z.array(z.string()), original: z.string().optional()}).optional(),
 });
 export const ArchitecturalObject = z.object({
   kind: ObjectKind, title: z.string(), completeness: unit, edsId: id, sections: z.array(ObjectSection),

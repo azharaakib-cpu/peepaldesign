@@ -168,7 +168,7 @@ export function buildObjects(eds: ExtractedDesignSystem, approvals: Record<strin
     const sections = BUILDERS[kind](eds).map((s): ObjectSection => {
       const draft = drafts[`${kind}:${s.id}`];
       return draft && isDraftable(s) ? {...s, content: draft.content, provenance: 'drafted', evidence: [...new Set([...s.evidence, ...draft.evidence])],
-        draftedBy: {model: draft.model, at: draft.at, openQuestions: draft.openQuestions}} : s;
+        draftedBy: {model: draft.model, at: draft.at, openQuestions: draft.openQuestions, original: s.content}} : s;
     }).map(s => {
       const approval = approvals[`${kind}:${s.id}`];
       if (!approval) return s;

@@ -77,9 +77,18 @@
 
   <!-- Documentation: the six objects a complete system documents. -->
   <div class="view" id="view-documentation" role="tabpanel" aria-labelledby="tab-documentation" hidden>
-    <section class="card" aria-labelledby="objects-title"><h2 id="objects-title">System completeness</h2><p class="muted">What a complete design system documents, and how much of it exists today. Drafts only count once someone approves them.</p>
-      <div id="reviewer-row"><label for="reviewer">Your name or email (for approvals)</label><input id="reviewer" type="text" autocomplete="email" placeholder="you@company.com"></div>
-      <div id="objects" style="margin-top:12px"></div></section>
+    <section class="card docs-card" aria-labelledby="objects-title">
+      <div class="card-head">
+        <div><h2 id="objects-title">System completeness</h2>
+          <p class="muted docs-intro">What a complete design system documents, and how much of it exists today. Drafts only count once someone approves them.</p></div>
+        <div class="segmented" role="group" aria-label="Show">
+          <button type="button" data-filter="all" aria-pressed="true">All sections</button>
+          <button type="button" data-filter="review" aria-pressed="false">Needs approval <span class="tab-count" id="review-count"></span></button>
+        </div>
+      </div>
+      <div id="reviewer-row" hidden><label for="reviewer">Your name or email, recorded with each approval</label><input id="reviewer" type="text" autocomplete="email" placeholder="you@company.com"></div>
+      <div class="docs" id="objects"><p class="muted">Loading…</p></div>
+    </section>
   </div>
 
   <!-- Deliver: files for code, Figma, brand assets. -->
