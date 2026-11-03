@@ -27,6 +27,7 @@ import {approvalKey, computeReport, createGapScanHandler, loadExtraction, loadGa
 import {codemodPlan, createCodemodHandler, loadCodemodRun} from './codemod-job.ts';
 import {buildScript} from '@gapscan/codemod';
 import {isVisitor, registerAuth} from './auth.ts';
+import {missingItems} from './missing.ts';
 import type {AuthConfig} from './auth.ts';
 import {createUrlGuard, publicUrl, UnsafeUrlError, createPinnedResolver} from './url-safety.ts';
 import {lookup} from 'node:dns/promises';
@@ -280,6 +281,11 @@ export function buildApp({infra, handlers = {}, logger = false, heartbeatMs = HE
     const project = await store.getProject(record.projectId), host = eds.sources.map(s => { try { return new URL(s.uri).hostname.replace(/^www\./, ''); } catch { return ''; } }).find(Boolean);
     return buildDesignSystem(eds, scales ? JSON.parse(scales.toString('utf8')) : {}, host ?? project?.name ?? 'Design system');
   };
+  // Commonly expected components and foundations this extraction didn't find, so people can add them.
+  app.get('/v1/extractions/:id/missing', async (request, reply) => {
+    const eds = await loadExtraction(store, blobs, IdParams.parse(request.params).id);
+    return eds ? missingItems(eds) : fail(reply, 404, 'Extraction not found.');
+  });
   app.get('/v1/extractions/:id/design-system', async (request, reply) => (await designSystem(IdParams.parse(request.params).id)) ?? fail(reply, 404, 'Extraction not found.'));
   // Export to Figma: a build plan the GapScan Importer plugin applies inside Figma. GapScan itself never writes to Figma.
   app.get('/v1/extractions/:id/figma-export.json', async (request, reply) => {

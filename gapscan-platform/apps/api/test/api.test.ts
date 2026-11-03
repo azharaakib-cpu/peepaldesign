@@ -374,3 +374,22 @@ test('projects: listed newest activity first with what is in them, and renamed',
     assert.equal((await h.json('PATCH', '/v1/projects/nope', {name: 'x'})).status, 404);
   } finally { await h.close(); }
 });
+
+test('typefaces set without a size still count, and what is missing is listed so people can add it', async () => {
+  const h = await harness();
+  try {
+    await h.json('POST', `/v1/projects/${h.project.id}/sources`, {kind: 'code', name: 'added.css', content: ':root { --color-brand: #7C3AED; }\nbody { font-family: Inter, sans-serif; }\nh1, h2, h3 { font-family: "Playfair Display", serif; }\n.btn { padding: 8px 16px; background: var(--color-brand); }'});
+    const {jobId} = (await h.json('POST', `/v1/projects/${h.project.id}/extractions`)).body;
+    await h.infra.queue.idle();
+    const edsId = (await h.json('GET', `/v1/jobs/${jobId}`)).body.resultId;
+    const eds = (await h.json('GET', `/v1/extractions/${edsId}?include=full`)).body;
+    const family = (role: string) => eds.tokens.find((t: {path: string}) => t.path === `font.family.${role}`)?.value;
+    assert.equal(family('body'), 'Inter');
+    assert.equal(family('heading'), 'Playfair Display');
+    const missing = (await h.json('GET', `/v1/extractions/${edsId}/missing`)).body;
+    assert.ok(!missing.components.includes('Button'), 'a .btn counts as a Button');
+    assert.ok(missing.components.includes('Checkbox'));
+    assert.ok(!missing.foundations.includes('Typefaces') && !missing.foundations.includes('Colours'));
+    assert.equal((await h.json('GET', '/v1/extractions/nope/missing')).status, 404);
+  } finally { await h.close(); }
+});

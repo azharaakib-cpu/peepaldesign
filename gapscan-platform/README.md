@@ -99,6 +99,7 @@ review the result, then compare it against a reference system.
 | `PUT /v1/gapscans/:id/matches/:sourceId` `{targetId, by, reason}` | Reviewer approval; tied to the extraction fingerprint and reference version |
 | `GET /v1/gapscans/:id/items/:itemId/projection` | Projected after-preview: the reference's CSS with your role colours |
 | `GET /v1/extractions/:id/gapscans` | Reports already run on an extraction, newest first |
+| `GET /v1/extractions/:id/missing` | Commonly expected components (Button, Checkbox, Modal…) and foundations (colours, typefaces, type sizes, spacing, corner radius, shadows) this extraction didn't find, matched with GapScan's own classifier, so people can add them |
 | `POST /v1/extractions/:id/book` | Starts a `render` job for the design-system book: an A4 PDF of the laid-out system plus approved documentation |
 | `GET /v1/admin/design-systems`, `GET /v1/admin/activity`, `GET /v1/admin/settings` | Admin only: every design system with its owner, the latest 100 jobs with failures, and how this GapScan is set up (never secrets) |
 | `GET /app/` | The app. For people using GapScan: home (one start box and your design systems), `system.html` (the result: Export, Documents, Migrate and the laid-out system), `export.html`, `documents.html`, `migrate.html`, `gapscan.html` (a report), `tools.html` (brand assets). For admins: `admin.html` and `review.html` (full extraction detail). |

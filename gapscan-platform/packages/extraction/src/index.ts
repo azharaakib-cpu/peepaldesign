@@ -210,9 +210,14 @@ export function assembleSystem(inputs: readonly AssetResult[], external: readonl
   }
   for (const role of ['heading', 'body', 'display'] as const) {
     const declared = fonts.find(f => f.o.role === role && f.o.family && DECLARED_CHANNELS.has(f.o.channel));
-    const family = declared?.o.family.split(',')[0]?.replace(/['"]/g, '').trim() ?? (role === 'body' ? type?.bodyFamily ?? type?.families[0] : undefined);
+    // A typeface set on the page itself or on top-level headings, even in a rule with no size.
+    const BY_SELECTOR = {body: /(^|,)\s*(html|body|:root)\s*(,|$)/, heading: /(^|,)\s*h[1-3]\s*(,|$)/, display: null}[role];
+    const styled = BY_SELECTOR ? fonts.find(f => f.o.family && f.o.selector && BY_SELECTOR.test(f.o.selector)) : undefined;
+    const clean = (value: string) => value.split(',')[0]?.replace(/['"]/g, '').trim() || undefined;
+    const family = declared ? clean(declared.o.family) : (role === 'body' ? type?.bodyFamily ?? type?.families[0] : undefined) ?? (styled ? clean(styled.o.family) : undefined);
+    const source = declared ?? (family && styled && clean(styled.o.family) === family ? styled : undefined);
     if (family) tokens.push({id: `tok:family:${role}`, tier: 'semantic', path: `font.family.${role}`, type: 'fontFamily', value: family, status: 'resolved',
-      evidence: declared ? [declared.evidenceId] : [], confidence: declared ? confidence(declared.o.channel, 1, 1) : 0.4, usageCount: fonts.filter(f => f.o.family.includes(family)).length});
+      evidence: source ? [source.evidenceId] : [], confidence: declared ? confidence(declared.o.channel, 1, 1) : source ? 0.6 : 0.4, usageCount: fonts.filter(f => f.o.family.includes(family)).length});
   }
   const radius = radiusScale(pick('radius').map(x => x.o.value));
   for (const r of radius) tokens.push({id: `tok:radius:${r.name}`, tier: 'global', path: `radius.${r.name}`, type: 'radius', value: r.px === 'full' ? '9999px' : `${r.px}px`, status: 'resolved', evidence: [], confidence: 0.6, usageCount: 0});

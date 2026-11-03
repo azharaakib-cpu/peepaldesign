@@ -382,3 +382,23 @@ details > summary:has(.inline-h2) { cursor: pointer; }
 .settings dt { font-weight: 600; } .settings dd { margin: 0; color: var(--text-secondary); }
 .admin-table td.wrap { white-space: normal; max-width: 420px; }
 .more-tools { margin: -14px 0 24px; font-size: 14px; }
+
+/* Add what we missed */
+.add-missing { margin-bottom: 28px; }
+.chips-label { margin: 0 0 8px; font-weight: 600; font-size: 14px; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+.chip { border-radius: 999px; padding: 5px 12px; font-size: 13px; border-style: dashed; }
+.chip:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
+.add-tabs { margin-bottom: 12px; }
+.add-panel { display: grid; gap: 4px; }
+.add-row { display: flex; align-items: end; gap: 12px; flex-wrap: wrap; }
+.add-row label { margin: 0; display: grid; gap: 6px; }
+.add-row input[type="text"] { width: 260px; }
+.add-or { padding-bottom: 10px; }
+.add-upload { margin: 0; font-weight: 500; }
+.token-rows { display: grid; gap: 8px; margin-bottom: 8px; }
+.token-row { display: grid; grid-template-columns: 150px 1fr 28px 1.4fr auto; gap: 8px; align-items: center; }
+.token-row select { font: inherit; padding: 8px; border-radius: 8px; border: 1px solid var(--line-strong); background: var(--surface-soft); color: var(--text); }
+.token-swatch { width: 28px; height: 28px; border-radius: 6px; border: 1px solid var(--line-strong); }
+#pending-wrap h3 { margin-top: 18px; }
+.update-row { margin-top: 16px; }
