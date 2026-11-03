@@ -349,7 +349,7 @@ export function buildApp({infra, handlers = {}, logger = false, heartbeatMs = HE
     const eds = await loadExtraction(store, blobs, IdParams.parse(request.params).id);
     return eds ? buildBrandKit(eds, String((request.query as {name?: string}).name ?? 'Your brand').slice(0, 80)) : fail(reply, 404, 'Extraction not found.');
   });
-  const StartRender = z.object({template: z.string().refine(id => id in TEMPLATES, 'Unknown template.'), brandName: z.string().trim().max(80).optional(), data: z.record(z.string(), z.string().max(1200)).default({})});
+  const StartRender = z.object({template: z.string().refine(id => id in TEMPLATES, 'Unknown template.'), brandName: z.string().trim().max(80).optional(), data: z.record(z.string(), z.string().max(4000)).default({})});
   app.post('/v1/extractions/:id/assets', async (request, reply) => {
     const {id} = IdParams.parse(request.params), extraction = await store.getExtraction(id);
     if (!extraction) return fail(reply, 404, 'Extraction not found.');

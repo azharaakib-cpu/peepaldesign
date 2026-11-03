@@ -139,10 +139,12 @@ objects();
 
 // Brand assets: template fields are rendered from the server's template list.
 let templates = [];
-const FIELD_LABELS = {name: 'Name', role: 'Role', email: 'Email', phone: 'Phone', website: 'Website', title: 'Title', subtitle: 'Subtitle', points: 'Points (separate with ;)', body: 'Message', cta: 'Button label', url: 'Button link (https://…)'};
+const FIELD_LABELS = {address: 'Address', name: 'Name', role: 'Role', email: 'Email', phone: 'Phone', website: 'Website', title: 'Title', subtitle: 'Subtitle', points: 'Points (separate with ;)', body: 'Message', cta: 'Button label', url: 'Button link (https://…)'};
 function assetFields() {
   const template = templates.find(t => t.id === $('#asset-template').value);
-  $('#asset-fields').replaceChildren(...(template?.fields ?? []).map(f => el('label', {}, FIELD_LABELS[f] || f, el('input', {type: 'text', name: `field-${f}`, maxlength: f === 'body' || f === 'points' ? '1200' : '160'}))));
+  // A letter or newsletter body gets a multi-line box; everything else is one line.
+  $('#asset-fields').replaceChildren(...(template?.fields ?? []).map(f => el('label', {}, FIELD_LABELS[f] || f,
+    f === 'body' ? el('textarea', {name: `field-${f}`, maxlength: '4000', rows: '5'}) : el('input', {type: 'text', name: `field-${f}`, maxlength: f === 'points' ? '1200' : '160'}))));
 }
 async function assets() {
   if (!id) return;
