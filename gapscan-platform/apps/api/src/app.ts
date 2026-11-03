@@ -26,7 +26,7 @@ import {buildBrandKit, TEMPLATES} from '@gapscan/assets';
 import {approvalKey, computeReport, createGapScanHandler, loadExtraction, loadGapScan, saveReport, summarize} from './gapscan-job.ts';
 import {codemodPlan, createCodemodHandler, loadCodemodRun} from './codemod-job.ts';
 import {buildScript} from '@gapscan/codemod';
-import {registerAuth} from './auth.ts';
+import {isVisitor, registerAuth} from './auth.ts';
 import type {AuthConfig} from './auth.ts';
 import {createUrlGuard, publicUrl, UnsafeUrlError, createPinnedResolver} from './url-safety.ts';
 import {lookup} from 'node:dns/promises';
@@ -111,8 +111,7 @@ export function buildApp({infra, handlers = {}, logger = false, heartbeatMs = HE
   });
 
   // Your projects (all of them when accounts are off), newest activity first, with what's in each.
-  app.get('/v1/projects', async request => {
-    const projects = request.user ? await store.listProjectsFor(request.user.id) : await store.listProjects();
+  const projectSummaries = async (projects: Awaited<ReturnType<typeof store.listProjects>>) => {
     const listed = await Promise.all(projects.map(async project => {
       const [extractions, sources] = await Promise.all([store.listExtractions(project.id), store.listSources(project.id)]);
       const latest = extractions.reduce<typeof extractions[number] | null>((a, b) => !a || b.createdAt > a.createdAt ? b : a, null);
@@ -121,6 +120,15 @@ export function buildApp({infra, handlers = {}, logger = false, heartbeatMs = HE
         lastActivity: [project.createdAt, latest?.createdAt, ...sources.map(s => s.createdAt)].filter((d): d is string => Boolean(d)).sort().at(-1)!};
     }));
     return listed.sort((a, b) => b.lastActivity.localeCompare(a.lastActivity));
+  };
+  app.get('/v1/projects', async request => projectSummaries(request.user ? await store.listProjectsFor(request.user.id) : await store.listProjects()));
+  // Admin: every design system on this GapScan, with who it belongs to (visitors stay anonymous).
+  app.get('/v1/admin/design-systems', async () => {
+    const listed = await projectSummaries(await store.listProjects());
+    return Promise.all(listed.map(async p => {
+      const owner = (await store.listMembers(p.id)).find(m => m.role === 'owner');
+      return {...p, owner: owner ? (isVisitor(owner) ? 'Visitor' : owner.email) : null};
+    }));
   });
   app.patch('/v1/projects/:id', async (request, reply) => {
     const {id} = IdParams.parse(request.params);

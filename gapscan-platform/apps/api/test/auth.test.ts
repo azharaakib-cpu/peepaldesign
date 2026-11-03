@@ -10,11 +10,11 @@ import type {Mail} from '../src/mailer.ts';
 
 const PUBLIC = 'https://gapscan.example.com';
 
-async function harness(options: {allowedDomains?: string[]; testUsers?: string[]} = {}) {
+async function harness(options: {allowedDomains?: string[]; testUsers?: string[]; visitors?: boolean; admins?: string[]} = {}) {
   const dataDir = await mkdtemp(join(tmpdir(), 'gapscan-auth-'));
   const infra = await createInfra({...configFromEnv({}), dataDir});
   const outbox: Mail[] = [];
-  const app = buildApp({infra, auth: {mode: 'magic-link', publicUrl: new URL(PUBLIC), mailer: {send: async mail => { outbox.push(mail); }}, allowedDomains: options.allowedDomains ?? [], ...(options.testUsers ? {testUsers: options.testUsers} : {})}});
+  const app = buildApp({infra, auth: {mode: 'magic-link', publicUrl: new URL(PUBLIC), mailer: {send: async mail => { outbox.push(mail); }}, allowedDomains: options.allowedDomains ?? [], ...(options.testUsers ? {testUsers: options.testUsers} : {}), ...(options.visitors ? {visitors: true} : {}), ...(options.admins ? {admins: options.admins} : {})}});
   const call = async (method: string, url: string, {cookie, payload, origin, from}: {cookie?: string; payload?: object; origin?: string; from?: string} = {}) => {
     const r = await app.inject({method: method as 'GET', url, ...(from ? {remoteAddress: from} : {}), headers: {...(cookie ? {cookie} : {}), ...(origin ? {origin} : {})}, ...(payload ? {payload} : {})});
     return {status: r.statusCode, body: /json/.test(String(r.headers['content-type'])) ? JSON.parse(r.body) : r.body, cookie: String(r.headers['set-cookie'] ?? '')};
@@ -155,5 +155,43 @@ test('test accounts: local development only, listed on the sign-in page, one cli
     const cookie = signedIn.cookie.split(';')[0]!;
     assert.equal((await h.call('GET', '/v1/auth/me', {cookie})).body.user.email, 'owner@test.local');
     assert.equal((await h.call('POST', '/v1/projects', {cookie, payload: {name: 'Test'}})).status, 201);
+  } finally { await h.close(); }
+});
+
+test('visitor mode: no sign-in, a private space per browser, and only admins sign in to see everything', async () => {
+  assert.throws(() => authSettingsFromEnv({GAPSCAN_AUTH: 'visitor', GAPSCAN_PUBLIC_URL: PUBLIC}), /needs GAPSCAN_ADMIN_EMAILS/);
+  const settings = authSettingsFromEnv({GAPSCAN_AUTH: 'visitor', GAPSCAN_PUBLIC_URL: PUBLIC, GAPSCAN_ADMIN_EMAILS: 'Admin@Example.com'});
+  assert.ok(settings.mode === 'magic-link' && settings.visitors && settings.admins[0] === 'admin@example.com');
+
+  const h = await harness({visitors: true, admins: ['admin@example.com']});
+  try {
+    assert.equal((await h.call('GET', '/app/')).cookie, '', 'reading a page creates nothing');
+    const first = await h.call('GET', '/v1/auth/me');
+    assert.equal(first.status, 200);
+    assert.equal(first.body.anonymous, true);
+    assert.equal(first.body.admin, false);
+    assert.match(first.body.user.email, /@visitors\.invalid$/);
+    const ana = first.cookie.split(';')[0]!;
+    const project = (await h.call('POST', '/v1/projects', {cookie: ana, payload: {name: 'Ana system'}})).body;
+    assert.deepEqual((await h.call('GET', '/v1/projects', {cookie: ana})).body.map((p: {name: string}) => p.name), ['Ana system']);
+
+    // Another browser: its own empty space, and Ana's project reads as not found.
+    const ben = (await h.call('GET', '/v1/projects')).cookie.split(';')[0]!;
+    assert.ok(ben && ben !== ana);
+    assert.deepEqual((await h.call('GET', '/v1/projects', {cookie: ben})).body, []);
+    assert.equal((await h.call('GET', `/v1/projects/${project.id}`, {cookie: ben})).status, 404);
+    assert.equal((await h.call('GET', '/v1/admin/design-systems', {cookie: ben})).status, 403);
+    assert.equal((await h.call('POST', `/v1/projects/${project.id}/members`, {cookie: ana, payload: {email: 'friend@example.com'}})).status, 403, 'no sharing without accounts');
+
+    // Only admins get sign-in links.
+    assert.equal((await h.call('POST', '/v1/auth/link', {payload: {email: 'someone@example.com'}})).status, 202);
+    assert.equal(h.outbox.length, 0, 'same answer, no email');
+    assert.equal((await h.call('GET', '/v1/auth/providers')).body.adminOnly, true);
+    const admin = await h.signIn('admin@example.com');
+    const me = (await h.call('GET', '/v1/auth/me', {cookie: admin.cookie})).body;
+    assert.deepEqual([me.admin, me.anonymous], [true, false]);
+    const all = (await h.call('GET', '/v1/admin/design-systems', {cookie: admin.cookie})).body;
+    assert.deepEqual(all.map((p: {name: string; owner: string}) => [p.name, p.owner]), [['Ana system', 'Visitor']], 'visitors stay anonymous');
+    assert.equal((await h.call('GET', `/v1/projects/${project.id}`, {cookie: admin.cookie})).status, 200, 'admins can open any project');
   } finally { await h.close(); }
 });

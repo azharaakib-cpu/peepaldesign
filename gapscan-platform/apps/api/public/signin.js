@@ -17,7 +17,13 @@ const SSO_ERRORS = {
   unknown: 'That sign-in option isn’t set up here.',
 };
 if (ssoError) { $('#sso-error').textContent = SSO_ERRORS[ssoError] ?? SSO_ERRORS.provider; $('#sso-error').hidden = false; }
-fetch('/v1/auth/providers').then(r => r.json()).then(({emailLinks, providers, testUsers}) => {
+fetch('/v1/auth/providers').then(r => r.json()).then(({emailLinks, providers, testUsers, adminOnly}) => {
+  if (adminOnly) {
+    setCrumbs([{label: 'Admin sign-in'}]);
+    $('h1').textContent = 'Admin sign-in';
+    $('#lead').textContent = 'Only GapScan admins sign in. Everyone else can use GapScan without an account.';
+    $('#lead').after(el('p', {}, el('a', {href: '/app/'}, 'Go to GapScan')));
+  }
   if (testUsers?.length) showTestUsers(testUsers);
   if (providers?.length) {
     $('#sso').replaceChildren(...providers.map(p => el('a', {class: 'button sso-button', href: `/v1/auth/sso/${encodeURIComponent(p.id)}/start`}, `Continue with ${p.name}`)),

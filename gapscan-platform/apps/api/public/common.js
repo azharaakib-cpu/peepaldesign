@@ -10,6 +10,7 @@ function el(tag, attrs = {}, ...children) {
   return node;
 }
 async function api(path, options = {}) {
+  await sessionReady;   // the first visit gets its visitor cookie before anything else is asked for
   const response = await fetch(path, {...options, headers: {'content-type': 'application/json', ...(options.headers || {})}});
   const body = response.status === 204 ? null : await response.json().catch(() => null);
   if (response.status === 401 && !location.pathname.endsWith('/signin.html')) { location.href = signinUrl(); throw new Error('Sign in first.'); }
@@ -43,15 +44,18 @@ async function crumbsFor(projectId, ...rest) {
   return project;
 }
 
-// With accounts on, the bar shows who is signed in. `whoami` resolves to the user, or null when accounts are off.
-const whoami = (async () => {
-  if (location.pathname.endsWith('/signin.html')) return null;
-  const me = await fetch('/v1/auth/me').then(r => r.status === 401 ? (location.href = signinUrl(), null) : r.json()).catch(() => null);
-  const user = me?.user ?? null;
-  if (user) appBar.querySelector('.appbar-end').prepend(el('div', {class: 'account'}, el('span', {class: 'muted account-email', title: user.email}, user.email),
+// Who is here: `me` resolves to {user, anonymous, admin} (user null when accounts are off) and `whoami` to the user.
+// Visitors (no sign-in) see nothing in the bar; signed-in people see their email; admins also get the Admin link.
+const me = location.pathname.endsWith('/signin.html') ? Promise.resolve({user: null})
+  : fetch('/v1/auth/me').then(r => r.status === 401 ? (location.href = signinUrl(), {user: null}) : r.json()).catch(() => ({user: null}));
+var sessionReady = me.then(() => {}, () => {});
+const whoami = me.then(info => {
+  const user = info?.user ?? null, end = appBar.querySelector('.appbar-end');
+  if (info?.admin) end.prepend(el('a', {class: 'admin-link', href: '/app/admin.html'}, 'Admin'));
+  if (user && !info.anonymous) end.prepend(el('div', {class: 'account'}, el('span', {class: 'muted account-email', title: user.email}, user.email),
     el('button', {type: 'button', class: 'quiet', onclick: async () => { await fetch('/v1/auth/logout', {method: 'POST'}); location.href = '/app/signin.html#signed-out'; }}, 'Sign out')));
   return user;
-})();
+});
 // Drafting with Claude is on only when the server says so; buttons stay hidden otherwise.
 const aiStatus = location.pathname.endsWith('/signin.html') ? Promise.resolve({enabled: false}) : fetch('/v1/ai').then(r => r.ok ? r.json() : {enabled: false}).catch(() => ({enabled: false}));
 // Starts a job and resolves when it completes; progress messages go to `onProgress`.

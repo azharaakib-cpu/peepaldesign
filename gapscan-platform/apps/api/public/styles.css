@@ -295,3 +295,10 @@ details.original > summary { cursor: pointer; }
 #optional-note { margin: 12px 0 0; }
 @media (max-width: 1000px) { .attention { grid-template-columns: 1fr; } }
 @media (max-width: 760px) { .report-layout { grid-template-columns: 1fr; } .report-side { position: static; order: -1; } }
+
+/* Admin */
+.admin-link { font-size: 14px; font-weight: 600; text-decoration: none; padding: 6px 10px; border-radius: 8px; border: 1px solid var(--line-strong); color: var(--text); }
+.admin-link:hover { background: var(--surface-soft); }
+.admin-table td, .admin-table th { white-space: nowrap; }
+.admin-table td:first-child { white-space: normal; }
+input[type="search"] { font: inherit; color: var(--text); background: var(--surface-soft); border: 1px solid var(--line-strong); border-radius: 8px; padding: 7px 11px; min-width: 260px; }

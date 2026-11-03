@@ -110,13 +110,14 @@ review the result, then compare it against a reference system.
 | `GAPSCAN_QUEUE` | `in-process`, or `postgres` with a Postgres store | The Postgres queue is shared by every instance: one claim per job (`FOR UPDATE SKIP LOCKED`), heartbeats, and a job whose worker stops is failed as retryable after 60 s |
 | `GAPSCAN_BLOBS` | `fs` | `s3` with `GAPSCAN_S3_BUCKET`, `GAPSCAN_S3_REGION`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` (and `AWS_SESSION_TOKEN`). `GAPSCAN_S3_ENDPOINT` and `GAPSCAN_S3_PATH_STYLE=1` for R2 or MinIO; `GAPSCAN_S3_PREFIX` to share a bucket. |
 | `GAPSCAN_CONCURRENCY` | `2` | Jobs this instance runs at once. With the Postgres queue, `0` makes an API-only instance. |
-| `GAPSCAN_AUTH` | `off` locally; required when hosted | `magic-link` turns on accounts. Hosted mode (Postgres) refuses to start until this is set, so a deployment can't go out open by accident; `off` is allowed when you put it behind your own sign-in. |
+| `GAPSCAN_AUTH` | `off` locally; required when hosted | `visitor`: people use GapScan without signing in, each browser in its own private space, and only admins sign in (needs `GAPSCAN_ADMIN_EMAILS`). `magic-link` turns on accounts for everyone. Hosted mode (Postgres) refuses to start until this is set, so a deployment can't go out open by accident; `off` is allowed when you put it behind your own sign-in. |
 | `GAPSCAN_PUBLIC_URL` | unset | The address people open (`https://gapscan.example.com`). Used for sign-in links, the cross-site check and the `Secure` cookie flag. |
 | `GAPSCAN_MAIL` | `log` locally, `smtp` hosted | `smtp` with `GAPSCAN_SMTP_URL` (for example `smtps://user:pass@smtp.postmarkapp.com:465`) and `GAPSCAN_MAIL_FROM`. `log` prints links to the server console and is refused when hosted. |
 | `GAPSCAN_SSO_GOOGLE_CLIENT_ID`, `…_SECRET` | unset | Adds "Continue with Google". Redirect URI: `<GAPSCAN_PUBLIC_URL>/v1/auth/sso/google/callback` |
 | `GAPSCAN_SSO_MICROSOFT_CLIENT_ID`, `…_SECRET`, `…_TENANT` | unset | Adds "Continue with Microsoft" for one directory (tenant ID required; `common` is refused because nobody vouches for those email claims). `GAPSCAN_SSO_MICROSOFT_TRUST_EMAIL=1` accepts your directory's email claim. Redirect URI: `…/v1/auth/sso/microsoft/callback` |
 | `GAPSCAN_SSO_OIDC_ISSUER`, `…_CLIENT_ID`, `…_CLIENT_SECRET`, `…_NAME` | unset | Any OpenID Connect provider (Okta, Auth0, Keycloak…), https only. `GAPSCAN_SSO_OIDC_TRUST_EMAIL=1` for a provider that doesn't send `email_verified` but manages its users' addresses. Redirect URI: `…/v1/auth/sso/oidc/callback` |
 | `GAPSCAN_SECRET` | unset | Needed with single sign-on: 32+ random characters that sign the short-lived sign-in cookie |
+| `GAPSCAN_ADMIN_EMAILS` | unset | Comma-separated emails of admins: they see every design system and the admin area (`/app/admin.html`), and in visitor mode they are the only people who can sign in. |
 | `GAPSCAN_AUTH_TEST_USERS` | unset | Local development only: comma-separated test accounts that sign in with one click on the sign-in page, no email. The last one used signs in again automatically; signing out forgets it. The server refuses to start with this set unless `GAPSCAN_PUBLIC_URL` is on localhost and the store is local, and only requests from this machine are accepted. |
 | `GAPSCAN_AUTH_EMAIL_LINKS` | on | `off` leaves single sign-on as the only way in |
 | `GAPSCAN_AUTH_DOMAINS` | unset (anyone) | Comma-separated email domains that can create an account. Others can still sign in once an owner invites them. |
@@ -165,6 +166,14 @@ email-domain rule applies as it does to links.
 For testing on your own machine, `GAPSCAN_AUTH_TEST_USERS=owner@test.local,editor@test.local`
 adds a Testing card to the sign-in page with one button per account (two accounts let you try
 invitations and roles). It can't be turned on for a hosted deployment.
+
+**Visitor mode** (`GAPSCAN_AUTH=visitor`) is the no-login version. A browser's first API request
+creates an anonymous account (an address under the reserved `.invalid` domain that can't receive
+mail) and a long-lived session cookie, so each visitor sees only their own design systems. Pages
+alone create nothing. Sign-in is for admins only: links, single sign-on and test accounts are
+refused for anyone not in `GAPSCAN_ADMIN_EMAILS`. Admins can open every project and see them all
+in the admin area, where visitors show as "Visitor". Sharing a project needs accounts, so it is
+off for visitors.
 
 Every project is private to its members. Each API route has an access rule in
 `apps/api/src/auth.ts` (public, any signed-in person, project member, or project owner);

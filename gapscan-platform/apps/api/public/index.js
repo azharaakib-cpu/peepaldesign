@@ -52,7 +52,8 @@ async function openProject(id) {
     el('a', {href: `/app/review.html?id=${e.id}`}, `Version ${e.version}`), el('span', {class: 'muted'}, `${when(e.createdAt)}${i === 0 ? ' · latest' : ''}`)))
     : [el('li', {class: 'empty'}, 'No extraction yet. Add sources below, then extract.')]));
   renderSources();
-  if (project.role) {
+  // Sharing needs accounts: visitors have a private space, so there is no People card for them.
+  if (project.role && !(await me).anonymous) {
     $('#project-card').hidden = false;
     renderMembers(await api(`/v1/projects/${id}/members`), project.role);
     $('#invite').hidden = project.role !== 'owner';
