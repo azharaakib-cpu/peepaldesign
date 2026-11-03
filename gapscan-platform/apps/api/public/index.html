@@ -48,9 +48,9 @@
       <p class="muted">Websites are rendered in a sandboxed browser at desktop, tablet and phone widths, plus dark mode.</p>
     </div>
     <div data-panel="file" hidden>
-      <label for="files">PowerPoint, Word, PDF, ZIP, or CSS / SCSS / token JSON</label>
-      <div class="row"><input id="files" type="file" multiple accept=".pptx,.docx,.pdf,.zip,.css,.scss,.sass,.less,.json,.html,.htm,.md"><button id="add-files" type="button">Upload</button></div>
-      <p class="muted">Up to 40 MB each. Files are read, never executed.</p>
+      <label for="files">PowerPoint, Word, PDF, ZIP, CSS / SCSS / token JSON, or screenshots and mockups (PNG, JPEG, WebP)</label>
+      <div class="row"><input id="files" type="file" multiple accept=".pptx,.docx,.pdf,.zip,.css,.scss,.sass,.less,.json,.html,.htm,.md,.png,.jpg,.jpeg,.webp,.gif"><button id="add-files" type="button">Upload</button></div>
+      <p class="muted">Up to 40 MB each. Files are read, never executed. From images GapScan estimates colours, corner radii, borders and spacing; text isn't read from images. Name retina screenshots <code>…@2x.png</code> so sizes come out in CSS pixels.</p>
     </div>
     <div data-panel="code" hidden>
       <label for="code-name">File name</label>

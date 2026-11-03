@@ -3,7 +3,7 @@
 // recorded as coverage gaps; the job fails only when nothing at all was readable.
 import {randomUUID} from 'node:crypto';
 import {setTimeout as sleep} from 'node:timers/promises';
-import {codeAdapter, createFigmaAdapter, docxAdapter, openZip, pdfAdapter, pptxAdapter} from '@gapscan/adapters';
+import {codeAdapter, createFigmaAdapter, docxAdapter, openZip, pdfAdapter, pptxAdapter, imageAdapter} from '@gapscan/adapters';
 import type {Adapter, AdapterResult} from '@gapscan/adapters';
 import {assembleSystem, systemFingerprint} from '@gapscan/extraction';
 import type {AssetResult, ExternalComponent} from '@gapscan/extraction';
@@ -15,7 +15,6 @@ import type {CodeDocument} from './legacy-bridge.ts';
 
 export const CODE_FILE = /\.(?:css|scss|sass|less|json|html?|jsx?|tsx?|mjs|vue|svelte|md|mdx|txt)$/i;
 const NOT_SUPPORTED: Partial<Record<SourceKind, string>> = {
-  image: 'Image sampling is not available yet. Upload the design file, guideline PDF or code instead.',
   url: 'Rendered website extraction is not configured on this server. Paste or upload the site\'s CSS/HTML instead.',
 };
 
@@ -32,7 +31,7 @@ function codeDocuments(source: SourceAsset, bytes: Buffer): CodeDocument[] {
 }
 
 export function createExtractHandler({store, blobs, stageDelayMs = 0, figmaToken = process.env.GAPSCAN_FIGMA_TOKEN, urlAdapter}: ExtractOptions): JobHandler {
-  const adapters: Partial<Record<SourceKind, Adapter>> = {pptx: pptxAdapter, docx: docxAdapter, pdf: pdfAdapter, figma: createFigmaAdapter(figmaToken), ...(urlAdapter ? {url: urlAdapter} : {})};
+  const adapters: Partial<Record<SourceKind, Adapter>> = {pptx: pptxAdapter, docx: docxAdapter, pdf: pdfAdapter, image: imageAdapter, figma: createFigmaAdapter(figmaToken), ...(urlAdapter ? {url: urlAdapter} : {})};
   return async ({job, signal, progress, warn}) => {
     // Stages yield (and can be slowed in tests) so cancellation is honoured between them.
     const checkpoint = async () => { if (stageDelayMs) await sleep(stageDelayMs, undefined, {signal}); signal.throwIfAborted(); };

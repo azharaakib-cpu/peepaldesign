@@ -16,3 +16,5 @@ export type {KeyValueStore, PageRecord, SiteMemory, SiteState} from './site-memo
 export type {EgressProxy, EgressResolver} from './egress.ts';
 export {componentApis, customElementApi, typescriptObservations} from './typescript.ts';
 export type {ComponentApi} from './typescript.ts';
+export {analyzePixels, decodeImage, imageAdapter, imageInfo, IMAGE_LIMITS} from './image.ts';
+export type {ImageAnalysis, ImageBox, ImageInfo, Pixels} from './image.ts';

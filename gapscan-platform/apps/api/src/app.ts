@@ -41,8 +41,8 @@ const SourceRole = z.enum(['system', 'application']).default('system');
 const CreateProjectBody = z.object({name: z.string().trim().min(1).max(200)});
 const AddSourceBody = z.discriminatedUnion('kind', [
   z.object({kind: z.literal('url'), uri: z.string().min(1).max(2048), consent: z.boolean().optional(), role: SourceRole}),
-  z.object({kind: z.literal('code'), name: z.string().trim().min(1).max(200).regex(/^[\w .()-]+$/, 'Use letters, numbers, spaces, dots, dashes or underscores.'), content: z.string().min(1), role: SourceRole}),
-  z.object({kind: z.literal('file'), name: z.string().trim().min(1).max(200).regex(/^[\w .()-]+$/, 'Use letters, numbers, spaces, dots, dashes or underscores.'), base64: z.string().min(1), role: SourceRole}),
+  z.object({kind: z.literal('code'), name: z.string().trim().min(1).max(200).regex(/^[\w .()@-]+$/, 'Use letters, numbers, spaces, dots, dashes, underscores or @.'), content: z.string().min(1), role: SourceRole}),
+  z.object({kind: z.literal('file'), name: z.string().trim().min(1).max(200).regex(/^[\w .()@-]+$/, 'Use letters, numbers, spaces, dots, dashes, underscores or @.'), base64: z.string().min(1), role: SourceRole}),
 ]);
 const IdParams = z.object({id: z.string().min(1)});
 

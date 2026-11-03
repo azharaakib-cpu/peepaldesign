@@ -82,7 +82,7 @@ $('#add-files').addEventListener('click', async () => {
   for (const file of $('#files').files) {
     const buffer = new Uint8Array(await file.arrayBuffer());
     let binary = ''; for (let i = 0; i < buffer.length; i += 0x8000) binary += String.fromCharCode(...buffer.subarray(i, i + 0x8000));
-    await addSource({kind: 'file', name: file.name.replace(/[^\w .()-]/g, '_'), base64: btoa(binary)});
+    await addSource({kind: 'file', name: file.name.replace(/[^\w .()@-]/g, '_'), base64: btoa(binary)});
   }
   $('#files').value = '';
 });

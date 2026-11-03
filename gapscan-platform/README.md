@@ -209,7 +209,13 @@ images, gradients or translucent layers is skipped rather than guessed.
   instance or a `:disabled` rule. Each variant up to 480×240px is screenshotted
   at rest once its images load. Up to 48 variants per extraction get states and
   screenshots.
-- **Image sources** (screenshots, mockups) are accepted but not sampled.
+- **Images are estimates.** Screenshots and mockups give a palette by area, flat
+  boxes (fill, border, corner radius) and spacing between and inside them, on the
+  lowest-trust channel, so declared tokens and real CSS always win. Text is not
+  read (that needs text recognition). Sizes are in CSS pixels when the scale is
+  known: the file's dpi, a `@2x` file name, or 2px hairlines; otherwise @1x is
+  assumed and said so. Images are decoded in Chromium with all network access
+  refused, and checked against a 60-megapixel limit before decoding.
 - **The in-process queue does not survive a restart.** Jobs that were queued or
   running are marked `failed` with `retryable: true` on the next start. The
   Postgres queue does not have this problem; a job interrupted by a shutdown is

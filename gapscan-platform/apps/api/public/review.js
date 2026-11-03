@@ -226,7 +226,7 @@ $('#impact-form').addEventListener('submit', async event => {
     if (zip) {
       const buffer = new Uint8Array(await zip.arrayBuffer()); let binary = '';
       for (let i = 0; i < buffer.length; i += 0x8000) binary += String.fromCharCode(...buffer.subarray(i, i + 0x8000));
-      await api(`/v1/projects/${projectOf}/sources`, {method: 'POST', body: JSON.stringify({kind: 'file', name: zip.name.replace(/[^\w .()-]/g, '_'), base64: btoa(binary), role: 'application'})});
+      await api(`/v1/projects/${projectOf}/sources`, {method: 'POST', body: JSON.stringify({kind: 'file', name: zip.name.replace(/[^\w .()@-]/g, '_'), base64: btoa(binary), role: 'application'})});
     }
     const {events} = await api(`/v1/projects/${projectOf}/usage`, {method: 'POST', body: JSON.stringify({edsId: id})});
     const stream = new EventSource(events);
