@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Design system · GapScan</title>
+  <link rel="stylesheet" href="/app/styles.css">
+</head>
+<body>
+<main class="wide">
+  <header class="top system-head">
+    <div class="title-block">
+      <div class="title-edit" id="title-show">
+        <h1 id="system-name">Your design system</h1>
+        <button type="button" class="quiet" id="rename">Rename</button>
+      </div>
+      <form class="title-edit" id="rename-form" hidden>
+        <label class="visually-hidden" for="rename-input">Name</label>
+        <input id="rename-input" type="text" maxlength="200" required>
+        <button class="primary" type="submit">Save</button>
+        <button type="button" id="rename-cancel">Cancel</button>
+      </form>
+      <p class="lead" id="system-meta">Loading…</p>
+      <p class="error" id="system-error" role="alert"></p>
+    </div>
+    <a class="button" id="update" href="/app/">Add sources or update</a>
+  </header>
+
+  <nav class="actions" aria-label="What you can do">
+    <a class="action" id="action-export" href="#">
+      <span class="action-icon icon-export" aria-hidden="true"></span>
+      <strong>Export</strong>
+      <span class="muted">Figma, PDF, or tokens for code.</span>
+    </a>
+    <a class="action" id="action-documents" href="#">
+      <span class="action-icon icon-docs" aria-hidden="true"></span>
+      <strong>Documents</strong>
+      <span class="muted" id="documents-note">Accessibility, guidelines, principles, brand and more.</span>
+    </a>
+    <a class="action" id="action-migrate" href="#">
+      <span class="action-icon icon-migrate" aria-hidden="true"></span>
+      <strong>Migrate</strong>
+      <span class="muted" id="migrate-note">See which design system is closest, and what moving to it takes.</span>
+    </a>
+  </nav>
+
+  <section class="preview" aria-labelledby="preview-title">
+    <div class="preview-head">
+      <h2 id="preview-title">Your design system</h2>
+      <a id="preview-open" href="#" target="_blank" rel="noopener">Open in a new tab</a>
+    </div>
+    <iframe id="preview" title="Your design system: colours, type, spacing and components" sandbox="allow-same-origin" loading="lazy"></iframe>
+  </section>
+</main>
+<script src="/app/common.js"></script>
+<script src="/app/system.js"></script>
+</body>
+</html>

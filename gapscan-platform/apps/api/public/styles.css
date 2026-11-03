@@ -334,3 +334,21 @@ input[type="search"] { font: inherit; color: var(--text); background: var(--surf
 .swatch-strip { display: flex; height: 44px; background: var(--surface-soft); border-bottom: 1px solid var(--line); }
 .swatch-strip i { flex: 1; }
 @media (max-width: 700px) { .how { grid-template-columns: 1fr; } .start-box { flex-wrap: wrap; } }
+
+/* Result page: three actions, then the system itself */
+main.wide { max-width: 1240px; }
+.system-head { align-items: flex-start; }
+.actions { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin-bottom: 28px; }
+.action { display: grid; gap: 6px; align-content: start; padding: 22px; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; color: var(--text); text-decoration: none; transition: border-color .15s, box-shadow .15s, transform .15s; }
+.action:hover { border-color: var(--accent); box-shadow: 0 6px 22px color-mix(in srgb, var(--accent) 14%, transparent); transform: translateY(-1px); }
+.action strong { font-size: 19px; }
+.action .muted { font-size: 14px; }
+.action-icon { width: 40px; height: 40px; border-radius: 10px; background: var(--accent-soft); margin-bottom: 6px; position: relative; }
+.action-icon::before { content: ""; position: absolute; inset: 0; margin: auto; background: var(--accent); }
+.icon-export::before { width: 4px; height: 16px; top: -4px; } .icon-export::after { content: ""; position: absolute; left: 13px; top: 8px; border: 7px solid transparent; border-bottom-color: var(--accent); border-top: 0; }
+.icon-docs::before { width: 16px; height: 20px; border-radius: 2px; background: none; border: 3px solid var(--accent); box-sizing: border-box; }
+.icon-migrate::before { width: 20px; height: 4px; } .icon-migrate::after { content: ""; position: absolute; right: 8px; top: 13px; border: 7px solid transparent; border-left-color: var(--accent); border-right: 0; }
+.preview-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.preview-head h2 { margin: 0 0 10px; }
+#preview { width: 100%; height: 78vh; min-height: 560px; border: 1px solid var(--line); border-radius: 14px; background: #fff; }
+@media (max-width: 760px) { .actions { grid-template-columns: 1fr; } }

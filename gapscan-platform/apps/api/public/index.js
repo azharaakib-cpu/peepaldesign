@@ -12,7 +12,7 @@ function projectCard(p) {
     const hexes = [...new Set([...scales.roles.map(r => r.hex), ...scales.colors.map(c => c.hex)])].slice(0, 6);
     strip.replaceChildren(...hexes.map(hex => el('i', {style: `background:${hex}`})));
   }).catch(() => {});
-  const href = p.latestExtraction ? `/app/review.html?id=${p.latestExtraction.id}` : `/app/?project=${p.id}`;
+  const href = p.latestExtraction ? `/app/system.html?id=${p.latestExtraction.id}` : `/app/?project=${p.id}`;
   return el('a', {class: 'project-card system-card', href}, strip,
     el('span', {class: 'project-name'}, p.name),
     el('span', {class: 'muted project-meta'}, p.latestExtraction ? `Updated ${new Date(p.latestExtraction.createdAt).toLocaleDateString(undefined, {day: 'numeric', month: 'short', year: 'numeric'})}` : 'Not read yet'));
@@ -76,7 +76,7 @@ function followReading(events, id) {
   renderSteps('collect', 'Starting…', 0, 0, $('#home-steps'));
   const stream = new EventSource(events);
   stream.addEventListener('progress', e => { const {body} = JSON.parse(e.data); renderSteps(body.stage, body.message, body.done, body.total, $('#home-steps')); });
-  stream.addEventListener('complete', e => { stream.close(); renderSteps('done', 'Done.', 0, 0, $('#home-steps')); location.href = `/app/review.html?id=${JSON.parse(e.data).body.resultId}`; });
+  stream.addEventListener('complete', e => { stream.close(); renderSteps('done', 'Done.', 0, 0, $('#home-steps')); location.href = `/app/system.html?id=${JSON.parse(e.data).body.resultId}`; });
   stream.addEventListener('failed', e => {
     stream.close();
     $('#reading-failed').hidden = false; $('#reading-message').textContent = JSON.parse(e.data).body.message;
@@ -93,7 +93,7 @@ async function openProject(id) {
   const extractions = [...project.extractions].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   $('#project-summary').textContent = `${plural(sources.length, 'source')} · ${extractions.length ? `latest extraction ${when(extractions[0].createdAt)}` : 'not extracted yet'}`;
   $('#versions').replaceChildren(...(extractions.length ? extractions.map((e, i) => el('li', {class: 'source'},
-    el('a', {href: `/app/review.html?id=${e.id}`}, `Version ${e.version}`), el('span', {class: 'muted'}, `${when(e.createdAt)}${i === 0 ? ' · latest' : ''}`)))
+    el('a', {href: `/app/system.html?id=${e.id}`}, `Version ${e.version}`), el('span', {class: 'muted'}, `${when(e.createdAt)}${i === 0 ? ' · latest' : ''}`)))
     : [el('li', {class: 'empty'}, 'No extraction yet. Add sources below, then extract.')]));
   renderSources();
   // Sharing needs accounts: visitors have a private space, so there is no People card for them.
@@ -249,7 +249,7 @@ async function runExtraction() {
     stream.addEventListener('progress', e => { const {body} = JSON.parse(e.data); log(body.message); renderSteps(body.stage, body.message, body.done, body.total); });
     stream.addEventListener('warning', e => { const message = JSON.parse(e.data).body.message; log('⚠ ' + message); stepState.warnings++; $('#status').textContent = `${plural(stepState.warnings, 'warning')}: see Details.`; });
     const finish = () => { stream.close(); activeJob = null; renderSources(); };
-    stream.addEventListener('complete', e => { finish(); renderSteps('done', 'Done.'); location.href = `/app/review.html?id=${JSON.parse(e.data).body.resultId}`; });
+    stream.addEventListener('complete', e => { finish(); renderSteps('done', 'Done.'); location.href = `/app/system.html?id=${JSON.parse(e.data).body.resultId}`; });
     stream.addEventListener('failed', e => { finish(); fail('The extraction stopped', JSON.parse(e.data).body.message); });
     stream.addEventListener('cancelled', () => { finish(); setMode('idle'); $('#extract-ready').textContent = 'Extraction cancelled. Pages already read from websites are kept for next time.'; });
   } catch (error) { activeJob = null; renderSources(); fail('The extraction couldn’t start', error.message); }

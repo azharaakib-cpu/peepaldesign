@@ -277,7 +277,9 @@ export function buildApp({infra, handlers = {}, logger = false, heartbeatMs = HE
   app.get('/v1/extractions/:id/design-system.html', async (request, reply) => {
     const doc = await designSystem(IdParams.parse(request.params).id);
     if (!doc) return fail(reply, 404, 'Extraction not found.');
-    const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">${renderDesignSystemHtml(doc, {figmaExport: 'figma-export.json', reviewHref: `/app/review.html?id=${encodeURIComponent(IdParams.parse(request.params).id)}#export-figma`})}`;
+    // ?embed=1 is the preview inside GapScan's result page, which has its own export actions.
+    const embed = (request.query as {embed?: string}).embed === '1';
+    const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">${renderDesignSystemHtml(doc, embed ? {} : {figmaExport: 'figma-export.json', reviewHref: `/app/review.html?id=${encodeURIComponent(IdParams.parse(request.params).id)}#export-figma`})}`;
     // No scripts at all; styles inline, fonts from Google Fonts only.
     return reply.type('text/html; charset=utf-8').header('content-security-policy', "default-src 'none'; style-src 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src data:")
       .header('content-disposition', `${(request.query as {download?: string}).download ? 'attachment' : 'inline'}; filename="${doc.name.replace(/[^\w.-]/g, '-')}-design-system.html"`).send(html);
