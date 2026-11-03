@@ -116,6 +116,7 @@ review the result, then compare it against a reference system.
 | `GAPSCAN_SSO_MICROSOFT_CLIENT_ID`, `…_SECRET`, `…_TENANT` | unset | Adds "Continue with Microsoft" for one directory (tenant ID required; `common` is refused because nobody vouches for those email claims). `GAPSCAN_SSO_MICROSOFT_TRUST_EMAIL=1` accepts your directory's email claim. Redirect URI: `…/v1/auth/sso/microsoft/callback` |
 | `GAPSCAN_SSO_OIDC_ISSUER`, `…_CLIENT_ID`, `…_CLIENT_SECRET`, `…_NAME` | unset | Any OpenID Connect provider (Okta, Auth0, Keycloak…), https only. `GAPSCAN_SSO_OIDC_TRUST_EMAIL=1` for a provider that doesn't send `email_verified` but manages its users' addresses. Redirect URI: `…/v1/auth/sso/oidc/callback` |
 | `GAPSCAN_SECRET` | unset | Needed with single sign-on: 32+ random characters that sign the short-lived sign-in cookie |
+| `GAPSCAN_AUTH_TEST_USERS` | unset | Local development only: comma-separated test accounts that sign in with one click on the sign-in page, no email. The last one used signs in again automatically; signing out forgets it. The server refuses to start with this set unless `GAPSCAN_PUBLIC_URL` is on localhost and the store is local, and only requests from this machine are accepted. |
 | `GAPSCAN_AUTH_EMAIL_LINKS` | on | `off` leaves single sign-on as the only way in |
 | `GAPSCAN_AUTH_DOMAINS` | unset (anyone) | Comma-separated email domains that can create an account. Others can still sign in once an owner invites them. |
 | `GAPSCAN_MAX_PAGES` | `8` | New pages rendered per website per extraction |
@@ -159,6 +160,10 @@ HttpOnly cookie limited to the sign-in routes. The ID token's signature is check
 the provider's published keys (RSA, RSA-PSS or ECDSA only; never `none` or a shared secret),
 along with issuer, audience, nonce and expiry. Only a verified email signs anyone in, and the
 email-domain rule applies as it does to links.
+
+For testing on your own machine, `GAPSCAN_AUTH_TEST_USERS=owner@test.local,editor@test.local`
+adds a Testing card to the sign-in page with one button per account (two accounts let you try
+invitations and roles). It can't be turned on for a hosted deployment.
 
 Every project is private to its members. Each API route has an access rule in
 `apps/api/src/auth.ts` (public, any signed-in person, project member, or project owner);

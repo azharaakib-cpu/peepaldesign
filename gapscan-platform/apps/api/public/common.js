@@ -12,17 +12,19 @@ function el(tag, attrs = {}, ...children) {
 async function api(path, options = {}) {
   const response = await fetch(path, {...options, headers: {'content-type': 'application/json', ...(options.headers || {})}});
   const body = response.status === 204 ? null : await response.json().catch(() => null);
-  if (response.status === 401 && !location.pathname.endsWith('/signin.html')) { location.href = '/app/signin.html'; throw new Error('Sign in first.'); }
+  if (response.status === 401 && !location.pathname.endsWith('/signin.html')) { location.href = signinUrl(); throw new Error('Sign in first.'); }
   if (!response.ok) throw new Error(body?.error || `Request failed (${response.status})`);
   return body;
 }
+// After signing in, people come back to the page they were on.
+const signinUrl = () => `/app/signin.html#next=${encodeURIComponent(location.pathname + location.search)}`;
 // With accounts on, the header shows who is signed in. `whoami` resolves to the user, or null when accounts are off.
 const whoami = (async () => {
   if (location.pathname.endsWith('/signin.html')) return null;
-  const me = await fetch('/v1/auth/me').then(r => r.status === 401 ? (location.href = '/app/signin.html', null) : r.json()).catch(() => null);
+  const me = await fetch('/v1/auth/me').then(r => r.status === 401 ? (location.href = signinUrl(), null) : r.json()).catch(() => null);
   const user = me?.user ?? null, header = document.querySelector('header.top');
   if (user && header) header.append(el('div', {class: 'account'}, el('span', {class: 'muted'}, user.email),
-    el('button', {type: 'button', onclick: async () => { await fetch('/v1/auth/logout', {method: 'POST'}); location.href = '/app/signin.html'; }}, 'Sign out')));
+    el('button', {type: 'button', onclick: async () => { await fetch('/v1/auth/logout', {method: 'POST'}); location.href = '/app/signin.html#signed-out'; }}, 'Sign out')));
   return user;
 })();
 // Drafting with Claude is on only when the server says so; buttons stay hidden otherwise.

@@ -10,13 +10,13 @@ import type {Mail} from '../src/mailer.ts';
 
 const PUBLIC = 'https://gapscan.example.com';
 
-async function harness(options: {allowedDomains?: string[]} = {}) {
+async function harness(options: {allowedDomains?: string[]; testUsers?: string[]} = {}) {
   const dataDir = await mkdtemp(join(tmpdir(), 'gapscan-auth-'));
   const infra = await createInfra({...configFromEnv({}), dataDir});
   const outbox: Mail[] = [];
-  const app = buildApp({infra, auth: {mode: 'magic-link', publicUrl: new URL(PUBLIC), mailer: {send: async mail => { outbox.push(mail); }}, allowedDomains: options.allowedDomains ?? []}});
-  const call = async (method: string, url: string, {cookie, payload, origin}: {cookie?: string; payload?: object; origin?: string} = {}) => {
-    const r = await app.inject({method: method as 'GET', url, headers: {...(cookie ? {cookie} : {}), ...(origin ? {origin} : {})}, ...(payload ? {payload} : {})});
+  const app = buildApp({infra, auth: {mode: 'magic-link', publicUrl: new URL(PUBLIC), mailer: {send: async mail => { outbox.push(mail); }}, allowedDomains: options.allowedDomains ?? [], ...(options.testUsers ? {testUsers: options.testUsers} : {})}});
+  const call = async (method: string, url: string, {cookie, payload, origin, from}: {cookie?: string; payload?: object; origin?: string; from?: string} = {}) => {
+    const r = await app.inject({method: method as 'GET', url, ...(from ? {remoteAddress: from} : {}), headers: {...(cookie ? {cookie} : {}), ...(origin ? {origin} : {})}, ...(payload ? {payload} : {})});
     return {status: r.statusCode, body: /json/.test(String(r.headers['content-type'])) ? JSON.parse(r.body) : r.body, cookie: String(r.headers['set-cookie'] ?? '')};
   };
   // Request a link, read it from the "email", and exchange it for a session cookie.
@@ -126,4 +126,32 @@ test('hosted deployments must choose accounts explicitly and cannot log sign-in 
   assert.throws(() => authSettingsFromEnv({GAPSCAN_STORE: 'postgres', GAPSCAN_AUTH: 'magic-link', GAPSCAN_PUBLIC_URL: PUBLIC}), /GAPSCAN_SMTP_URL and GAPSCAN_MAIL_FROM/);
   const local = authSettingsFromEnv({GAPSCAN_AUTH: 'magic-link', GAPSCAN_PUBLIC_URL: 'http://localhost:4300', GAPSCAN_AUTH_DOMAINS: 'Acme.com, acme.io'});
   assert.deepEqual(local.mode === 'magic-link' && [local.mail, local.allowedDomains], ['log', ['acme.com', 'acme.io']]);
+});
+
+test('test accounts: local development only, listed on the sign-in page, one click, from this machine', async () => {
+  const local = {GAPSCAN_AUTH: 'magic-link', GAPSCAN_PUBLIC_URL: 'http://localhost:4301', GAPSCAN_AUTH_TEST_USERS: 'Owner@test.local, editor@test.local'};
+  assert.deepEqual(authSettingsFromEnv(local).mode === 'magic-link' && authSettingsFromEnv(local).testUsers, ['owner@test.local', 'editor@test.local']);
+  assert.throws(() => authSettingsFromEnv({...local, GAPSCAN_PUBLIC_URL: 'https://gapscan.example.com'}), /local development only/);
+  assert.throws(() => authSettingsFromEnv({...local, GAPSCAN_STORE: 'postgres', GAPSCAN_MAIL: 'smtp', GAPSCAN_SMTP_URL: 'smtp://x', GAPSCAN_MAIL_FROM: 'a@b.c'}), /local development only/);
+  assert.throws(() => authSettingsFromEnv({...local, GAPSCAN_AUTH_TEST_USERS: 'not-an-email'}), /invalid email/);
+
+  const off = await harness();
+  try {
+    assert.equal((await off.call('GET', '/v1/auth/providers')).body.testUsers, undefined);
+    assert.equal((await off.call('POST', '/v1/auth/test-session', {payload: {email: 'owner@test.local'}})).status, 404, 'absent unless configured');
+  } finally { await off.close(); }
+
+  const h = await harness({testUsers: ['owner@test.local', 'editor@test.local']});
+  try {
+    assert.deepEqual((await h.call('GET', '/v1/auth/providers')).body.testUsers, ['owner@test.local', 'editor@test.local']);
+    assert.equal((await h.call('POST', '/v1/auth/test-session', {payload: {email: 'someone@else.com'}})).status, 400);
+    assert.equal((await h.call('POST', '/v1/auth/test-session', {payload: {email: 'owner@test.local'}, from: '203.0.113.5'})).status, 403, 'not from another machine');
+    const signedIn = await h.call('POST', '/v1/auth/test-session', {payload: {email: 'owner@test.local'}});
+    assert.equal(signedIn.status, 200);
+    assert.match(signedIn.cookie, /HttpOnly/);
+    assert.equal(h.outbox.length, 0, 'no email sent');
+    const cookie = signedIn.cookie.split(';')[0]!;
+    assert.equal((await h.call('GET', '/v1/auth/me', {cookie})).body.user.email, 'owner@test.local');
+    assert.equal((await h.call('POST', '/v1/projects', {cookie, payload: {name: 'Test'}})).status, 201);
+  } finally { await h.close(); }
 });

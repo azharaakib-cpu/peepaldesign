@@ -135,4 +135,5 @@ main.narrow { max-width: 560px; }
 #members .source > button { justify-self: end; }
 .steps { display: grid; gap: 10px; padding-left: 20px; margin: 12px 0 0; } .steps li { padding-left: 4px; }
 .source .saved { display: block; font-size: 12px; margin-top: 2px } label.inline { display: inline-flex; gap: 6px; align-items: center; margin-top: 10px }
+.test-users { border-style: dashed; } .test-users h2 { margin: 0 0 4px; font-size: 15px; }
 .sso { display: grid; gap: 8px; margin-bottom: 12px } .sso-button { text-align: center; justify-content: center } .sso .or { text-align: center; margin: 4px 0 0 }

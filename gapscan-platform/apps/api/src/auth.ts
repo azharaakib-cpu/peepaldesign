@@ -13,7 +13,11 @@ import type {Oidc} from './oidc.ts';
 declare module 'fastify' { interface FastifyRequest { user?: User } }
 
 // `sso` adds single sign-on next to email links; `emailLinks: false` leaves single sign-on only.
-export type AuthConfig = {mode: 'off'} | {mode: 'magic-link'; publicUrl: URL; mailer: Mailer; allowedDomains: string[]; linkMinutes?: number; sessionDays?: number; sso?: Oidc; emailLinks?: boolean};
+// `testUsers` (local development only) are accounts that sign in with one click, no email.
+export type AuthConfig = {mode: 'off'} | {mode: 'magic-link'; publicUrl: URL; mailer: Mailer; allowedDomains: string[]; linkMinutes?: number; sessionDays?: number; sso?: Oidc; emailLinks?: boolean; testUsers?: string[]};
+
+const LOCAL_HOST = /^(localhost|127\.0\.0\.1|\[::1\]|.+\.localhost)$/;
+const LOOPBACK = new Set(['127.0.0.1', '::1', '::ffff:127.0.0.1']);
 
 // Hosted deployments must choose explicitly; local mode stays open and zero-config.
 export function authSettingsFromEnv(env: NodeJS.ProcessEnv = process.env) {
@@ -32,7 +36,14 @@ export function authSettingsFromEnv(env: NodeJS.ProcessEnv = process.env) {
   const allowedDomains = (env.GAPSCAN_AUTH_DOMAINS ?? '').split(',').map(d => d.trim().toLowerCase()).filter(Boolean);
   const providers = ssoProvidersFromEnv(env), emailLinks = env.GAPSCAN_AUTH_EMAIL_LINKS !== 'off';
   if (!emailLinks && !providers.length) throw new Error('GAPSCAN_AUTH_EMAIL_LINKS=off needs at least one single sign-on provider.');
-  return {mode: 'magic-link' as const, publicUrl, mail, smtpUrl: env.GAPSCAN_SMTP_URL, from: env.GAPSCAN_MAIL_FROM, allowedDomains, providers, emailLinks, secret: env.GAPSCAN_SECRET ?? ''};
+  // One-click test accounts skip email entirely, so they exist only on a developer's own machine.
+  const testUsers = (env.GAPSCAN_AUTH_TEST_USERS ?? '').split(',').map(e => e.trim().toLowerCase()).filter(Boolean);
+  if (testUsers.length) {
+    if (hosted || !LOCAL_HOST.test(publicUrl.hostname)) throw new Error('GAPSCAN_AUTH_TEST_USERS is for local development only: it needs GAPSCAN_PUBLIC_URL on localhost and the local store.');
+    const bad = testUsers.find(e => !z.string().email().safeParse(e).success);
+    if (bad) throw new Error(`GAPSCAN_AUTH_TEST_USERS has an invalid email address: ${bad}`);
+  }
+  return {mode: 'magic-link' as const, publicUrl, mail, smtpUrl: env.GAPSCAN_SMTP_URL, from: env.GAPSCAN_MAIL_FROM, allowedDomains, providers, emailLinks, secret: env.GAPSCAN_SECRET ?? '', testUsers};
 }
 
 export const SESSION_COOKIE = 'gapscan_session';
@@ -52,7 +63,7 @@ export function accessRules(store: Store): Record<string, Rule> {
   return {
     'GET /health': pub, 'GET /healthz': pub, 'GET /': pub, 'GET /app/*': pub,
     'POST /v1/auth/link': pub, 'POST /v1/auth/session': pub, 'GET /v1/auth/me': pub, 'POST /v1/auth/logout': pub,
-    'GET /v1/auth/providers': pub, 'GET /v1/auth/sso/:provider/start': pub, 'GET /v1/auth/sso/:provider/callback': pub,
+    'GET /v1/auth/providers': pub, 'POST /v1/auth/test-session': pub, 'GET /v1/auth/sso/:provider/start': pub, 'GET /v1/auth/sso/:provider/callback': pub,
     'GET /v1/library': user, 'GET /v1/saved-sites': user, 'GET /v1/library/:id': user, 'GET /v1/templates': user, 'POST /v1/projects': user, 'GET /v1/projects': user,
     'GET /v1/projects/:id': viaProject, 'POST /v1/projects/:id/sources': viaProject, 'POST /v1/projects/:id/extractions': viaProject,
     'POST /v1/projects/:id/usage': viaProject, 'GET /v1/projects/:id/usage': viaProject, 'GET /v1/projects/:id/members': viaProject,
@@ -115,7 +126,21 @@ export function registerAuth(app: FastifyInstance, store: Store, config: AuthCon
 
   const Email = z.object({email: z.string().trim().toLowerCase().email().max(254)});
   const sent = {message: 'If that address can sign in, a link is on its way. It works once, for 15 minutes.'};
-  app.get('/v1/auth/providers', async () => ({emailLinks: config.emailLinks !== false, providers: config.sso?.list() ?? []}));
+  const testUsers = config.testUsers ?? [];
+  app.get('/v1/auth/providers', async () => ({emailLinks: config.emailLinks !== false, providers: config.sso?.list() ?? [], ...(testUsers.length ? {testUsers} : {})}));
+
+  // Local testing: sign in as one of the configured test accounts without an email. Refused
+  // unless configured, and only from this machine even then.
+  app.post('/v1/auth/test-session', async (request, reply) => {
+    if (!testUsers.length) return fail(reply, 404, 'Not found.');
+    if (!LOOPBACK.has(request.ip)) return fail(reply, 403, 'Test accounts can only sign in from this machine.');
+    const body = Email.safeParse(request.body);
+    if (!body.success || !testUsers.includes(body.data.email)) return fail(reply, 400, 'That is not one of the test accounts.');
+    const user = await store.ensureUser(body.data.email), secret = token();
+    await store.saveSession({hash: hash(secret), userId: user.id, expiresAt: new Date(Date.now() + sessionMs).toISOString(), createdAt: new Date().toISOString()});
+    setCookie(reply, secret, Math.round(sessionMs / 1000));
+    return {user};
+  });
 
   // Single sign-on. The state is stored single-use (any instance can finish the sign-in); the nonce
   // and PKCE verifier ride in a signed cookie scoped to these two routes.

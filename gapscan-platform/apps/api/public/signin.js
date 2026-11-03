@@ -1,6 +1,9 @@
 // Magic-link sign-in. The token arrives in the URL fragment (never sent to a server) and is
 // exchanged only when the person presses Sign in, so link scanners that open emails can't use it up.
 const fragment = new URLSearchParams(location.hash.slice(1)), token = fragment.get('token'), ssoError = fragment.get('error');
+// Only GapScan's own pages are valid places to return to.
+const next = /^\/app\/[a-z-]*(\.html)?(\?[\w=&%.-]*)?$/.test(fragment.get('next') ?? '') ? fragment.get('next') : '/app/';
+const signedOut = fragment.has('signed-out');
 // Messages for single sign-on that came back without signing in (codes from /v1/auth/sso/…/callback).
 const SSO_ERRORS = {
   cancelled: 'Sign-in was cancelled. Choose an option to try again.',
@@ -13,7 +16,8 @@ const SSO_ERRORS = {
   unknown: 'That sign-in option isn’t set up here.',
 };
 if (ssoError) { $('#sso-error').textContent = SSO_ERRORS[ssoError] ?? SSO_ERRORS.provider; $('#sso-error').hidden = false; }
-fetch('/v1/auth/providers').then(r => r.json()).then(({emailLinks, providers}) => {
+fetch('/v1/auth/providers').then(r => r.json()).then(({emailLinks, providers, testUsers}) => {
+  if (testUsers?.length) showTestUsers(testUsers);
   if (providers?.length) {
     $('#sso').replaceChildren(...providers.map(p => el('a', {class: 'button sso-button', href: `/v1/auth/sso/${encodeURIComponent(p.id)}/start`}, `Continue with ${p.name}`)),
       emailLinks ? el('p', {class: 'muted or'}, 'or get a link by email') : '');
@@ -28,7 +32,7 @@ addEventListener('hashchange', () => location.reload());   // a link opened in a
 
 $('#finish-button').addEventListener('click', async () => {
   $('#finish-button').disabled = true;
-  try { await api('/v1/auth/session', {method: 'POST', body: JSON.stringify({token})}); location.replace('/app/'); }
+  try { await api('/v1/auth/session', {method: 'POST', body: JSON.stringify({token})}); location.replace(next); }
   catch (error) { $('#finish-error').textContent = error.message; $('#request').hidden = false; $('#finish-button').disabled = false; }
 });
 $('#email-form').addEventListener('submit', async event => {
@@ -37,3 +41,22 @@ $('#email-form').addEventListener('submit', async event => {
   try { status.textContent = (await api('/v1/auth/link', {method: 'POST', body: JSON.stringify({email: $('#email').value})})).message; }
   catch (error) { status.textContent = error.message; }
 });
+
+// Local testing only: the server lists test accounts when GAPSCAN_AUTH_TEST_USERS is set.
+// The last account used signs in again by itself, except straight after signing out.
+const TEST_KEY = 'gapscan-test-user';
+async function testSignIn(email) {
+  try {
+    await api('/v1/auth/test-session', {method: 'POST', body: JSON.stringify({email})});
+    try { localStorage.setItem(TEST_KEY, email); } catch {}
+    location.replace(next);
+  } catch (error) { $('#test-status').textContent = error.message; }
+}
+function showTestUsers(emails) {
+  $('#test-buttons').replaceChildren(...emails.map(email => el('button', {type: 'button', onclick: () => testSignIn(email)}, `Sign in as ${email}`)));
+  $('#test-users').hidden = false;
+  let last = null;
+  // Signing out forgets the account, so you can pick another.
+  try { if (signedOut) localStorage.removeItem(TEST_KEY); else last = localStorage.getItem(TEST_KEY); } catch {}
+  if (last && emails.includes(last) && !token) { $('#test-status').textContent = `Signing in as ${last}…`; testSignIn(last); }
+}
