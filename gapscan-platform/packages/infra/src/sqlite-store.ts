@@ -92,6 +92,9 @@ export function createSqliteStore(path: string): Store {
     async listUnfinishedJobs() {
       return (db.prepare("SELECT data FROM jobs WHERE status IN ('queued', 'running')").all() as Row[]).map(row => readJob(row)!);
     },
+    async listRecentJobs(limit) {
+      return (db.prepare("SELECT data FROM jobs ORDER BY json_extract(data, '$.createdAt') DESC LIMIT ?").all(limit) as Row[]).map(row => readJob(row)!);
+    },
     async appendEvent(jobId, body: JobEventBody) {
       // Sequence numbers are per job and gap-free, so a client can resume from Last-Event-ID.
       const at = now();

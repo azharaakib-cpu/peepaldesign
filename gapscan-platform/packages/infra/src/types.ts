@@ -31,6 +31,8 @@ export interface Store {
   updateJob(id: string, patch: {status?: JobStatus; resultId?: string; error?: Job['error']}): Promise<Job>;
   // Jobs left queued or running by a previous process; the caller decides their fate.
   listUnfinishedJobs(): Promise<Job[]>;
+  // The most recent jobs across every project, newest first (admin activity).
+  listRecentJobs(limit: number): Promise<Job[]>;
   appendEvent(jobId: string, body: JobEventBody): Promise<JobEvent>;
   listEvents(jobId: string, afterSeq?: number): Promise<JobEvent[]>;
   saveExtraction(record: ExtractionRecord): Promise<void>;

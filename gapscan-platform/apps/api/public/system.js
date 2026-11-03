@@ -22,10 +22,10 @@ async function load() {
   const preview = `/v1/extractions/${id}/design-system.html`;
   $('#preview').src = `${preview}?embed=1`;
   $('#preview-open').href = preview;
-  // Until each action gets its own simple view, they open the matching part of the full review.
   $('#action-export').href = `/app/export.html?id=${id}`;
   $('#action-documents').href = `/app/documents.html?id=${id}`;
   $('#action-migrate').href = `/app/migrate.html?id=${id}`;
+  $('#more-tools').href = `/app/tools.html?id=${id}`;
   api(`/v1/extractions/${id}/recommendations`).then(ranked => {
     if (ranked[0]) $('#migrate-note').textContent = `Closest match: ${ranked[0].library}. See what moving to it takes.`;
   }).catch(() => {});

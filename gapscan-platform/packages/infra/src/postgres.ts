@@ -180,6 +180,9 @@ export function createPostgresStore(sql: SqlClient): Store {
     async listUnfinishedJobs() {
       return (await sql.query("SELECT data FROM jobs WHERE status IN ('queued', 'running') ORDER BY ord")).map(row => toJob(row)!);
     },
+    async listRecentJobs(limit) {
+      return (await sql.query('SELECT data FROM jobs ORDER BY ord DESC LIMIT $1', [limit])).map(row => toJob(row)!);
+    },
     async appendEvent(jobId, body) {
       // The job row lock serialises writers, so per-job sequence numbers stay gap-free across
       // instances. The notification is sent on commit, never for an event that rolled back.

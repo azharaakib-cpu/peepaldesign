@@ -378,3 +378,7 @@ main.wide { max-width: 1240px; }
 .progress-inline .kind-busy { margin: 0; width: 16px; height: 16px; }
 .inline-h2 { display: inline; font-size: 17px; margin: 0; }
 details > summary:has(.inline-h2) { cursor: pointer; }
+.settings { display: grid; grid-template-columns: 200px 1fr; gap: 10px 20px; margin: 16px 0 0; }
+.settings dt { font-weight: 600; } .settings dd { margin: 0; color: var(--text-secondary); }
+.admin-table td.wrap { white-space: normal; max-width: 420px; }
+.more-tools { margin: -14px 0 24px; font-size: 14px; }

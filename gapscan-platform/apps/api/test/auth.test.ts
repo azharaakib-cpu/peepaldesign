@@ -193,5 +193,16 @@ test('visitor mode: no sign-in, a private space per browser, and only admins sig
     const all = (await h.call('GET', '/v1/admin/design-systems', {cookie: admin.cookie})).body;
     assert.deepEqual(all.map((p: {name: string; owner: string}) => [p.name, p.owner]), [['Ana system', 'Visitor']], 'visitors stay anonymous');
     assert.equal((await h.call('GET', `/v1/projects/${project.id}`, {cookie: admin.cookie})).status, 200, 'admins can open any project');
+    for (const url of ['/v1/admin/activity', '/v1/admin/settings']) assert.equal((await h.call('GET', url, {cookie: ben})).status, 403, url);
+    await h.call('POST', `/v1/projects/${project.id}/sources`, {cookie: ana, payload: {kind: 'code', name: 'a.css', content: '.btn{color:#0b5fd6}'}});
+    await h.call('POST', `/v1/projects/${project.id}/extractions`, {cookie: ana});
+    await h.infra.queue.idle();
+    const activity = (await h.call('GET', '/v1/admin/activity', {cookie: admin.cookie})).body;
+    assert.deepEqual(activity.map((a: {label: string; status: string; project: string}) => [a.label, a.status, a.project]), [['Read a design system', 'completed', 'Ana system']]);
+    const settings = (await h.call('GET', '/v1/admin/settings', {cookie: admin.cookie}));
+    assert.equal(settings.body.accounts, 'Visitors without sign-in; admins sign in');
+    assert.deepEqual(settings.body.admins, ['admin@example.com']);
+    assert.ok(settings.body.references.length >= 10);
+    assert.doesNotMatch(JSON.stringify(settings.body), /secret|password|token":"/i, 'never secrets');
   } finally { await h.close(); }
 });

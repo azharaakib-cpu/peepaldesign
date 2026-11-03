@@ -1,5 +1,7 @@
 // Extraction review (architecture Part 1 §1.8): plain language first, raw evidence behind a toggle.
 const params = new URLSearchParams(location.search), id = params.get('id');
+// The full review is for admins. With accounts on, everyone else sees the simple result page instead.
+me.then(info => { if (info?.user && info.auth !== 'off' && !info.admin) location.replace(`/app/system.html?id=${encodeURIComponent(id ?? '')}`); });
 const SEVERITY = {major: 0, minor: 1, info: 2};
 const band = c => c >= 0.8 ? 'Confirmed' : c >= 0.5 ? 'Likely' : 'Inferred';
 const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
@@ -162,45 +164,6 @@ recommendations();
 const FORMATS = [['dtcg', 'tokens.json (DTCG)'], ['css', 'CSS variables'], ['tailwind4', 'Tailwind v4 theme'], ['scss', 'SCSS variables']];
 if (id) $('#exports').replaceChildren(...FORMATS.map(([format, label]) => el('a', {class: 'button', href: `/v1/extractions/${id}/export?format=${format}`, download: ''}, label)));
 
-// Brand assets: template fields are rendered from the server's template list.
-let templates = [];
-const FIELD_LABELS = {address: 'Address', name: 'Name', role: 'Role', email: 'Email', phone: 'Phone', website: 'Website', title: 'Title', subtitle: 'Subtitle', points: 'Points (separate with ;)', body: 'Message', cta: 'Button label', url: 'Button link (https://…)'};
-function assetFields() {
-  const template = templates.find(t => t.id === $('#asset-template').value);
-  // A letter or newsletter body gets a multi-line box; everything else is one line.
-  $('#asset-fields').replaceChildren(...(template?.fields ?? []).map(f => el('label', {}, FIELD_LABELS[f] || f,
-    f === 'body' ? el('textarea', {name: `field-${f}`, maxlength: '4000', rows: '5'}) : el('input', {type: 'text', name: `field-${f}`, maxlength: f === 'points' ? '1200' : '160'}))));
-}
-async function assets() {
-  if (!id) return;
-  templates = await api('/v1/templates');
-  $('#asset-template').replaceChildren(...templates.map(t => el('option', {value: t.id}, t.label)));
-  assetFields();
-}
-$('#asset-template').addEventListener('change', assetFields);
-$('#asset-form').addEventListener('submit', async event => {
-  event.preventDefault();
-  const form = event.target, data = {};
-  for (const input of form.querySelectorAll('[name^="field-"]')) if (input.value.trim()) data[input.name.slice(6)] = input.value.trim();
-  const result = $('#asset-result');
-  result.replaceChildren(el('p', {class: 'muted'}, 'Rendering…'));
-  try {
-    const {jobId, events} = await api(`/v1/extractions/${id}/assets`, {method: 'POST', body: JSON.stringify({template: form.elements.template.value, brandName: form.elements.brandName.value, data})});
-    const stream = new EventSource(events);
-    stream.addEventListener('failed', e => { stream.close(); result.replaceChildren(el('p', {class: 'error'}, JSON.parse(e.data).body.message)); });
-    stream.addEventListener('complete', async () => {
-      stream.close();
-      const manifest = await api(`/v1/assets/${jobId}`), url = `/v1/assets/${jobId}/file`;
-      result.replaceChildren(
-        manifest.contentType === 'image/png' ? el('img', {src: url, alt: `${manifest.template.label} preview`, style: 'max-width:100%;border:1px solid var(--line);border-radius:8px'})
-          : manifest.contentType.startsWith('text/html') ? el('iframe', {src: url, sandbox: '', title: 'Email preview', style: 'width:100%;height:520px;border:1px solid var(--line);border-radius:8px;background:#fff'})
-          : el('p', {}, el('a', {href: `${url}?download=1`}, `Download ${manifest.file}`)),
-        el('ul', {class: 'plain'}, manifest.checks.map(c => el('li', {class: 'source'}, el('span', {}, c.message), el('span', {class: `pill ${c.pass ? 'ok' : 'minor'}`}, c.pass ? 'Pass' : 'Check')))),
-        el('a', {class: 'button', href: `${url}?download=1`}, 'Download'));
-    });
-  } catch (error) { result.replaceChildren(el('p', {class: 'error'}, error.message)); }
-});
-assets();
 
 // Figma Variables: preview, then an explicit confirmation that applies exactly that preview.
 $('#figma-form').addEventListener('submit', async event => {

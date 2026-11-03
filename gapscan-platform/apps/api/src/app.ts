@@ -122,6 +122,24 @@ export function buildApp({infra, handlers = {}, logger = false, heartbeatMs = HE
     return listed.sort((a, b) => b.lastActivity.localeCompare(a.lastActivity));
   };
   app.get('/v1/projects', async request => projectSummaries(request.user ? await store.listProjectsFor(request.user.id) : await store.listProjects()));
+  // Admin: the latest jobs on every project, failures with their reason, and the project's name.
+  const JOB_LABEL: Record<string, string> = {extract: 'Read a design system', gapscan: 'Comparison', generate: 'Claude draft', render: 'Render', usage: 'App-code scan', codemod: 'Codemod dry run'};
+  app.get('/v1/admin/activity', async () => {
+    const jobs = await store.listRecentJobs(100), names = new Map<string, string>();
+    for (const projectId of new Set(jobs.map(j => j.projectId))) names.set(projectId, (await store.getProject(projectId))?.name ?? 'Deleted project');
+    return jobs.map(j => ({id: j.id, type: j.type, label: JOB_LABEL[j.type] ?? j.type, status: j.status, project: names.get(j.projectId), projectId: j.projectId,
+      resultId: j.resultId ?? null, error: j.error?.message ?? null, createdAt: j.createdAt, updatedAt: j.updatedAt}));
+  });
+  // Admin: what this GapScan is set up with. Never secrets, only whether something is configured.
+  app.get('/v1/admin/settings', async () => ({
+    accounts: auth.mode === 'off' ? 'Off' : auth.visitors ? 'Visitors without sign-in; admins sign in' : 'Everyone signs in',
+    admins: auth.mode === 'off' ? [] : auth.admins ?? [],
+    signIn: auth.mode === 'off' ? [] : [...(auth.emailLinks !== false ? ['Email links'] : []), ...(auth.sso?.list().map(p => p.name) ?? []), ...(auth.testUsers?.length ? ['Test accounts (local only)'] : [])],
+    drafting: ai ? {enabled: true, provider: 'Anthropic', model: ai.model, effort: ai.effort} : {enabled: false},
+    figmaToken: Boolean(figma.token),
+    references: (await listReferences()).map(r => ({id: r.id, library: r.library, version: r.version, framework: r.framework, components: r.components, pinnedAt: r.pinnedAt})),
+  }));
+
   // Admin: every design system on this GapScan, with who it belongs to (visitors stay anonymous).
   app.get('/v1/admin/design-systems', async () => {
     const listed = await projectSummaries(await store.listProjects());
