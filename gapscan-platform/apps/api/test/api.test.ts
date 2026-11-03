@@ -189,7 +189,7 @@ test('the extraction UI is served with a CSP and nothing outside its folder is r
     const page = await h.app.inject({method: 'GET', url: '/app/'});
     assert.equal(page.statusCode, 200);
     assert.match(page.headers['content-security-policy'] as string, /default-src 'self'/);
-    assert.match(page.body, /Extract a design system/);
+    assert.match(page.body, /<h1>Projects<\/h1>/);
     assert.equal((await h.app.inject({method: 'GET', url: '/app/review.js'})).statusCode, 200);
     for (const url of ['/app/../src/app.ts', '/app/..%2Fpackage.json', '/app/secret.txt', '/app/%2e%2e/%2e%2e/package.json'])
       assert.equal((await h.app.inject({method: 'GET', url})).statusCode, 404, url);
@@ -351,4 +351,24 @@ test('Figma Variables sync previews without writing and applies only the confirm
     const noToken = buildApp({infra, figma: {}});
     assert.equal((await noToken.inject({method: 'POST', url: `/v1/extractions/${edsId}/figma-sync/plan`, payload: {fileUrl}})).statusCode, 400);
   } finally { await app.close(); await infra.close(); await rm(dataDir, {recursive: true, force: true}); }
+});
+
+test('projects: listed newest activity first with what is in them, and renamed', async () => {
+  const h = await harness();
+  try {
+    const other = (await h.json('POST', '/v1/projects', {name: 'Beta'})).body;
+    await new Promise(resolve => setTimeout(resolve, 5));   // timestamps are to the millisecond
+    await h.json('POST', `/v1/projects/${h.project.id}/sources`, {kind: 'code', name: 'acme.css', content: CSS});
+    const listed = (await h.json('GET', '/v1/projects')).body;
+    assert.deepEqual(listed.map((p: {name: string}) => p.name), ['Acme', 'Beta'], 'adding a source is activity');
+    assert.equal(listed[0].sources, 1);
+    assert.equal(listed[0].extractions, 0);
+    assert.equal(listed[0].latestExtraction, null);
+    const renamed = await h.json('PATCH', `/v1/projects/${other.id}`, {name: '  Brand refresh  '});
+    assert.equal(renamed.status, 200);
+    assert.equal(renamed.body.name, 'Brand refresh');
+    assert.equal((await h.json('GET', `/v1/projects/${other.id}`)).body.name, 'Brand refresh');
+    assert.equal((await h.json('PATCH', `/v1/projects/${other.id}`, {name: ' '})).status, 400);
+    assert.equal((await h.json('PATCH', '/v1/projects/nope', {name: 'x'})).status, 404);
+  } finally { await h.close(); }
 });

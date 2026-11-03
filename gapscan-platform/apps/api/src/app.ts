@@ -110,6 +110,24 @@ export function buildApp({infra, handlers = {}, logger = false, heartbeatMs = HE
     return reply.code(201).send(project);
   });
 
+  // Your projects (all of them when accounts are off), newest activity first, with what's in each.
+  app.get('/v1/projects', async request => {
+    const projects = request.user ? await store.listProjectsFor(request.user.id) : await store.listProjects();
+    const listed = await Promise.all(projects.map(async project => {
+      const [extractions, sources] = await Promise.all([store.listExtractions(project.id), store.listSources(project.id)]);
+      const latest = extractions.reduce<typeof extractions[number] | null>((a, b) => !a || b.createdAt > a.createdAt ? b : a, null);
+      return {...project, sources: sources.filter(s => s.role === 'system').length, extractions: extractions.length,
+        latestExtraction: latest ? {id: latest.id, version: latest.version, createdAt: latest.createdAt} : null,
+        lastActivity: [project.createdAt, latest?.createdAt, ...sources.map(s => s.createdAt)].filter((d): d is string => Boolean(d)).sort().at(-1)!};
+    }));
+    return listed.sort((a, b) => b.lastActivity.localeCompare(a.lastActivity));
+  });
+  app.patch('/v1/projects/:id', async (request, reply) => {
+    const {id} = IdParams.parse(request.params);
+    const body = parse(CreateProjectBody, request.body, reply); if (!body) return reply;
+    return (await store.renameProject(id, body.name)) ?? fail(reply, 404, 'Project not found.');
+  });
+
   // What's saved for a website: pages read, pages still queued, when it was first read.
   app.get('/v1/saved-sites', async (request, reply) => {
     const url = String((request.query as {url?: string}).url ?? '');

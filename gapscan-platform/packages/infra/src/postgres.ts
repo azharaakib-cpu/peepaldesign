@@ -144,6 +144,14 @@ export function createPostgresStore(sql: SqlClient): Store {
       const [row] = await sql.query('SELECT id, name, created_at FROM projects WHERE id = $1', [id]);
       return row ? ProjectSchema.parse({id: str(row, 'id'), name: str(row, 'name'), createdAt: str(row, 'created_at')}) : null;
     },
+    async renameProject(id, name) {
+      const [row] = await sql.query('UPDATE projects SET name = $1 WHERE id = $2 RETURNING id, name, created_at', [name, id]);
+      return row ? ProjectSchema.parse({id: str(row, 'id'), name: str(row, 'name'), createdAt: str(row, 'created_at')}) : null;
+    },
+    async listProjects() {
+      return (await sql.query('SELECT id, name, created_at FROM projects ORDER BY created_at DESC'))
+        .map(row => ProjectSchema.parse({id: str(row, 'id'), name: str(row, 'name'), createdAt: str(row, 'created_at')}));
+    },
     async addSource(source) {
       const parsed = SourceAssetSchema.parse(source);
       await sql.query('INSERT INTO sources (id, project_id, data, created_at) VALUES ($1, $2, $3, $4)', [parsed.id, parsed.projectId, JSON.stringify(parsed), parsed.createdAt]);

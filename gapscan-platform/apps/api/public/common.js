@@ -18,13 +18,38 @@ async function api(path, options = {}) {
 }
 // After signing in, people come back to the page they were on.
 const signinUrl = () => `/app/signin.html#next=${encodeURIComponent(location.pathname + location.search)}`;
-// With accounts on, the header shows who is signed in. `whoami` resolves to the user, or null when accounts are off.
+
+// ── App bar: the same on every page. Brand, where you are, who you are, theme. ──
+const ICONS = {
+  moon: '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M20.7 14.6A8.5 8.5 0 0 1 9.4 3.3a.8.8 0 0 0-1-1A10 10 0 1 0 21.7 15.6a.8.8 0 0 0-1-1Z"/></svg>',
+  sun: '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><circle cx="12" cy="12" r="4.5" fill="currentColor"/><path stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M4.9 19.1l1.8-1.8M17.3 6.7l1.8-1.8"/></svg>',
+};
+const svg = markup => { const t = document.createElement('template'); t.innerHTML = markup; return t.content.firstChild; };   // fixed icons only, never data
+const appBar = el('nav', {class: 'appbar', 'aria-label': 'GapScan'}, el('div', {class: 'appbar-inner'},
+  el('a', {class: 'brand', href: '/app/'}, el('span', {class: 'brand-mark', 'aria-hidden': 'true'}), 'GapScan'),
+  el('ol', {class: 'crumbs', 'aria-label': 'You are here'}),
+  el('div', {class: 'appbar-end'}, el('button', {class: 'icon-button', id: 'theme', type: 'button'}))));
+document.body.prepend(appBar);
+// Pages say where they are: [{label, href?}, …]; the last one is the current page.
+function setCrumbs(crumbs) {
+  appBar.querySelector('.crumbs').replaceChildren(...crumbs.map((c, i) => el('li', {}, i === crumbs.length - 1
+    ? el('span', {'aria-current': 'page'}, c.label) : el('a', {href: c.href}, c.label))));
+  document.title = [...crumbs].reverse().map(c => c.label).concat('GapScan').join(' · ');
+}
+// Projects › <project> › …rest, with the project's name fetched (left out if it can't be read).
+async function crumbsFor(projectId, ...rest) {
+  const project = projectId ? await api(`/v1/projects/${projectId}`).catch(() => null) : null;
+  setCrumbs([{label: 'Projects', href: '/app/'}, ...(project ? [{label: project.name, href: `/app/?project=${project.id}`}] : []), ...rest]);
+  return project;
+}
+
+// With accounts on, the bar shows who is signed in. `whoami` resolves to the user, or null when accounts are off.
 const whoami = (async () => {
   if (location.pathname.endsWith('/signin.html')) return null;
   const me = await fetch('/v1/auth/me').then(r => r.status === 401 ? (location.href = signinUrl(), null) : r.json()).catch(() => null);
-  const user = me?.user ?? null, header = document.querySelector('header.top');
-  if (user && header) header.append(el('div', {class: 'account'}, el('span', {class: 'muted'}, user.email),
-    el('button', {type: 'button', onclick: async () => { await fetch('/v1/auth/logout', {method: 'POST'}); location.href = '/app/signin.html#signed-out'; }}, 'Sign out')));
+  const user = me?.user ?? null;
+  if (user) appBar.querySelector('.appbar-end').prepend(el('div', {class: 'account'}, el('span', {class: 'muted account-email', title: user.email}, user.email),
+    el('button', {type: 'button', class: 'quiet', onclick: async () => { await fetch('/v1/auth/logout', {method: 'POST'}); location.href = '/app/signin.html#signed-out'; }}, 'Sign out')));
   return user;
 })();
 // Drafting with Claude is on only when the server says so; buttons stay hidden otherwise.
@@ -41,12 +66,16 @@ async function runJob(path, onProgress = () => {}) {
   });
 }
 (function theme() {
+  const button = $('#theme');
+  const isDark = () => document.documentElement.dataset.theme ? document.documentElement.dataset.theme === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
+  const paint = () => { const dark = isDark(); button.replaceChildren(svg(dark ? ICONS.sun : ICONS.moon)); button.setAttribute('aria-label', dark ? 'Use light theme' : 'Use dark theme'); button.title = button.getAttribute('aria-label'); };
   try { const saved = localStorage.getItem('gapscan-theme'); if (saved) document.documentElement.dataset.theme = saved; } catch {}
-  document.addEventListener('click', event => {
-    if (event.target?.id !== 'theme') return;
-    const dark = document.documentElement.dataset.theme ? document.documentElement.dataset.theme === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
-    document.documentElement.dataset.theme = dark ? 'light' : 'dark';
+  paint();
+  matchMedia('(prefers-color-scheme: dark)').addEventListener('change', paint);
+  button.addEventListener('click', () => {
+    document.documentElement.dataset.theme = isDark() ? 'light' : 'dark';
     try { localStorage.setItem('gapscan-theme', document.documentElement.dataset.theme); } catch {}
+    paint();
   });
 })();
 

@@ -231,7 +231,7 @@ async function load() {
     specimens = new Map(eds.specimens.map(s => [s.id, s]));
     [suggestions, aiEnabled] = await Promise.all([api(`/v1/gapscans/${reportId}/suggestions`).catch(() => ({})), aiStatus.then(a => a.enabled)]);
     $('#title').textContent = `Your system → ${reference.library} ${reference.version}`;
-    $('#back').href = `/app/review.html?id=${report.edsId}`;
+    crumbsFor(eds.projectId, {label: `Extraction v${eds.version}`, href: `/app/review.html?id=${report.edsId}`}, {label: `Report: ${reference.library}`});
     renderSummary(); renderItems(); loadCodemod();
   } catch (error) { $('#headline').textContent = error.message; }
 }

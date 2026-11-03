@@ -56,6 +56,15 @@ export function createSqliteStore(path: string): Store {
       const row = db.prepare('SELECT id, name, created_at FROM projects WHERE id = ?').get(id) as Row | undefined;
       return row ? ProjectSchema.parse({id: text(row, 'id'), name: text(row, 'name'), createdAt: text(row, 'created_at')}) : null;
     },
+    async renameProject(id, name) {
+      db.prepare('UPDATE projects SET name = ? WHERE id = ?').run(name, id);
+      const row = db.prepare('SELECT id, name, created_at FROM projects WHERE id = ?').get(id) as Row | undefined;
+      return row ? ProjectSchema.parse({id: text(row, 'id'), name: text(row, 'name'), createdAt: text(row, 'created_at')}) : null;
+    },
+    async listProjects() {
+      return (db.prepare('SELECT id, name, created_at FROM projects ORDER BY created_at DESC').all() as Row[])
+        .map(row => ProjectSchema.parse({id: text(row, 'id'), name: text(row, 'name'), createdAt: text(row, 'created_at')}));
+    },
     async addSource(source) {
       const parsed = SourceAssetSchema.parse(source);
       db.prepare('INSERT INTO sources (id, project_id, data, created_at) VALUES (?, ?, ?, ?)').run(parsed.id, parsed.projectId, JSON.stringify(parsed), parsed.createdAt);

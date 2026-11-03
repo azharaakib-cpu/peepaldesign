@@ -21,6 +21,9 @@ export type Member = {userId: string; email: string; role: Role; addedAt: string
 export interface Store {
   createProject(name: string): Promise<Project>;
   getProject(id: string): Promise<Project | null>;
+  renameProject(id: string, name: string): Promise<Project | null>;
+  // Every project, newest first: local mode without accounts.
+  listProjects(): Promise<Project[]>;
   addSource(source: SourceAsset): Promise<void>;
   listSources(projectId: string): Promise<SourceAsset[]>;
   createJob(input: {type: JobType; projectId: string; subjectId?: string; payload: Record<string, unknown>}): Promise<Job>;

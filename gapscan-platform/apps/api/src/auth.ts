@@ -65,7 +65,7 @@ export function accessRules(store: Store): Record<string, Rule> {
     'POST /v1/auth/link': pub, 'POST /v1/auth/session': pub, 'GET /v1/auth/me': pub, 'POST /v1/auth/logout': pub,
     'GET /v1/auth/providers': pub, 'POST /v1/auth/test-session': pub, 'GET /v1/auth/sso/:provider/start': pub, 'GET /v1/auth/sso/:provider/callback': pub,
     'GET /v1/library': user, 'GET /v1/saved-sites': user, 'GET /v1/library/:id': user, 'GET /v1/templates': user, 'POST /v1/projects': user, 'GET /v1/projects': user,
-    'GET /v1/projects/:id': viaProject, 'POST /v1/projects/:id/sources': viaProject, 'POST /v1/projects/:id/extractions': viaProject,
+    'GET /v1/projects/:id': viaProject, 'PATCH /v1/projects/:id': viaProject, 'POST /v1/projects/:id/sources': viaProject, 'POST /v1/projects/:id/extractions': viaProject,
     'POST /v1/projects/:id/usage': viaProject, 'GET /v1/projects/:id/usage': viaProject, 'GET /v1/projects/:id/members': viaProject,
     'POST /v1/projects/:id/members': {access: 'owner', project: async r => param(r)}, 'DELETE /v1/projects/:id/members/:userId': {access: 'owner', project: async r => param(r)},
     'GET /v1/jobs/:id': viaJob, 'DELETE /v1/jobs/:id': viaJob, 'GET /v1/jobs/:id/events': viaJob, 'GET /v1/assets/:id': viaJob, 'GET /v1/assets/:id/file': viaJob,
@@ -212,7 +212,6 @@ export function registerAuth(app: FastifyInstance, store: Store, config: AuthCon
     return reply.code(204).send();
   });
 
-  app.get('/v1/projects', async request => store.listProjectsFor(request.user!.id));
   app.get('/v1/projects/:id/members', async request => store.listMembers((request.params as {id: string}).id));
   app.post('/v1/projects/:id/members', async (request, reply) => {
     const {id} = request.params as {id: string};

@@ -18,6 +18,7 @@
   --major: #ff8a80; --major-soft: #3a1717; --minor: #f5c56b; --minor-soft: #33270f; --info: #a9c3e8; --info-soft: #172640; --ok: #6fd3a0; color-scheme: dark;
 }
 * { box-sizing: border-box; }
+[hidden] { display: none !important; }
 body { margin: 0; background: var(--canvas); color: var(--text); font: 15px/1.5 var(--font); }
 main { max-width: 1120px; margin: 0 auto; padding: 32px 16px 64px; }
 header.top { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 24px; }
@@ -137,3 +138,38 @@ main.narrow { max-width: 560px; }
 .source .saved { display: block; font-size: 12px; margin-top: 2px } label.inline { display: inline-flex; gap: 6px; align-items: center; margin-top: 10px }
 .test-users { border-style: dashed; } .test-users h2 { margin: 0 0 4px; font-size: 15px; }
 .sso { display: grid; gap: 8px; margin-bottom: 12px } .sso-button { text-align: center; justify-content: center } .sso .or { text-align: center; margin: 4px 0 0 }
+
+/* App bar: brand, breadcrumb, account and theme on every page */
+.appbar { position: sticky; top: 0; z-index: 10; background: color-mix(in srgb, var(--surface) 88%, transparent); backdrop-filter: saturate(1.4) blur(10px); border-bottom: 1px solid var(--line); }
+.appbar-inner { max-width: 1120px; margin: 0 auto; padding: 10px max(16px, env(safe-area-inset-right, 0px)) 10px max(16px, env(safe-area-inset-left, 0px)); display: flex; align-items: center; gap: 16px; min-height: 52px; }
+.brand { display: inline-flex; align-items: center; gap: 8px; font-weight: 700; color: var(--text); text-decoration: none; letter-spacing: -0.01em; flex: none; }
+.brand-mark { width: 20px; height: 20px; border-radius: 6px; background: linear-gradient(135deg, var(--accent) 0 50%, color-mix(in srgb, var(--accent) 45%, var(--surface)) 50% 100%); }
+.crumbs { display: flex; align-items: center; gap: 6px; list-style: none; margin: 0; padding: 0; min-width: 0; flex: 1; font-size: 14px; color: var(--text-secondary); overflow: hidden; }
+.crumbs li { display: flex; align-items: center; gap: 6px; min-width: 0; white-space: nowrap; }
+.crumbs li + li::before { content: "/"; color: var(--line-strong); }
+.crumbs a { color: var(--text-secondary); text-decoration: none; overflow: hidden; text-overflow: ellipsis; }
+.crumbs a:hover { color: var(--text); text-decoration: underline; }
+.crumbs [aria-current] { color: var(--text); font-weight: 600; overflow: hidden; text-overflow: ellipsis; }
+.appbar-end { display: flex; align-items: center; gap: 8px; flex: none; }
+.account-email { font-size: 13px; max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.icon-button { display: inline-grid; place-items: center; width: 36px; height: 36px; padding: 0; border-radius: 8px; border-color: transparent; background: transparent; color: var(--text-secondary); }
+.icon-button:hover { background: var(--surface-soft); color: var(--text); border-color: var(--line); }
+button.quiet { border-color: transparent; background: transparent; color: var(--text-secondary); padding: 6px 10px; }
+button.quiet:hover { background: var(--surface-soft); color: var(--text); }
+@media (max-width: 640px) { .account-email { display: none; } .crumbs li:not(:last-child) { display: none; } .crumbs li + li::before { content: none; } }
+
+/* Projects home */
+.project-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }
+.project-card { display: grid; gap: 8px; align-content: start; padding: 18px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); color: var(--text); text-decoration: none; transition: border-color .15s, box-shadow .15s; }
+.project-card:hover { border-color: var(--line-strong); box-shadow: 0 2px 10px color-mix(in srgb, var(--text) 8%, transparent); }
+.project-card .pill { justify-self: start; }
+.project-name { font-weight: 650; font-size: 16px; overflow-wrap: anywhere; }
+.project-meta { font-size: 13px; }
+.empty-state { grid-column: 1 / -1; text-align: center; padding: 48px 20px; background: var(--surface); border: 1px dashed var(--line-strong); border-radius: var(--radius); }
+.empty-state p { max-width: 52ch; margin: 8px auto 20px; }
+.new-project label { margin-top: 0; }
+.title-block { min-width: 0; flex: 1; }
+.title-edit { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.title-edit h1 { overflow-wrap: anywhere; }
+.title-edit input { flex: 1 1 260px; font-size: 20px; font-weight: 600; }
+.title-block .lead { margin: 6px 0 0; }

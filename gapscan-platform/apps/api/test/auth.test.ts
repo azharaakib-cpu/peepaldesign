@@ -41,7 +41,7 @@ test('every API route has an access rule, and a route without one stops the serv
   app.get('/v1/forgotten', async () => ({open: true}));
   await assert.rejects(async () => { await app.ready(); }, /Routes without an access rule in auth.ts: GET \/v1\/forgotten/);
   await infra.close(); await rm(dataDir, {recursive: true, force: true});
-  for (const key of Object.keys(accessRules(infra.store))) assert.match(key, /^(GET|POST|PUT|DELETE) \//);
+  for (const key of Object.keys(accessRules(infra.store))) assert.match(key, /^(GET|POST|PUT|PATCH|DELETE) \//);
 });
 
 test('a magic link signs you in once; the link travels in the URL fragment; the cookie is HttpOnly and Secure', async () => {
@@ -76,6 +76,8 @@ test('projects are private to their members; owners invite, editors work, approv
       assert.deepEqual([(await h.call('GET', url, {cookie: ben.cookie})).status, url], [404, url]);
     assert.equal((await h.call('POST', '/v1/gapscans', {cookie: ben.cookie, payload: {edsId, referenceId: 'bootstrap-5.3.3'}})).status, 404, 'resolved through the body too');
     assert.deepEqual((await h.call('GET', '/v1/projects', {cookie: ben.cookie})).body, []);
+    assert.equal((await h.call('PATCH', `/v1/projects/${project.id}`, {cookie: ben.cookie, payload: {name: 'Mine now'}})).status, 404, 'only members rename');
+    assert.deepEqual((await h.call('GET', '/v1/projects', {cookie: ana.cookie})).body.map((p: {name: string; extractions: number}) => [p.name, p.extractions]), [['Acme', 1]]);
 
     // Ana invites Ben as an editor; he gets an email and access.
     const members = await h.call('POST', `/v1/projects/${project.id}/members`, {cookie: ana.cookie, payload: {email: 'ben@example.com'}});

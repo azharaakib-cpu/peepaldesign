@@ -13,6 +13,8 @@ async function load() {
   const evidence = new Map(eds.evidence.map(e => [e.id, e]));
   const sourceNames = eds.sources.map(s => s.label || s.uri);
   $('#subtitle').textContent = `Version ${eds.version} · from ${sourceNames.join(', ')} · ${new Date(eds.createdAt).toLocaleString()}`;
+  crumbsFor(eds.projectId, {label: `Extraction v${eds.version}`});
+  $('#extract-again').href = `/app/?project=${eds.projectId}`;
 
   const stat = (value, label) => el('div', {class: 'stat'}, el('b', {}, value), el('span', {}, label));
   $('#stats').replaceChildren(

@@ -1,3 +1,4 @@
+setCrumbs([{label: 'Sign in'}]);
 // Magic-link sign-in. The token arrives in the URL fragment (never sent to a server) and is
 // exchanged only when the person presses Sign in, so link scanners that open emails can't use it up.
 const fragment = new URLSearchParams(location.hash.slice(1)), token = fragment.get('token'), ssoError = fragment.get('error');

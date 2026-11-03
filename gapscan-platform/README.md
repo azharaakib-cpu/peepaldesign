@@ -86,7 +86,8 @@ review the result, then compare it against a reference system.
 | `GET /v1/gapscans/:id/codemod.mjs` | The script: `node gapscan-codemod.mjs [paths…]` prints the diff; `--write` applies it. Uses the project's own `typescript` package. |
 | `POST /v1/auth/link` `{email}` | Emails a single-use sign-in link (15 minutes). Same answer whether or not the address can sign in; 5 links per address and 20 requests per IP per 15 minutes. |
 | `POST /v1/auth/session` `{token}`, `GET /v1/auth/me`, `POST /v1/auth/logout` | Exchange the link's token for a session cookie (30 days, HttpOnly, SameSite=Lax), read it, end it |
-| `GET /v1/projects` | Projects you are a member of |
+| `GET /v1/projects` | Projects, newest activity first, with source and extraction counts and the latest extraction: yours when accounts are on, all of them when off |
+| `PATCH /v1/projects/:id` `{name}` | Rename a project (any member) |
 | `GET`/`POST /v1/projects/:id/members`, `DELETE /v1/projects/:id/members/:userId` | People on a project; owners invite (`{email, role}`, emailed) and remove; the last owner stays |
 | `GET /v1/extractions/:id/design-system`, `…/design-system.html` | The extraction laid out like a Figma library (colour ramps, text styles, spacing, radius, effects, components with variants), as JSON or a self-contained page with no scripts |
 | `GET /v1/extractions/:id/figma-export.json`, `GET /v1/figma-plugin.zip` | Export to Figma, on request: a build plan, and the GapScan Importer plugin that applies it inside a Figma file you choose. GapScan never writes to Figma itself. |
