@@ -17,7 +17,7 @@
 
   <div class="page-tabs" role="tablist" aria-label="Report">
     <button role="tab" id="tab-report" aria-controls="view-report" data-view="report">Report</button>
-    <button role="tab" id="tab-codemod" aria-controls="view-codemod" data-view="codemod">Codemod</button>
+    <button role="tab" id="tab-codemod" aria-controls="view-codemod" data-view="codemod">For developers</button>
   </div>
 
   <div class="view" id="view-report" role="tabpanel" aria-labelledby="tab-report">
@@ -79,7 +79,7 @@
 
   <div class="view" id="view-codemod" role="tabpanel" aria-labelledby="tab-codemod" hidden>
     <section class="card" aria-labelledby="codemod-title">
-      <h2 id="codemod-title">Codemod</h2>
+      <h2 id="codemod-title">Update the code automatically</h2>
       <p class="muted">Rewrites the renames this report found (imports, props, option values and class names) for confirmed matches only. Call sites it can't change safely are listed for a person. Review the dry run, then run the script in your repository; GapScan never changes your code.</p>
       <div class="row"><button class="primary" id="codemod-run" type="button">Dry-run on your app code</button><a class="button" id="codemod-download" href="#">Download script</a></div>
       <div id="codemod"></div>

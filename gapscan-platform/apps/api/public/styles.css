@@ -369,3 +369,12 @@ main.wide { max-width: 1240px; }
 @media (max-width: 900px) { .export-grid { grid-template-columns: 1fr; } }
 .fine-tag { font-size: 12px; }
 .docs-main-head .row { gap: 6px; }
+
+/* Migrate */
+.recommend { display: grid; gap: 8px; border-color: color-mix(in srgb, var(--accent) 40%, var(--line)); }
+.recommend h2 { font-size: 24px; margin: 0; }
+.recommend p { margin: 0; }
+.progress-inline { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; color: var(--text-secondary); }
+.progress-inline .kind-busy { margin: 0; width: 16px; height: 16px; }
+.inline-h2 { display: inline; font-size: 17px; margin: 0; }
+details > summary:has(.inline-h2) { cursor: pointer; }
