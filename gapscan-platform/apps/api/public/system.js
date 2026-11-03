@@ -23,7 +23,7 @@ async function load() {
   $('#preview').src = `${preview}?embed=1`;
   $('#preview-open').href = preview;
   // Until each action gets its own simple view, they open the matching part of the full review.
-  $('#action-export').href = `/app/review.html?id=${id}#deliver`;
+  $('#action-export').href = `/app/export.html?id=${id}`;
   $('#action-documents').href = `/app/review.html?id=${id}#documentation`;
   $('#action-migrate').href = `/app/review.html?id=${id}#migrate`;
   api(`/v1/extractions/${id}/recommendations`).then(ranked => {

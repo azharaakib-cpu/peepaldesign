@@ -85,7 +85,7 @@ export function accessRules(store: Store): Record<string, Rule> {
     'GET /v1/ai': user, 'POST /v1/extractions/:id/objects/:kind/sections/:sectionId/draft': viaExtraction, 'DELETE /v1/extractions/:id/objects/:kind/sections/:sectionId/draft': viaExtraction,
     'POST /v1/gapscans/:id/matches/:sourceId/suggestion': viaGapScan, 'GET /v1/gapscans/:id/suggestions': viaGapScan,
     'POST /v1/extractions/:id/figma-sync/plan': viaExtraction, 'POST /v1/extractions/:id/figma-sync/apply': viaExtraction, 'GET /v1/extractions/:id/brandkit': viaExtraction,
-    'POST /v1/extractions/:id/assets': viaExtraction, 'GET /v1/extractions/:id/recommendations': viaExtraction,
+    'POST /v1/extractions/:id/assets': viaExtraction, 'POST /v1/extractions/:id/book': viaExtraction, 'GET /v1/extractions/:id/recommendations': viaExtraction,
     'POST /v1/gapscans': {access: 'project', project: async r => (await store.getExtraction(String((r.body as {edsId?: unknown} | undefined)?.edsId ?? '')))?.projectId ?? null},
     'GET /v1/gapscans/:id': viaGapScan, 'GET /v1/gapscans/:id/items/:itemId/projection': viaGapScan, 'PUT /v1/gapscans/:id/assumptions': viaGapScan,
     'PUT /v1/gapscans/:id/matches/:sourceId': viaGapScan, 'POST /v1/gapscans/:id/codemod': viaGapScan, 'GET /v1/gapscans/:id/codemod': viaGapScan,

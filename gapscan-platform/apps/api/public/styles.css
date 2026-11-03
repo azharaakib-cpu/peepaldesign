@@ -352,3 +352,18 @@ main.wide { max-width: 1240px; }
 .preview-head h2 { margin: 0 0 10px; }
 #preview { width: 100%; height: 78vh; min-height: 560px; border: 1px solid var(--line); border-radius: 14px; background: #fff; }
 @media (max-width: 760px) { .actions { grid-template-columns: 1fr; } }
+
+/* Export */
+.export-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; align-items: start; }
+.export-card { display: grid; gap: 10px; align-content: start; margin: 0; }
+.export-card h2 { margin: 4px 0 0; font-size: 19px; }
+.export-card p { margin: 0; }
+.export-card > .button, .export-card > button { justify-self: start; }
+.format-list { display: grid; gap: 6px; }
+.format-list label { margin: 0; font-weight: 400; display: flex; gap: 8px; align-items: center; }
+.format-list input { accent-color: var(--accent); }
+.guide summary { cursor: pointer; color: var(--accent); font-size: 14px; }
+.icon-figma::before { width: 14px; height: 20px; border-radius: 7px; }
+.icon-pdf::before { width: 16px; height: 20px; border-radius: 2px; }
+.icon-code::before { width: 18px; height: 4px; box-shadow: 0 -6px 0 var(--accent), 0 6px 0 var(--accent); }
+@media (max-width: 900px) { .export-grid { grid-template-columns: 1fr; } }

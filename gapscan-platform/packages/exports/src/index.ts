@@ -89,5 +89,7 @@ export {planFigmaSync, variableName} from './figma-variables.ts';
 export type {ExistingVariables, SyncChange, SyncPlan} from './figma-variables.ts';
 export {buildDesignSystem, parseShadows, renderDesignSystemHtml} from './design-system.ts';
 export type {DesignSystemDoc} from './design-system.ts';
+export {markdownToHtml, renderDesignSystemBook} from './book.ts';
+export type {BookDocument} from './book.ts';
 export {buildFigmaPlan, FIGMA_PLAN_FORMAT} from './figma-plan.ts';
 export type {FigmaPlan} from './figma-plan.ts';

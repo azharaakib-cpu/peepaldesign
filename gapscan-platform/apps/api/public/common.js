@@ -44,6 +44,13 @@ async function crumbsFor(projectId, ...rest) {
   return project;
 }
 
+// Pages about one design system (Export, Documents, Migrate): Design systems / <name> / <page>.
+async function systemContext(id, label) {
+  const record = await api(`/v1/extractions/${id}`), project = await api(`/v1/projects/${record.projectId}`);
+  setCrumbs([{label: 'Design systems', href: '/app/'}, {label: project.name, href: `/app/system.html?id=${id}`}, {label}]);
+  return {record, project};
+}
+
 // Who is here: `me` resolves to {user, anonymous, admin} (user null when accounts are off) and `whoami` to the user.
 // Visitors (no sign-in) see nothing in the bar; signed-in people see their email; admins also get the Admin link.
 const me = location.pathname.endsWith('/signin.html') ? Promise.resolve({user: null})

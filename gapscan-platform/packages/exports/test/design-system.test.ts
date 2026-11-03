@@ -77,3 +77,19 @@ test('a state is only what changes, a disabled instance becomes its look’s dis
   assert.match(html, /outline:2px solid #005eff;outline-offset:2px/, 'the focus ring is drawn');
   assert.match(html, /No visible style found for: focus-visible/);
 });
+
+test('the design-system book: print layout, approved documentation, and Markdown rendered safely', async () => {
+  const {markdownToHtml, renderDesignSystemBook} = await import('@gapscan/exports');
+  const html = markdownToHtml('### Do\n- Use **primary** for `submit`\n\n| Pair | Ratio |\n| --- | --- |\n| Text | 7:1 |\n\n<script>alert(1)</script>');
+  assert.match(html, /<h4>Do<\/h4>/);
+  assert.match(html, /<li>Use <strong>primary<\/strong> for <code>submit<\/code><\/li>/);
+  assert.match(html, /<th>Pair<\/th>.*<td>7:1<\/td>/s);
+  assert.doesNotMatch(html, /<script>/, 'text is escaped, never markup');
+  const doc = buildDesignSystem(eds([token('--color-brand', '#0B5FD6')]), {}, 'Acme <web>');
+  const empty = renderDesignSystemBook(doc, [{title: 'Accessibility standard', sections: []}]);
+  assert.match(empty, /@page \{ size: A4/);
+  assert.match(empty, /No documentation has been approved yet/);
+  assert.match(empty, /Acme &lt;web&gt;/);
+  const withDocs = renderDesignSystemBook(doc, [{title: 'Accessibility standard', sections: [{title: 'Conformance target', content: 'We meet **WCAG 2.2 AA**.'}]}]);
+  assert.match(withDocs, /<h2>Accessibility standard<\/h2><article><h3>Conformance target<\/h3><p>We meet <strong>WCAG 2.2 AA<\/strong>\.<\/p>/);
+});

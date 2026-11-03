@@ -20,7 +20,7 @@ import type {ExistingVariables} from '@gapscan/exports';
 import {buildObjects, contentHash, isDraftable} from '@gapscan/objects';
 import {approvalsKey, createDraftHandler, draftsKey, readApprovals, readDrafts, readSuggestions} from './draft-job.ts';
 import type {Ai} from './draft-job.ts';
-import {assetKey, createRenderHandler} from './render-job.ts';
+import {assetKey, BOOK, createRenderHandler} from './render-job.ts';
 import {createUsageHandler, githubRepo, loadUsageReport} from './usage-job.ts';
 import {buildBrandKit, TEMPLATES} from '@gapscan/assets';
 import {approvalKey, computeReport, createGapScanHandler, loadExtraction, loadGapScan, saveReport, summarize} from './gapscan-job.ts';
@@ -413,6 +413,15 @@ export function buildApp({infra, handlers = {}, logger = false, heartbeatMs = HE
     if (!extraction) return fail(reply, 404, 'Extraction not found.');
     const body = parse(StartRender, request.body, reply); if (!body) return reply;
     const job = await store.createJob({type: 'render', projectId: extraction.projectId, subjectId: id, payload: {edsId: id, ...body}});
+    await queue.enqueue(job);
+    return reply.code(202).send({jobId: job.id, events: `/v1/jobs/${job.id}/events`});
+  });
+  // The design-system book (PDF): the laid-out system plus approved documentation, rendered as a `render` job.
+  app.post('/v1/extractions/:id/book', async (request, reply) => {
+    const {id} = IdParams.parse(request.params), extraction = await store.getExtraction(id);
+    if (!extraction) return fail(reply, 404, 'Extraction not found.');
+    const project = await store.getProject(extraction.projectId);
+    const job = await store.createJob({type: 'render', projectId: extraction.projectId, subjectId: id, payload: {edsId: id, template: BOOK, brandName: project?.name ?? 'Design system', data: {}}});
     await queue.enqueue(job);
     return reply.code(202).send({jobId: job.id, events: `/v1/jobs/${job.id}/events`});
   });
