@@ -163,7 +163,7 @@ export function buildApp({infra, handlers = {}, logger = false, heartbeatMs = HE
     }
     if (body.kind === 'file') {
       const kind = FILE_KINDS.find(([pattern]) => pattern.test(body.name))?.[1];
-      if (!kind) return fail(reply, 415, `${body.name} is not a supported file type. Use .pptx, .docx, .pdf, .zip, or CSS/SCSS/JSON/HTML source.`);
+      if (!kind) return fail(reply, 415, `${body.name} is not a supported file type. Use PDF, PowerPoint, Word, ZIP, CSS/SCSS/Less, token JSON, HTML, Markdown, component code (JS/TS, Vue, Svelte), or a PNG, JPEG, WebP or GIF image.`);
       const data = Buffer.from(body.base64, 'base64');
       if (!data.length) return fail(reply, 400, 'The file is empty or not base64-encoded.');
       if (data.length > MAX_FILE_BYTES) return fail(reply, 413, `${body.name} is ${data.length} bytes; the limit is ${MAX_FILE_BYTES}.`);

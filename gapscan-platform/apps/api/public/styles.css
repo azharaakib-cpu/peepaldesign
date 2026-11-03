@@ -18,6 +18,7 @@
   --major: #ff8a80; --major-soft: #3a1717; --minor: #f5c56b; --minor-soft: #33270f; --info: #a9c3e8; --info-soft: #172640; --ok: #6fd3a0; color-scheme: dark;
 }
 * { box-sizing: border-box; }
+html { scroll-padding-top: 72px; }
 [hidden] { display: none !important; }
 body { margin: 0; background: var(--canvas); color: var(--text); font: 15px/1.5 var(--font); }
 main { max-width: 1120px; margin: 0 auto; padding: 32px 16px 64px; }
@@ -173,3 +174,56 @@ button.quiet:hover { background: var(--surface-soft); color: var(--text); }
 .title-edit h1 { overflow-wrap: anywhere; }
 .title-edit input { flex: 1 1 260px; font-size: 20px; font-weight: 600; }
 .title-block .lead { margin: 6px 0 0; }
+
+/* Sources and extraction */
+.card-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.card-head h2 { margin-bottom: 4px; }
+.card-intro { margin: 0 0 16px; max-width: 70ch; }
+.dropzone { display: grid; justify-items: center; gap: 6px; margin: 0; padding: 28px 20px; text-align: center; font-weight: 400; cursor: pointer;
+  border: 1.5px dashed var(--line-strong); border-radius: var(--radius); background: var(--surface-soft); transition: border-color .15s, background .15s; }
+.dropzone:hover, .dropzone.is-over { border-color: var(--accent); background: var(--accent-soft); }
+.dropzone:focus-within { outline: 2px solid var(--focus); outline-offset: 2px; }
+.dropzone-icon { width: 36px; height: 36px; border-radius: 10px; background: var(--accent-soft); position: relative; }
+.dropzone-icon::before { content: ""; position: absolute; inset: 9px 15px 13px; background: var(--accent); }
+.dropzone-icon::after { content: ""; position: absolute; left: 10px; top: 7px; border: 8px solid transparent; border-bottom-color: var(--accent); border-top: 0; }
+.dropzone-title { font-weight: 600; } .dropzone-title u { color: var(--accent); text-underline-offset: 3px; }
+.dropzone-hint { font-size: 13px; max-width: 60ch; }
+.link-row label { margin-top: 16px; }
+.field-hint { font-size: 13px; margin: 6px 0 0; }
+details.paste { margin-top: 12px; } details.paste > summary { cursor: pointer; color: var(--accent); font-weight: 500; width: max-content; }
+details.paste[open] { padding: 12px; border: 1px solid var(--line); border-radius: 8px; }
+.source-cards { display: grid; gap: 8px; margin-top: 16px; }
+.source-cards:empty { display: none; }
+.source-card { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
+.source-card.is-error { border-color: color-mix(in srgb, var(--major) 45%, var(--line)); background: var(--major-soft); }
+.source-text { display: grid; min-width: 0; }
+.source-title { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.source-detail { font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.source-card .saved { font-size: 12px; margin-top: 2px; }
+.kind-icon { width: 32px; height: 32px; border-radius: 8px; display: grid; place-items: center; background: var(--info-soft); color: var(--info); font: 600 11px/1 var(--font); }
+.kind-web::before { content: "WWW"; font-size: 9px; } .kind-figma::before { content: "Fig"; } .kind-doc::before { content: "DOC"; font-size: 9px; }
+.kind-code::before { content: "</>"; } .kind-zip::before { content: "ZIP"; font-size: 9px; } .kind-image::before { content: "IMG"; font-size: 9px; }
+.kind-error { background: var(--surface); color: var(--major); } .kind-error::before { content: "!"; font-size: 15px; }
+.kind-busy { background: transparent; border: 2px solid var(--line-strong); border-top-color: var(--accent); border-radius: 50%; width: 22px; height: 22px; margin: 5px; animation: spin .8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.fine-print { margin-top: 14px; font-size: 13px; } .fine-print summary { cursor: pointer; width: max-content; } .fine-print p { margin: 6px 0 0; max-width: 70ch; }
+.extract-panel #extract-ready { margin: 0 0 12px; }
+.progress-steps { list-style: none; margin: 4px 0 16px; padding: 0; display: grid; gap: 0; }
+.step { display: grid; grid-template-columns: 22px 1fr; gap: 10px; position: relative; padding-bottom: 14px; }
+.step:not(:last-child)::after { content: ""; position: absolute; left: 10px; top: 22px; bottom: 0; width: 2px; background: var(--line); }
+.step.is-done:not(:last-child)::after { background: var(--accent); }
+.step-dot { width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--line-strong); background: var(--surface); box-sizing: border-box; }
+.step.is-done .step-dot { background: var(--accent); border-color: var(--accent); position: relative; }
+.step.is-done .step-dot::after { content: ""; position: absolute; left: 6px; top: 3px; width: 5px; height: 9px; border: solid #fff; border-width: 0 2px 2px 0; transform: rotate(45deg); }
+.step.is-active .step-dot { border-color: var(--accent); border-top-color: transparent; animation: spin .9s linear infinite; }
+.step-text { display: grid; gap: 2px; min-width: 0; padding-top: 1px; }
+.step.is-todo .step-label { color: var(--text-secondary); }
+.step.is-active .step-label { font-weight: 600; }
+.step-detail { font-size: 13px; overflow-wrap: anywhere; }
+.bar-track { display: block; height: 6px; border-radius: 3px; background: var(--surface-soft); border: 1px solid var(--line); overflow: hidden; margin-top: 6px; max-width: 360px; }
+.bar-track i { display: block; height: 100%; background: var(--accent); transition: width .3s; }
+.notice { padding: 14px 16px; border-radius: 8px; margin-bottom: 8px; }
+.error-notice { background: var(--major-soft); border: 1px solid color-mix(in srgb, var(--major) 40%, transparent); }
+.error-notice strong { color: var(--major); } .error-notice p { margin: 4px 0 10px; overflow-wrap: anywhere; }
+.log-details { margin-top: 12px; } .log-details > summary { cursor: pointer; color: var(--text-secondary); font-size: 13px; width: max-content; } .log-details .log { margin-top: 8px; }
+@media (prefers-reduced-motion: reduce) { .kind-busy, .step.is-active .step-dot { animation: none; } .bar-track i { transition: none; } }
