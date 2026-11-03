@@ -108,6 +108,11 @@ review the result, then compare it against a reference system.
 | `GAPSCAN_AUTH` | `off` locally; required when hosted | `magic-link` turns on accounts. Hosted mode (Postgres) refuses to start until this is set, so a deployment can't go out open by accident; `off` is allowed when you put it behind your own sign-in. |
 | `GAPSCAN_PUBLIC_URL` | unset | The address people open (`https://gapscan.example.com`). Used for sign-in links, the cross-site check and the `Secure` cookie flag. |
 | `GAPSCAN_MAIL` | `log` locally, `smtp` hosted | `smtp` with `GAPSCAN_SMTP_URL` (for example `smtps://user:pass@smtp.postmarkapp.com:465`) and `GAPSCAN_MAIL_FROM`. `log` prints links to the server console and is refused when hosted. |
+| `GAPSCAN_SSO_GOOGLE_CLIENT_ID`, `…_SECRET` | unset | Adds "Continue with Google". Redirect URI: `<GAPSCAN_PUBLIC_URL>/v1/auth/sso/google/callback` |
+| `GAPSCAN_SSO_MICROSOFT_CLIENT_ID`, `…_SECRET`, `…_TENANT` | unset | Adds "Continue with Microsoft" for one directory (tenant ID required; `common` is refused because nobody vouches for those email claims). `GAPSCAN_SSO_MICROSOFT_TRUST_EMAIL=1` accepts your directory's email claim. Redirect URI: `…/v1/auth/sso/microsoft/callback` |
+| `GAPSCAN_SSO_OIDC_ISSUER`, `…_CLIENT_ID`, `…_CLIENT_SECRET`, `…_NAME` | unset | Any OpenID Connect provider (Okta, Auth0, Keycloak…), https only. `GAPSCAN_SSO_OIDC_TRUST_EMAIL=1` for a provider that doesn't send `email_verified` but manages its users' addresses. Redirect URI: `…/v1/auth/sso/oidc/callback` |
+| `GAPSCAN_SECRET` | unset | Needed with single sign-on: 32+ random characters that sign the short-lived sign-in cookie |
+| `GAPSCAN_AUTH_EMAIL_LINKS` | on | `off` leaves single sign-on as the only way in |
 | `GAPSCAN_AUTH_DOMAINS` | unset (anyone) | Comma-separated email domains that can create an account. Others can still sign in once an owner invites them. |
 | `GAPSCAN_MAX_PAGES` | `8` | New pages rendered per website per extraction |
 | `GAPSCAN_SITE_MAX_PAGES` | `24` | Most pages kept for one website across extractions; once reached, extractions reuse them without reading the site |
@@ -140,6 +145,14 @@ passwords. The link carries its token in the URL fragment, which browsers never 
 server, so it can't land in access logs, and the sign-in page asks for a click before
 using it, so email scanners that open links can't spend it. Tokens and session ids are
 stored only as SHA-256 hashes.
+
+**Single sign-on** (Google, Microsoft, or any OpenID Connect provider) sits beside email
+links: the authorization-code flow with PKCE, a single-use `state` stored in the database (so
+any instance can finish a sign-in and a replay fails), and the nonce and verifier in a signed,
+HttpOnly cookie limited to the sign-in routes. The ID token's signature is checked against
+the provider's published keys (RSA, RSA-PSS or ECDSA only; never `none` or a shared secret),
+along with issuer, audience, nonce and expiry. Only a verified email signs anyone in, and the
+email-domain rule applies as it does to links.
 
 Every project is private to its members. Each API route has an access rule in
 `apps/api/src/auth.ts` (public, any signed-in person, project member, or project owner);
@@ -225,8 +238,9 @@ images, gradients or translucent layers is skipped rather than guessed.
   server. Contention between separate machines (SKIP LOCKED claims, cross-connection
   notifications) follows standard Postgres semantics but has not been load-tested
   against a real server.
-- **Accounts are email-only.** No SSO, no organisation-wide admin, and roles are
-  per project (owner or editor). Sign-in requests are rate-limited per instance, not
+- **Accounts.** Email links and single sign-on; no organisation-wide admin, and roles are
+  per project (owner or editor). Single sign-on is tested against a local OpenID Connect
+  provider, not yet against Google or Microsoft themselves. Sign-in requests are rate-limited per instance, not
   across instances.
 - **Previews are inferred.** "Before" examples from code apply your real CSS to
   generated markup; "after" previews apply the reference's CSS with your role

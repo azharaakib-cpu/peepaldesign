@@ -7,10 +7,13 @@ import type {FastifyInstance, FastifyReply, FastifyRequest} from 'fastify';
 import type {Role, Store, User} from '@gapscan/infra';
 import {linkMail} from './mailer.ts';
 import type {Mailer} from './mailer.ts';
+import {SsoError, ssoProvidersFromEnv} from './oidc.ts';
+import type {Oidc} from './oidc.ts';
 
 declare module 'fastify' { interface FastifyRequest { user?: User } }
 
-export type AuthConfig = {mode: 'off'} | {mode: 'magic-link'; publicUrl: URL; mailer: Mailer; allowedDomains: string[]; linkMinutes?: number; sessionDays?: number};
+// `sso` adds single sign-on next to email links; `emailLinks: false` leaves single sign-on only.
+export type AuthConfig = {mode: 'off'} | {mode: 'magic-link'; publicUrl: URL; mailer: Mailer; allowedDomains: string[]; linkMinutes?: number; sessionDays?: number; sso?: Oidc; emailLinks?: boolean};
 
 // Hosted deployments must choose explicitly; local mode stays open and zero-config.
 export function authSettingsFromEnv(env: NodeJS.ProcessEnv = process.env) {
@@ -27,7 +30,9 @@ export function authSettingsFromEnv(env: NodeJS.ProcessEnv = process.env) {
   if (mail === 'log' && hosted) throw new Error('GAPSCAN_MAIL=log would put sign-in links in the server logs; use smtp when hosted.');
   if (mail === 'smtp' && (!env.GAPSCAN_SMTP_URL || !env.GAPSCAN_MAIL_FROM)) throw new Error('GAPSCAN_MAIL=smtp needs GAPSCAN_SMTP_URL and GAPSCAN_MAIL_FROM.');
   const allowedDomains = (env.GAPSCAN_AUTH_DOMAINS ?? '').split(',').map(d => d.trim().toLowerCase()).filter(Boolean);
-  return {mode: 'magic-link' as const, publicUrl, mail, smtpUrl: env.GAPSCAN_SMTP_URL, from: env.GAPSCAN_MAIL_FROM, allowedDomains};
+  const providers = ssoProvidersFromEnv(env), emailLinks = env.GAPSCAN_AUTH_EMAIL_LINKS !== 'off';
+  if (!emailLinks && !providers.length) throw new Error('GAPSCAN_AUTH_EMAIL_LINKS=off needs at least one single sign-on provider.');
+  return {mode: 'magic-link' as const, publicUrl, mail, smtpUrl: env.GAPSCAN_SMTP_URL, from: env.GAPSCAN_MAIL_FROM, allowedDomains, providers, emailLinks, secret: env.GAPSCAN_SECRET ?? ''};
 }
 
 export const SESSION_COOKIE = 'gapscan_session';
@@ -47,6 +52,7 @@ export function accessRules(store: Store): Record<string, Rule> {
   return {
     'GET /health': pub, 'GET /healthz': pub, 'GET /': pub, 'GET /app/*': pub,
     'POST /v1/auth/link': pub, 'POST /v1/auth/session': pub, 'GET /v1/auth/me': pub, 'POST /v1/auth/logout': pub,
+    'GET /v1/auth/providers': pub, 'GET /v1/auth/sso/:provider/start': pub, 'GET /v1/auth/sso/:provider/callback': pub,
     'GET /v1/library': user, 'GET /v1/saved-sites': user, 'GET /v1/library/:id': user, 'GET /v1/templates': user, 'POST /v1/projects': user, 'GET /v1/projects': user,
     'GET /v1/projects/:id': viaProject, 'POST /v1/projects/:id/sources': viaProject, 'POST /v1/projects/:id/extractions': viaProject,
     'POST /v1/projects/:id/usage': viaProject, 'GET /v1/projects/:id/usage': viaProject, 'GET /v1/projects/:id/members': viaProject,
@@ -107,7 +113,44 @@ export function registerAuth(app: FastifyInstance, store: Store, config: AuthCon
 
   const Email = z.object({email: z.string().trim().toLowerCase().email().max(254)});
   const sent = {message: 'If that address can sign in, a link is on its way. It works once, for 15 minutes.'};
+  app.get('/v1/auth/providers', async () => ({emailLinks: config.emailLinks !== false, providers: config.sso?.list() ?? []}));
+
+  // Single sign-on. The state is stored single-use (any instance can finish the sign-in); the nonce
+  // and PKCE verifier ride in a signed cookie scoped to these two routes.
+  const SSO_COOKIE = 'gapscan_sso';
+  const ssoCookie = (reply: FastifyReply, value: string, maxAge: number) =>
+    reply.header('set-cookie', `${SSO_COOKIE}=${value}; Path=/v1/auth/sso; HttpOnly; SameSite=Lax; Max-Age=${maxAge}${secure ? '; Secure' : ''}`);
+  const back = (reply: FastifyReply, code: string) => { ssoCookie(reply, '', 0); return reply.redirect(`/app/signin.html#error=${encodeURIComponent(code)}`); };
+  app.get('/v1/auth/sso/:provider/start', async (request, reply) => {
+    if (!config.sso) return fail(reply, 404, 'Single sign-on is not set up.');
+    const now = Date.now(), recent = (recentByIp.get(request.ip) ?? []).filter(t => t > now - 15 * 60_000);
+    if (recent.length >= 20) return fail(reply, 429, 'Too many sign-in requests. Try again in a few minutes.');
+    recentByIp.set(request.ip, [...recent, now]);
+    try {
+      const started = await config.sso.start((request.params as {provider: string}).provider);
+      await store.saveLoginToken({hash: hash(`sso:${started.state}`), email: 'sso', expiresAt: new Date(now + 600_000).toISOString(), createdAt: new Date(now).toISOString()});
+      ssoCookie(reply, started.cookie, 600);
+      return reply.redirect(started.url);
+    } catch (error) { return back(reply, error instanceof SsoError ? error.code : 'provider'); }
+  });
+  app.get('/v1/auth/sso/:provider/callback', async (request, reply) => {
+    if (!config.sso) return fail(reply, 404, 'Single sign-on is not set up.');
+    const query = request.query as {code?: string; state?: string; error?: string}, raw = (request.headers.cookie ?? '').split(/;\s*/).find(c => c.startsWith(`${SSO_COOKIE}=`))?.slice(SSO_COOKIE.length + 1);
+    try {
+      // Single use, checked before anything else: a replayed callback finds its state already spent.
+      if (!query.state || await store.consumeLoginToken(hash(`sso:${query.state}`), new Date().toISOString()) !== 'sso') throw new SsoError(query.error ? 'cancelled' : 'state', 'This sign-in was already used or has expired.');
+      const {email} = await config.sso.finish((request.params as {provider: string}).provider, query, raw);
+      if (allowedDomains.length && !allowedDomains.includes(email.split('@')[1]!) && !await store.findUserByEmail(email)) throw new SsoError('domain', 'This email address can’t sign in here.');
+      const user = await store.ensureUser(email), secret = token();
+      await store.saveSession({hash: hash(secret), userId: user.id, expiresAt: new Date(Date.now() + sessionMs).toISOString(), createdAt: new Date().toISOString()});
+      reply.header('set-cookie', [`${SSO_COOKIE}=; Path=/v1/auth/sso; HttpOnly; SameSite=Lax; Max-Age=0${secure ? '; Secure' : ''}`,
+        `${SESSION_COOKIE}=${secret}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${Math.round(sessionMs / 1000)}${secure ? '; Secure' : ''}`]);
+      return reply.redirect('/app/');
+    } catch (error) { return back(reply, error instanceof SsoError ? error.code : 'provider'); }
+  });
+
   app.post('/v1/auth/link', async (request, reply) => {
+    if (config.emailLinks === false) return fail(reply, 404, 'Email sign-in links are turned off here; use single sign-on.');
     const body = Email.safeParse(request.body);
     if (!body.success) return fail(reply, 400, 'Enter a valid email address.');
     const {email} = body.data, now = Date.now();

@@ -9,10 +9,12 @@
 <body>
 <main class="narrow">
   <header class="top">
-    <div><h1>Sign in to GapScan</h1><p class="lead">No password: we email you a link that signs you in.</p></div>
+    <div><h1>Sign in to GapScan</h1><p class="lead" id="lead">No password: we email you a link that signs you in.</p></div>
     <button class="theme-toggle" id="theme" type="button">Toggle theme</button>
   </header>
   <section class="card" id="request">
+    <p class="error" id="sso-error" role="alert" hidden></p>
+    <div id="sso" class="sso" hidden></div>
     <form id="email-form">
       <label for="email">Work email</label>
       <div class="row"><input id="email" type="email" autocomplete="email" required placeholder="you@company.com"><button class="primary" type="submit">Email me a link</button></div>
