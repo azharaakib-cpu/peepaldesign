@@ -52,11 +52,16 @@ function renderSummary() {
   const inUse = i => !(i.usage && !i.usage.usages);
   const wins = report.items.filter(i => i.quickWin && inUse(i)), breaking = report.items.filter(i => i.breaking && i.decision !== 'optional' && inUse(i));
   $('#wins').replaceChildren(...(wins.length ? wins.map(line) : [el('li', {class: 'empty'}, 'None found.')]));
+  const review = report.items.filter(i => ['replace', 'check_first'].includes(i.decision) && inUse(i));
+  $('#needs-review').replaceChildren(...(review.length ? review.map(i => el('li', {class: 'source'}, el('a', {href: `#item-${CSS.escape(i.id)}`}, i.name), el('span', {class: 'pill minor'}, DECISION_LABEL[i.decision])))
+    : [el('li', {class: 'empty'}, 'Nothing: every component has a decision.')]));
   $('#breaking').replaceChildren(...(breaking.length ? breaking.map(i => el('li', {class: 'source'}, el('a', {href: `#item-${CSS.escape(i.id)}`}, i.name), el('span', {class: 'pill major'}, i.decision === 'replace' ? 'No counterpart' : i.effort.label))) : [el('li', {class: 'empty'}, 'None found.')]));
 
   const decisions = {};
   for (const item of report.items) decisions[item.decision] = (decisions[item.decision] || 0) + 1;
-  $('#decisions').textContent = Object.entries(DECISION_LABEL).map(([k, label]) => `${label} ${decisions[k] || 0}`).join(' · ');
+  // Optional additions are things the reference has and you don't: worth knowing, never work.
+  $('#decisions').textContent = Object.entries(DECISION_LABEL).filter(([k]) => k !== 'optional').map(([k, label]) => `${label} ${decisions[k] || 0}`).join(' · ')
+    + (decisions.optional ? `. Plus ${decisions.optional} optional addition${decisions.optional === 1 ? '' : 's'} in ${reference.library} you don't use today.` : '');
   const areas = areaHours(), max = Math.max(1, ...Object.values(areas));
   $('#areas').replaceChildren(...(Object.keys(areas).length ? AREA_ORDER.filter(a => areas[a]).flatMap(a => [el('span', {}, a), el('div', {class: 'row'}, el('div', {class: 'bar', style: `width:${Math.max(4, areas[a] / max * 70)}%`}), el('span', {class: 'muted'}, `${num(areas[a])} h`))]) : [el('span', {class: 'empty'}, 'No estimated work yet.')]));
   $('#order').replaceChildren(...AREA_ORDER.filter(a => areas[a]).map(a => el('li', {}, a)), ...(report.tokenCategories.length ? [el('li', {}, 'Token mapping: ' + report.tokenCategories.map(c => `${c.name} (${c.remappedTokens})`).join(', '))] : []));
@@ -175,9 +180,14 @@ function suggestionBlock(item, suggestion, form) {
 let specimens = new Map();
 function renderItems() {
   const filter = $('#filter').value;
+  const needsReview = i => ['replace', 'check_first'].includes(i.decision) ? 0 : 1;
   const visible = report.items.filter(i => filter === 'all' ? i.decision !== 'optional' : filter === 'review' ? ['replace', 'check_first'].includes(i.decision) : i.decision === filter)
-    .sort((a, b) => (b.effort.level ?? 6) - (a.effort.level ?? 6) || a.name.localeCompare(b.name));
+    .sort((a, b) => needsReview(a) - needsReview(b) || (b.effort.level ?? 6) - (a.effort.level ?? 6) || a.name.localeCompare(b.name));
   $('#items').replaceChildren(...(visible.length ? visible.map(itemCard) : [el('p', {class: 'empty'}, 'Nothing in this view.')]));
+  const optional = report.items.filter(i => i.decision === 'optional').length;
+  $('#optional-note').hidden = filter === 'optional' || !optional;
+  $('#optional-note').replaceChildren(`${plural(optional, 'optional addition')}: components ${reference.library} has that you don't use today. Not counted as work. `,
+    el('button', {type: 'button', class: 'quiet', onclick: () => { $('#filter').value = 'optional'; renderItems(); }}, 'Show them'));
 }
 
 // ── Codemod ──
@@ -220,6 +230,33 @@ $('#codemod-run').addEventListener('click', async () => {
     stream.addEventListener('failed', e => { done(); out.replaceChildren(el('p', {class: 'error'}, JSON.parse(e.data).body.message)); });
     stream.addEventListener('complete', () => { done(); loadCodemod(); });
   } catch (error) { button.disabled = false; out.replaceChildren(el('p', {class: 'error'}, error.message)); }
+});
+
+// ── Tabs: Report and Codemod; #codemod opens the second ──
+const tabs = [...document.querySelectorAll('.page-tabs [role="tab"]')];
+function showView(view, {focus = false} = {}) {
+  if (view !== 'codemod') view = 'report';
+  for (const tab of tabs) { const on = tab.dataset.view === view; tab.setAttribute('aria-selected', String(on)); tab.tabIndex = on ? 0 : -1; if (on && focus) tab.focus(); }
+  $('#view-report').hidden = view !== 'report'; $('#view-codemod').hidden = view !== 'codemod';
+  history.replaceState(null, '', view === 'codemod' ? '#codemod' : location.pathname + location.search);
+}
+tabs.forEach((tab, i) => {
+  tab.addEventListener('click', () => showView(tab.dataset.view));
+  tab.addEventListener('keydown', event => {
+    const step = {ArrowRight: 1, ArrowLeft: -1}[event.key];
+    if (step) { event.preventDefault(); showView(tabs[(i + step + tabs.length) % tabs.length].dataset.view, {focus: true}); }
+  });
+});
+showView(location.hash.slice(1));
+// Links to a component (from attention lists) open its card, showing it first if the filter hides it.
+document.addEventListener('click', event => {
+  const link = event.target.closest('a[href^="#item-"]');
+  if (!link) return;
+  event.preventDefault();
+  const itemId = decodeURIComponent(link.getAttribute('href').slice('#item-'.length)).replace(/\\(.)/g, '$1');
+  let card = document.getElementById(`item-${itemId}`);
+  if (!card) { $('#filter').value = 'all'; renderItems(); card = document.getElementById(`item-${itemId}`); }
+  if (card) { card.open = true; card.scrollIntoView({behavior: 'smooth', block: 'start'}); card.querySelector('summary')?.focus({preventScroll: true}); }
 });
 
 async function load() {

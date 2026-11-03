@@ -280,3 +280,18 @@ details.paste[open] { padding: 12px; border: 1px solid var(--line); border-radiu
 .compare-label { font-size: 12px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--text-secondary); cursor: default; }
 details.original > summary { cursor: pointer; }
 @media (max-width: 760px) { .docs, .compare { grid-template-columns: 1fr; } .docs-nav { position: static; } }
+
+/* Migration report: verdict, work in the main column, assumptions beside it */
+.lead.verdict { font-size: 18px; color: var(--text); max-width: 70ch; margin-top: 8px; }
+.verdict-card .stats { margin-bottom: 16px; }
+.verdict-card .stat { background: var(--surface-soft); }
+.report-layout { display: grid; grid-template-columns: minmax(0, 1fr) 260px; gap: 16px; align-items: start; }
+.report-side { position: sticky; top: 110px; }
+.side-form { grid-template-columns: 1fr 1fr; }
+.side-form button { grid-column: 1 / -1; }
+.attention { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; }
+.attention h3 { margin-top: 0; }
+.filter-label { margin: 0; font-weight: 500; }
+#optional-note { margin: 12px 0 0; }
+@media (max-width: 1000px) { .attention { grid-template-columns: 1fr; } }
+@media (max-width: 760px) { .report-layout { grid-template-columns: 1fr; } .report-side { position: static; order: -1; } }
