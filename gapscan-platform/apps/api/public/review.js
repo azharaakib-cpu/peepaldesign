@@ -111,6 +111,8 @@ if (id) $('#exports').replaceChildren(...FORMATS.map(([format, label]) => el('a'
 try { $('#reviewer').value = localStorage.getItem('gapscan-reviewer') || ''; } catch {}
 $('#reviewer').addEventListener('change', () => { try { localStorage.setItem('gapscan-reviewer', $('#reviewer').value.trim()); } catch {} });
 const PROVENANCE = {extracted: 'From your sources', inferred: 'Inferred by GapScan', drafted: 'Draft'};
+const draftable = s => s.provenance !== 'extracted' || s.id.startsWith('component-');
+let aiEnabled = false;
 function objectBlock(object) {
   const pct = Math.round(object.completeness * 100);
   const block = el('details', {class: 'object'}, el('summary', {}, el('span', {class: 'name'}, object.title), el('span', {class: 'meter', 'aria-hidden': 'true'}, el('i', {style: `width:${pct}%`})), el('span', {class: 'muted'}, `${pct}%`)));
@@ -124,15 +126,34 @@ function objectBlock(object) {
       try { const updated = await api(`/v1/extractions/${id}/objects/${object.kind}/sections/${encodeURIComponent(s.id)}/approval`, {method: 'PUT', body: JSON.stringify({by})}); const fresh = objectBlock(updated); fresh.open = true; block.replaceWith(fresh); }
       catch (error) { approve.disabled = false; approve.textContent = error.message; }
     });
+    const sectionPath = `/v1/extractions/${id}/objects/${object.kind}/sections/${encodeURIComponent(s.id)}/draft`;
+    const replace = updated => { const fresh = objectBlock(updated); fresh.open = true; block.replaceWith(fresh); };
+    const note = el('span', {class: 'muted', 'aria-live': 'polite'});
+    // Claude drafts on request only; the result replaces this text and still needs approving.
+    const draft = aiEnabled && draftable(s) ? el('button', {type: 'button'}, s.draftedBy ? 'Redraft with Claude' : 'Draft with Claude') : null;
+    draft?.addEventListener('click', async () => {
+      draft.disabled = true;
+      try { await runJob(sectionPath, message => { note.textContent = message; }); replace((await api(`/v1/extractions/${id}/objects`)).find(o => o.kind === object.kind)); }
+      catch (error) { draft.disabled = false; note.textContent = error.message; }
+    });
+    const discard = s.draftedBy ? el('button', {type: 'button'}, 'Discard draft') : null;
+    discard?.addEventListener('click', async () => {
+      discard.disabled = true;
+      try { replace(await api(sectionPath, {method: 'DELETE'})); } catch (error) { discard.disabled = false; note.textContent = error.message; }
+    });
     block.append(el('div', {class: 'section'},
-      el('div', {class: 'row'}, el('strong', {}, s.title), el('span', {class: `pill ${s.status === 'present' ? 'ok' : s.status === 'partial' ? 'minor' : ''}`}, s.status), el('span', {class: 'pill'}, PROVENANCE[s.provenance]), s.stale ? el('span', {class: 'pill major'}, 'Changed since approval') : null),
-      markdown(s.content), el('div', {class: 'row'}, approve)));
+      el('div', {class: 'row'}, el('strong', {}, s.title), el('span', {class: `pill ${s.status === 'present' ? 'ok' : s.status === 'partial' ? 'minor' : ''}`}, s.status),
+        el('span', {class: 'pill'}, s.draftedBy ? 'Drafted by Claude' : PROVENANCE[s.provenance]), s.draftedBy && !s.approval ? el('span', {class: 'pill minor'}, 'Needs approval') : null, s.stale ? el('span', {class: 'pill major'}, 'Changed since approval') : null),
+      markdown(s.content),
+      s.draftedBy?.openQuestions.length ? el('div', {class: 'questions'}, el('strong', {}, 'Decisions for your team'), el('ul', {}, s.draftedBy.openQuestions.map(q => el('li', {}, q)))) : null,
+      s.draftedBy ? el('p', {class: 'muted'}, `Written by ${s.draftedBy.model} on ${new Date(s.draftedBy.at).toLocaleString()} from ${s.evidence.length ? `${s.evidence.length} cited pieces of evidence` : 'the extraction'}. Check it before approving.`) : null,
+      el('div', {class: 'row'}, approve, draft, discard, note)));
   }
   return block;
 }
 async function objects() {
   if (!id) return;
-  try { const list = await api(`/v1/extractions/${id}/objects`); $('#objects').replaceChildren(...list.map(objectBlock)); }
+  try { aiEnabled = (await aiStatus).enabled; const list = await api(`/v1/extractions/${id}/objects`); $('#objects').replaceChildren(...list.map(objectBlock)); }
   catch (error) { $('#objects').replaceChildren(el('p', {class: 'error'}, error.message)); }
 }
 objects();

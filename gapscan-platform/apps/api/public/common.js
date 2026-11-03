@@ -25,6 +25,19 @@ const whoami = (async () => {
     el('button', {type: 'button', onclick: async () => { await fetch('/v1/auth/logout', {method: 'POST'}); location.href = '/app/signin.html'; }}, 'Sign out')));
   return user;
 })();
+// Drafting with Claude is on only when the server says so; buttons stay hidden otherwise.
+const aiStatus = location.pathname.endsWith('/signin.html') ? Promise.resolve({enabled: false}) : fetch('/v1/ai').then(r => r.ok ? r.json() : {enabled: false}).catch(() => ({enabled: false}));
+// Starts a job and resolves when it completes; progress messages go to `onProgress`.
+async function runJob(path, onProgress = () => {}) {
+  const {events} = await api(path, {method: 'POST'});
+  return new Promise((resolve, reject) => {
+    const stream = new EventSource(events);
+    stream.addEventListener('progress', e => onProgress(JSON.parse(e.data).body.message));
+    stream.addEventListener('complete', e => { stream.close(); resolve(JSON.parse(e.data).body); });
+    stream.addEventListener('failed', e => { stream.close(); reject(new Error(JSON.parse(e.data).body.message)); });
+    stream.addEventListener('cancelled', () => { stream.close(); reject(new Error('Cancelled.')); });
+  });
+}
 (function theme() {
   try { const saved = localStorage.getItem('gapscan-theme'); if (saved) document.documentElement.dataset.theme = saved; } catch {}
   document.addEventListener('click', event => {

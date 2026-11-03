@@ -17,8 +17,9 @@ import {CODE_FILE, createExtractHandler} from './extract-job.ts';
 import {projectSpecimen} from '@gapscan/gapscan';
 import {buildDesignSystem, buildFigmaPlan, EXPORT_FORMATS, exportTokens, planFigmaSync, renderDesignSystemHtml} from '@gapscan/exports';
 import type {ExistingVariables} from '@gapscan/exports';
-import {buildObjects, contentHash} from '@gapscan/objects';
-import type {StoredApproval} from '@gapscan/objects';
+import {buildObjects, contentHash, isDraftable} from '@gapscan/objects';
+import {approvalsKey, createDraftHandler, draftsKey, readApprovals, readDrafts, readSuggestions} from './draft-job.ts';
+import type {Ai} from './draft-job.ts';
 import {assetKey, createRenderHandler} from './render-job.ts';
 import {createUsageHandler, githubRepo, loadUsageReport} from './usage-job.ts';
 import {buildBrandKit, TEMPLATES} from '@gapscan/assets';
@@ -46,9 +47,11 @@ const AddSourceBody = z.discriminatedUnion('kind', [
 ]);
 const IdParams = z.object({id: z.string().min(1)});
 
-export type AppOptions = {infra: Infra; handlers?: Partial<Record<JobType, JobHandler>>; logger?: boolean; heartbeatMs?: number; figma?: {token?: string; fetch?: typeof fetch}; auth?: AuthConfig};
+export type AppOptions = {infra: Infra; handlers?: Partial<Record<JobType, JobHandler>>; logger?: boolean; heartbeatMs?: number; figma?: {token?: string; fetch?: typeof fetch}; auth?: AuthConfig;
+  // Drafting with Claude; absent unless GAPSCAN_AI=claude.
+  ai?: Ai};
 
-export function buildApp({infra, handlers = {}, logger = false, heartbeatMs = HEARTBEAT_MS, figma = {token: process.env.GAPSCAN_FIGMA_TOKEN}, auth = {mode: 'off'}}: AppOptions) {
+export function buildApp({infra, handlers = {}, logger = false, heartbeatMs = HEARTBEAT_MS, figma = {token: process.env.GAPSCAN_FIGMA_TOKEN}, auth = {mode: 'off'}, ai}: AppOptions) {
   const {store, blobs, bus, queue} = infra;
   // Every page and sub-request the browser makes must pass the same public-URL check as intake.
   // Each extraction gets a fresh guard, so DNS answers are cached for one job only.
@@ -60,6 +63,7 @@ export function buildApp({infra, handlers = {}, logger = false, heartbeatMs = HE
   queue.register('gapscan', handlers.gapscan ?? createGapScanHandler({store, blobs}));
   queue.register('render', handlers.render ?? createRenderHandler({store, blobs}));
   queue.register('usage', handlers.usage ?? createUsageHandler({store, blobs, allowUrl: url => createUrlGuard(lookupAll)(url)}));
+  if (handlers.generate ?? ai) queue.register('generate', handlers.generate ?? createDraftHandler({store, blobs, ai: ai!}));
   queue.register('codemod', handlers.codemod ?? createCodemodHandler({store, blobs, allowUrl: url => createUrlGuard(lookupAll)(url)}));
   const app = Fastify({logger, bodyLimit: Math.ceil(MAX_FILE_BYTES * 1.4)});
   // Action endpoints like POST /extractions take no body; clients that still send
@@ -271,13 +275,10 @@ export function buildApp({infra, handlers = {}, logger = false, heartbeatMs = HE
     return reply.type(`${format.type}; charset=utf-8`).header('content-disposition', `attachment; filename="${format.file}"`).send(exportTokens(eds, query.data.format, {includeInferredPalette: query.data.palette === '1'}));
   });
 
-  const approvalsKey = (edsId: string) => `objects/${edsId}.approvals.json`;
-  const readApprovals = async (edsId: string): Promise<Record<string, StoredApproval>> => { const blob = await blobs.get(approvalsKey(edsId)); return blob ? JSON.parse(blob.toString('utf8')) : {}; };
-
   app.get('/v1/extractions/:id/objects', async (request, reply) => {
     const {id} = IdParams.parse(request.params), eds = await loadExtraction(store, blobs, id);
     if (!eds) return fail(reply, 404, 'Extraction not found.');
-    return buildObjects(eds, await readApprovals(id));
+    return buildObjects(eds, await readApprovals(blobs, id), await readDrafts(blobs, id));
   });
 
   // Approves exactly the content the reviewer saw; regenerated content shows as stale until re-approved.
@@ -287,12 +288,41 @@ export function buildApp({infra, handlers = {}, logger = false, heartbeatMs = HE
     const body = parse(z.object({by: z.string().trim().min(1).max(200)}), request.body, reply); if (!body) return reply;
     const eds = await loadExtraction(store, blobs, params.data.id);
     if (!eds) return fail(reply, 404, 'Extraction not found.');
-    const section = buildObjects(eds).find(o => o.kind === params.data.kind)?.sections.find(s => s.id === params.data.sectionId);
+    const drafts = await readDrafts(blobs, params.data.id);
+    const section = buildObjects(eds, {}, drafts).find(o => o.kind === params.data.kind)?.sections.find(s => s.id === params.data.sectionId);
     if (!section) return fail(reply, 404, 'Section not found.');
-    const approvals = await readApprovals(params.data.id);
+    const approvals = await readApprovals(blobs, params.data.id);
     approvals[`${params.data.kind}:${params.data.sectionId}`] = {by: body.by, at: new Date().toISOString(), hash: contentHash(section.content)};
     await blobs.put(approvalsKey(params.data.id), JSON.stringify(approvals));
-    return buildObjects(eds, approvals).find(o => o.kind === params.data.kind);
+    return buildObjects(eds, approvals, drafts).find(o => o.kind === params.data.kind);
+  });
+
+  // ── Drafting with Claude (only with GAPSCAN_AI=claude; every result waits for a person) ──
+  app.get('/v1/ai', async () => ({enabled: Boolean(ai), ...(ai ? {provider: 'Anthropic', model: ai.model} : {})}));
+  const SectionParams = z.object({id: z.string().min(1), kind: ObjectKind, sectionId: z.string().min(1)});
+  app.post('/v1/extractions/:id/objects/:kind/sections/:sectionId/draft', async (request, reply) => {
+    if (!ai) return fail(reply, 503, 'Drafting with Claude is not turned on for this GapScan.');
+    const params = SectionParams.safeParse(request.params);
+    if (!params.success) return fail(reply, 404, 'Unknown object.');
+    const extraction = await store.getExtraction(params.data.id), eds = extraction && await loadExtraction(store, blobs, params.data.id);
+    if (!extraction || !eds) return fail(reply, 404, 'Extraction not found.');
+    const section = buildObjects(eds).find(o => o.kind === params.data.kind)?.sections.find(s => s.id === params.data.sectionId);
+    if (!section) return fail(reply, 404, 'Section not found.');
+    if (!isDraftable(section)) return fail(reply, 400, 'This section is read straight from your sources, so it is not redrafted.');
+    const job = await store.createJob({type: 'generate', projectId: extraction.projectId, subjectId: eds.id, payload: {task: 'section', edsId: eds.id, kind: params.data.kind, sectionId: section.id}});
+    await queue.enqueue(job);
+    return reply.code(202).send({jobId: job.id, events: `/v1/jobs/${job.id}/events`});
+  });
+  // Discards a draft: the section goes back to GapScan's generated text.
+  app.delete('/v1/extractions/:id/objects/:kind/sections/:sectionId/draft', async (request, reply) => {
+    const params = SectionParams.safeParse(request.params);
+    if (!params.success) return fail(reply, 404, 'Unknown object.');
+    const eds = await loadExtraction(store, blobs, params.data.id);
+    if (!eds) return fail(reply, 404, 'Extraction not found.');
+    const drafts = await readDrafts(blobs, eds.id);
+    delete drafts[`${params.data.kind}:${params.data.sectionId}`];
+    await blobs.put(draftsKey(eds.id), JSON.stringify(drafts));
+    return buildObjects(eds, await readApprovals(blobs, eds.id), drafts).find(o => o.kind === params.data.kind);
   });
 
   // ── Application impact ────────────────────────────────────────────────────
@@ -451,6 +481,25 @@ export function buildApp({infra, handlers = {}, logger = false, heartbeatMs = HE
     const report = {id, ...await computeReport(store, blobs, loaded.record.extractionId, loaded.report.reference.id, loaded.report.assumptions)};
     await saveReport(store, blobs, report, loaded.record.projectId, loaded.record.extractionId, loaded.record.createdAt);
     return {item: report.items.find(i => i.match.sourceId === sourceId), totals: report.totals, summary: summarize(report)};
+  });
+
+  // Claude's suggested counterpart for a component GapScan couldn't settle. Approving it goes
+  // through PUT …/matches/:sourceId like any reviewer decision.
+  app.post('/v1/gapscans/:id/matches/:sourceId/suggestion', async (request, reply) => {
+    if (!ai) return fail(reply, 503, 'Drafting with Claude is not turned on for this GapScan.');
+    const {id, sourceId} = z.object({id: z.string().min(1), sourceId: z.string().min(1)}).parse(request.params);
+    const loaded = await loadReport(id), item = loaded?.report.items.find(i => i.match.sourceId === sourceId);
+    if (!loaded || !item) return fail(reply, 404, 'That component is not in this report.');
+    if (item.match.status === 'confirmed') return fail(reply, 400, 'This match is already confirmed.');
+    if (sourceId.startsWith('target:')) return fail(reply, 400, 'This component exists only in the reference system.');
+    const job = await store.createJob({type: 'generate', projectId: loaded.record.projectId, subjectId: id, payload: {task: 'match', gapscanId: id, sourceId}});
+    await queue.enqueue(job);
+    return reply.code(202).send({jobId: job.id, events: `/v1/jobs/${job.id}/events`});
+  });
+  app.get('/v1/gapscans/:id/suggestions', async (request, reply) => {
+    const {id} = IdParams.parse(request.params);
+    if (!await store.getGapScan(id)) return fail(reply, 404, 'Report not found.');
+    return readSuggestions(blobs, id);
   });
 
   // ── Codemods: a dry run on the application's code, and the same rewriter as a script ──

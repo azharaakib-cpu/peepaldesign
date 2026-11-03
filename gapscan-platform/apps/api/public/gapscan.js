@@ -8,7 +8,7 @@ const money = v => new Intl.NumberFormat('en-US', {style: 'currency', currency: 
 const num = v => Number(v.toFixed(1)).toLocaleString();
 const range = (low, high, format = num) => format(low) === format(high) ? format(low) : `${format(low)}–${format(high)}`;
 const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
-let report, reference, techLoaded = null;
+let report, reference, techLoaded = null, suggestions = {}, aiEnabled = false;
 
 const kpi = (value, label) => el('div', {class: 'stat'}, el('b', {}, value), el('span', {}, label));
 function complexityWord(c) { return c === null ? 'Not estimated' : c < 1.5 ? 'Trivial' : c < 2.5 ? 'Easy' : c < 3.5 ? 'Moderate' : c < 4.5 ? 'Hard' : 'Very hard'; }
@@ -121,12 +121,14 @@ function projectionSlot(item) {
 }
 
 function reviewForm(item) {
-  const options = [el('option', {value: ''}, 'No counterpart: approve a custom build or replacement'), ...reference.components.filter(c => c.category === item.category || c.id === item.match.targetId).map(c => el('option', {value: c.id, selected: c.id === item.match.targetId}, `${c.canonical} (${c.category})`))];
+  const suggestion = suggestions[item.match.sourceId];
+  const options = [el('option', {value: ''}, 'No counterpart: approve a custom build or replacement'), ...reference.components.filter(c => c.category === item.category || c.id === item.match.targetId || c.id === suggestion?.targetId).map(c => el('option', {value: c.id, selected: c.id === item.match.targetId}, `${c.canonical} (${c.category})`))];
   const form = el('form', {class: 'review'}, el('h3', {}, 'Reviewer decision'),
     el('label', {}, 'Counterpart', el('select', {name: 'target'}, options)),
     el('label', {}, 'Your name or email', el('input', {type: 'text', name: 'by', required: true})),
     el('label', {}, 'Reason', el('input', {type: 'text', name: 'reason', required: true})),
     el('div', {class: 'row'}, el('button', {class: 'primary', type: 'submit'}, 'Approve mapping'), el('span', {class: 'muted', 'aria-live': 'polite'})));
+  if (item.match.status !== 'confirmed' && !item.match.sourceId.startsWith('target:')) form.querySelector('h3').after(suggestionBlock(item, suggestion, form));
   form.addEventListener('submit', async event => {
     event.preventDefault();
     const status = form.querySelector('[aria-live]');
@@ -137,6 +139,37 @@ function reviewForm(item) {
     } catch (error) { status.textContent = error.message; }
   });
   return form;
+}
+
+// Claude's suggestion is advice: using it fills in the form, and the mapping counts only once a reviewer approves it.
+function suggestionBlock(item, suggestion, form) {
+  const box = el('div', {class: 'suggestion'}), note = el('span', {class: 'muted', 'aria-live': 'polite'});
+  if (suggestion) {
+    const target = reference.components.find(c => c.id === suggestion.targetId);
+    const use = el('button', {type: 'button'}, 'Use this suggestion');
+    use.addEventListener('click', () => {
+      form.elements.target.value = suggestion.targetId ?? '';
+      form.elements.reason.value = `Claude's suggestion (${suggestion.confidence} confidence), checked by reviewer: ${suggestion.rationale}`.slice(0, 1000);
+      form.elements.by.focus();
+    });
+    box.append(el('p', {}, el('strong', {}, 'Claude suggests: '), target ? `${target.canonical} (${target.category})` : `no ${reference.library} counterpart`, ' ', el('span', {class: 'pill'}, `${suggestion.confidence} confidence`)),
+      el('p', {}, suggestion.rationale), el('p', {class: 'muted'}, `${suggestion.model}, ${new Date(suggestion.at).toLocaleString()}. Not applied until you approve the mapping below.`));
+    box.append(el('div', {class: 'row'}, use, aiEnabled ? askButton('Ask again') : null, note));
+  } else if (aiEnabled) box.append(el('div', {class: 'row'}, askButton('Ask Claude for a match'), note));
+  else return el('span');
+  function askButton(label) {
+    const button = el('button', {type: 'button'}, label);
+    button.addEventListener('click', async () => {
+      button.disabled = true;
+      try {
+        await runJob(`/v1/gapscans/${reportId}/matches/${encodeURIComponent(item.match.sourceId)}/suggestion`, message => { note.textContent = message; });
+        suggestions = await api(`/v1/gapscans/${reportId}/suggestions`);
+        form.replaceWith(reviewForm(item));
+      } catch (error) { button.disabled = false; note.textContent = error.message; }
+    });
+    return button;
+  }
+  return box;
 }
 
 let specimens = new Map();
@@ -196,6 +229,7 @@ async function load() {
     reference = await api(`/v1/library/${report.reference.id}`);
     const eds = await api(`/v1/extractions/${report.edsId}?include=full`);
     specimens = new Map(eds.specimens.map(s => [s.id, s]));
+    [suggestions, aiEnabled] = await Promise.all([api(`/v1/gapscans/${reportId}/suggestions`).catch(() => ({})), aiStatus.then(a => a.enabled)]);
     $('#title').textContent = `Your system → ${reference.library} ${reference.version}`;
     $('#back').href = `/app/review.html?id=${report.edsId}`;
     renderSummary(); renderItems(); loadCodemod();

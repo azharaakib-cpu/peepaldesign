@@ -1,7 +1,8 @@
 // Missing architectural objects (architecture Part 3 §3.1). Facts come straight
 // from the extraction; patterns GapScan infers say so; everything else is a
 // drafted starting point that counts for nothing until a person approves it.
-// Deterministic: no language model is called here.
+// Deterministic: no language model is called here; drafts requested from Claude
+// (@gapscan/drafting) are stored separately and laid over the generated text.
 import {createHash} from 'node:crypto';
 import {contrastRatio, parseColor, toHex, toOklch} from '@gapscan/normalize';
 import {exportTokens} from '@gapscan/exports';
@@ -157,9 +158,18 @@ function brand(eds: ExtractedDesignSystem): ObjectSection[] {
 const BUILDERS: Record<ObjectKind, (eds: ExtractedDesignSystem) => ObjectSection[]> = {accessibility, guidelines, principles, tooling, content, brand};
 
 export type StoredApproval = {by: string; at: string; hash: string};
-export function buildObjects(eds: ExtractedDesignSystem, approvals: Record<string, StoredApproval> = {}): ArchitecturalObject[] {
+// A draft written on request (by Claude) replaces the generated text and is always marked drafted.
+export type StoredDraft = {content: string; evidence: string[]; model: string; at: string; openQuestions: string[]};
+// Facts read straight from the extraction are never rewritten; component pages are, since their usage notes need writing.
+export const isDraftable = (section: ObjectSection) => section.provenance !== 'extracted' || section.id.startsWith('component-');
+
+export function buildObjects(eds: ExtractedDesignSystem, approvals: Record<string, StoredApproval> = {}, drafts: Record<string, StoredDraft> = {}): ArchitecturalObject[] {
   return (Object.keys(BUILDERS) as ObjectKind[]).map(kind => {
-    const sections = BUILDERS[kind](eds).map(s => {
+    const sections = BUILDERS[kind](eds).map((s): ObjectSection => {
+      const draft = drafts[`${kind}:${s.id}`];
+      return draft && isDraftable(s) ? {...s, content: draft.content, provenance: 'drafted', evidence: [...new Set([...s.evidence, ...draft.evidence])],
+        draftedBy: {model: draft.model, at: draft.at, openQuestions: draft.openQuestions}} : s;
+    }).map(s => {
       const approval = approvals[`${kind}:${s.id}`];
       if (!approval) return s;
       return approval.hash === contentHash(s.content) ? {...s, approval: {by: approval.by, at: approval.at}} : {...s, stale: true};

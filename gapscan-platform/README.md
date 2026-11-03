@@ -47,7 +47,8 @@ review the result, then compare it against a reference system.
 | `packages/library` | Pinned reference systems: Bootstrap 5.3.3, Shopify Polaris 13.9.5, IBM Carbon `@carbon/styles` 1.68.0 and Bulma 1.0.2 from their published CSS (with previews), MUI 6.4.7, Ant Design 5.24.2 and Fluent 2 (`@fluentui/react-components` 9.74.10) from their published `.d.ts` files, Chakra UI 3.37.0 from its style recipes, shadcn/ui from its registry source pinned to a commit (one component per file, parts dropped), and Material Design 3 from `@material/web` 2.3.0 web components (each tag a style variant). Type-based references compare APIs only: no previews or role colours, and no conclusions about hover or focus styling, or about native attributes (disabled, required…) a component inherits without declaring. Compound parts (DialogTitle, TableRow…) belong to their component and are not listed separately. All with checksums, by the same pipeline as user sources. `node packages/library/scripts/build.ts` rebuilds them. |
 | `packages/gapscan` | Component matching (weighted 0–100 score; confirmed / suggested / unresolved), diffs into rubric drivers, decisions (keep / update / replace / check first / optional), token mapping, projected previews. Gains the target brings for free are shown but never priced. |
 | `packages/exports` | Figma Variables sync planner (create / update / unchanged / skipped, with modes and aliases, bound to a plan hash) and token exporters from one canonical list: W3C DTCG `tokens.json` (with provenance in `$extensions`), CSS custom properties (with theme-mode blocks), Tailwind v4 `@theme`, SCSS. Unresolved values are never exported as known. |
-| `packages/objects` | Missing-object generator. Each section is labelled extracted, inferred or drafted; contrast pairs come with fixes that pass; approvals are tied to a content hash and go stale if the content changes. No language model is called. |
+| `packages/objects` | Missing-object generator. Each section is labelled extracted, inferred or drafted; contrast pairs come with fixes that pass; approvals are tied to a content hash and go stale if the content changes. No language model is called; drafts requested from Claude are stored separately and laid over the generated text. |
+| `packages/drafting` | Drafting with Claude, on request only (`GAPSCAN_AI=claude`): section drafts and match suggestions from a numbered sheet of facts taken from the extraction, answered in a fixed JSON shape; citations not on the sheet are dropped and a pick outside the candidate list is discarded. |
 | `packages/assets` | Brand kit from token slots (reports which slots fell back to defaults), self-contained templates (business card 85×55 mm + 3 mm bleed, and a print-shop version with crop marks; A4 and US Letter letterheads; OpenGraph 1200×630; LinkedIn banner; PowerPoint deck template with a branded theme; HTML email newsletter with dark mode; an email signature for Gmail, Outlook and Apple Mail), approximate CMYK values on print templates (to ask a printer for a proof; Pantone matching needs Pantone's licensed library and isn't offered), contrast checks, offline rendering in Chromium. |
 | `packages/usage` | Application impact: JSX usages through import aliases (with the props each passes), class names in markup and HTML, custom-element tags, files and screens per component. Tests, dependencies and docs are skipped. |
 | `packages/codemod` | Rules from a GapScan report (confirmed matches only): imports re-pointed at the reference's package, prop renames, option values paired exactly as the report pairs them, and class renames for CSS references with a known modifier convention (Bootstrap, Carbon, Bulma). Each element is edited all or nothing; spreads, computed values, props with no equivalent, values the target prop means differently (`type="submit"` in Ant Design) and use outside JSX are listed for a person. The downloadable script embeds the same rewriter and diff code, so it makes exactly the dry-run changes. |
@@ -72,6 +73,9 @@ review the result, then compare it against a reference system.
 | `POST /v1/extractions/:id/figma-sync/apply` `{fileUrl, hash, confirm: true}` | Writes exactly the previewed plan; refused if anything changed |
 | `GET /v1/extractions/:id/objects` | The six architectural objects with completeness and sections |
 | `PUT /v1/extractions/:id/objects/:kind/sections/:sectionId/approval` `{by}` | Approve exactly the content shown |
+| `GET /v1/ai` | Whether drafting with Claude is on, and the model |
+| `POST`/`DELETE /v1/extractions/:id/objects/:kind/sections/:sectionId/draft` | Ask Claude to draft a section (a `generate` job), or discard the draft. Sections read straight from your sources are refused. |
+| `POST /v1/gapscans/:id/matches/:sourceId/suggestion`, `GET /v1/gapscans/:id/suggestions` | Ask Claude which reference component matches one GapScan couldn't settle (a `generate` job), and read the suggestions. Applying one is a normal reviewer approval. |
 | `GET /v1/templates`, `GET /v1/extractions/:id/brandkit` | Asset templates and the brand kit they read |
 | `POST /v1/extractions/:id/assets` `{template, brandName?, data}` | Starts a `render` job |
 | `GET /v1/assets/:jobId`, `GET /v1/assets/:jobId/file` | Checks and the rendered file (`?download=1` to save) |
@@ -118,6 +122,8 @@ review the result, then compare it against a reference system.
 | `GAPSCAN_SITE_MAX_PAGES` | `24` | Most pages kept for one website across extractions; once reached, extractions reuse them without reading the site |
 | `GAPSCAN_SITE_MAX_AGE_DAYS` | `30` | Saved websites older than this are read again |
 | `GAPSCAN_FIGMA_TOKEN` | unset | Personal access token for reading Figma files. Without it, Figma links are recorded as "not connected". Variables need a Figma plan with REST variable access; otherwise styles and usage are read. |
+| `GAPSCAN_AI` | `off` | `claude` turns on drafting with Claude. Credentials come from the Anthropic SDK: `ANTHROPIC_API_KEY` (or `ANTHROPIC_AUTH_TOKEN`, or an Anthropic profile). GapScan never stores or logs them. |
+| `GAPSCAN_AI_MODEL`, `GAPSCAN_AI_EFFORT` | `claude-opus-5-5`, `medium` | Model and effort (`low`, `medium`, `high`) for drafting |
 | `GAPSCAN_LEGACY_ENGINE` | `../gapscan/engine/` | The prototype extractor, still used for component inventories in code |
 
 ## Hosting
@@ -160,6 +166,30 @@ a route without one stops the server from starting. A project you aren't on answ
 "not found", exactly like one that doesn't exist. Requests that change things must come
 from GapScan's own pages (checked by `Origin`). Approvals record the signed-in person's
 email rather than a typed name.
+
+## Drafting with Claude
+
+Off unless `GAPSCAN_AI=claude` is set; nothing calls Claude otherwise. With it on, the review
+page shows **Draft with Claude** on the sections GapScan can only template (principles,
+keyboard behaviour, component usage notes…), and the GapScan report shows **Ask Claude for a
+match** on components it couldn't settle.
+
+- **Grounded.** Each request carries a numbered sheet of facts from the extraction only:
+  tokens, components with their styles and states, findings, and writing quoted from your
+  sources. Text from your sources is wrapped in `<quoted>` tags and Claude is told it is
+  material, never instructions.
+- **Checked.** Claude answers in a fixed JSON shape (structured output) with the facts it
+  relied on. Citations that aren't on the sheet are dropped; a match outside GapScan's
+  candidate list is discarded. Facts read straight from your sources are never redrafted.
+- **Approved by a person.** A draft replaces the template text, is labelled "Drafted by
+  Claude", lists the decisions it leaves to your team, and counts for nothing until someone
+  approves it (the approval covers exactly that text). A match suggestion only fills in the
+  reviewer form; the report changes when a reviewer approves the mapping.
+- **Refusals.** If the model declines on policy grounds, the request is retried once on
+  Anthropic's default fallback model (server-side fallback beta); if that also declines,
+  GapScan says so and you write the section yourself.
+- **What is sent.** The facts sheet and the section's current text, to Anthropic's API.
+  No source files, screenshots or application code.
 
 ## Export to Figma
 
@@ -206,6 +236,9 @@ images, gradients or translucent layers is skipped rather than guessed.
 
 ## Current limits
 
+- **Drafting with Claude was tested with a stand-in client**, not against the live API
+  (that needs an API key and costs money per request). Each draft is one request with
+  adaptive thinking at medium effort.
 - **The prototype bridge only reads markup now.** JS/TS components and all
   foundations are read natively; HTML and Markdown components still pass through
   `apps/api/src/legacy-bridge.ts`.
