@@ -189,7 +189,7 @@ test('the extraction UI is served with a CSP and nothing outside its folder is r
     const page = await h.app.inject({method: 'GET', url: '/app/'});
     assert.equal(page.statusCode, 200);
     assert.match(page.headers['content-security-policy'] as string, /default-src 'self'/);
-    assert.match(page.body, /<h1>Projects<\/h1>/);
+    assert.match(page.body, /See your design system clearly/);
     assert.equal((await h.app.inject({method: 'GET', url: '/app/review.js'})).statusCode, 200);
     for (const url of ['/app/../src/app.ts', '/app/..%2Fpackage.json', '/app/secret.txt', '/app/%2e%2e/%2e%2e/package.json'])
       assert.equal((await h.app.inject({method: 'GET', url})).statusCode, 404, url);

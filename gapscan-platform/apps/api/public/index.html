@@ -3,30 +3,51 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Projects · GapScan</title>
+  <title>GapScan</title>
   <link rel="stylesheet" href="/app/styles.css">
 </head>
 <body>
 <main>
-  <!-- Projects home: shown when no project is open. -->
+  <!-- Home: one way in, then your design systems. -->
   <div id="home" hidden>
-    <header class="top">
-      <div>
-        <h1>Projects</h1>
-        <p class="lead">One project per design system. Add its sources, extract, then compare, document and hand off.</p>
+    <section class="hero" aria-labelledby="hero-title">
+      <h1 id="hero-title">See your design system clearly</h1>
+      <p class="lead hero-lead">Add your website, Figma file or brand files. GapScan organises what it finds, then helps you export it, document it, or move to another design system.</p>
+      <form class="start" id="start-form" novalidate>
+        <div class="start-box" id="start-box">
+          <label class="visually-hidden" for="start-url">Website or Figma link</label>
+          <input id="start-url" type="url" inputmode="url" autocomplete="off" placeholder="Paste your website or Figma link">
+          <span class="start-or muted">or</span>
+          <label class="button start-files" for="start-files">Choose files</label>
+          <input id="start-files" class="visually-hidden" type="file" multiple accept=".pptx,.docx,.pdf,.zip,.css,.scss,.sass,.less,.json,.html,.htm,.md,.mdx,.txt,.js,.jsx,.ts,.tsx,.mjs,.vue,.svelte,.png,.jpg,.jpeg,.webp,.gif">
+          <button class="primary" type="submit" id="start-go">Get started</button>
+        </div>
+        <p class="muted start-hint" id="start-hint">You can also drop files anywhere on this box: brand guides, PDFs, token files or screenshots.</p>
+        <ul class="plain start-files-list" id="start-files-list"></ul>
+        <p class="error" id="start-error" role="alert"></p>
+      </form>
+      <ol class="how" aria-label="How it works">
+        <li><b>1</b><span><strong>Add your system</strong><span class="muted">A link or a few files is enough.</span></span></li>
+        <li><b>2</b><span><strong>See it organised</strong><span class="muted">Colours, type, spacing and components in one place.</span></span></li>
+        <li><b>3</b><span><strong>Use it</strong><span class="muted">Export to Figma or PDF, write the documents, or plan a migration.</span></span></li>
+      </ol>
+    </section>
+
+    <section class="card reading" id="reading" aria-labelledby="reading-title" hidden>
+      <h2 id="reading-title">Reading your design system</h2>
+      <p class="muted" id="reading-note">This usually takes under a minute; websites take longer. You can leave this page; it keeps going.</p>
+      <ol class="progress-steps" id="home-steps"></ol>
+      <div class="notice error-notice" id="reading-failed" role="alert" hidden>
+        <strong>We couldn’t finish reading it</strong>
+        <p id="reading-message"></p>
+        <a class="button" id="reading-open" href="#">Check the sources</a>
       </div>
-      <button class="primary" id="new-project" type="button">New project</button>
-    </header>
-    <form class="card new-project" id="new-project-form" hidden>
-      <label for="new-project-name">Project name</label>
-      <div class="row">
-        <input id="new-project-name" type="text" maxlength="200" required placeholder="e.g. Acme web app">
-        <button class="primary" type="submit">Create project</button>
-        <button type="button" id="new-project-cancel">Cancel</button>
-      </div>
-      <p class="error" id="new-project-error" role="alert"></p>
-    </form>
-    <div class="project-grid" id="projects" aria-live="polite"><p class="muted">Loading projects…</p></div>
+    </section>
+
+    <section aria-labelledby="mine-title" id="mine" hidden>
+      <h2 id="mine-title" class="section-title">Your design systems</h2>
+      <div class="project-grid" id="projects" aria-live="polite"></div>
+    </section>
   </div>
 
   <!-- One project: its name, extractions, people, sources and the extract action. -->

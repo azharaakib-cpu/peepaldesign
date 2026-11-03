@@ -40,7 +40,7 @@ function setCrumbs(crumbs) {
 // Projects › <project> › …rest, with the project's name fetched (left out if it can't be read).
 async function crumbsFor(projectId, ...rest) {
   const project = projectId ? await api(`/v1/projects/${projectId}`).catch(() => null) : null;
-  setCrumbs([{label: 'Projects', href: '/app/'}, ...(project ? [{label: project.name, href: `/app/?project=${project.id}`}] : []), ...rest]);
+  setCrumbs([{label: 'Design systems', href: '/app/'}, ...(project ? [{label: project.name, href: `/app/?project=${project.id}`}] : []), ...rest]);
   return project;
 }
 

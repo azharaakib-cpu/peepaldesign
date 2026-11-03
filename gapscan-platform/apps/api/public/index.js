@@ -1,44 +1,88 @@
-// Projects home (no ?project) and one project: its extractions, sources, the extract action and people.
+// Home (no ?project): one way to start, then your design systems. With ?project: its sources, extractions and people.
 const projectParam = new URLSearchParams(location.search).get('project');
 let projectId = null, sources = [], activeJob = null, stream = null;
 const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
 const when = iso => new Date(iso).toLocaleString(undefined, {day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'});
 
-// ── Projects home ──
+// ── Home: one start box, then your design systems ──
+// Each card shows the system's own colours as a strip, read from the saved scales.
 function projectCard(p) {
-  const status = p.latestExtraction ? `Extraction v${p.latestExtraction.version}` : p.sources ? 'Ready to extract' : 'No sources yet';
-  return el('a', {class: 'project-card', href: `/app/?project=${p.id}`},
+  const strip = el('span', {class: 'swatch-strip', 'aria-hidden': 'true'});
+  if (p.latestExtraction) api(`/v1/extractions/${p.latestExtraction.id}/scales`).then(scales => {
+    const hexes = [...new Set([...scales.roles.map(r => r.hex), ...scales.colors.map(c => c.hex)])].slice(0, 6);
+    strip.replaceChildren(...hexes.map(hex => el('i', {style: `background:${hex}`})));
+  }).catch(() => {});
+  const href = p.latestExtraction ? `/app/review.html?id=${p.latestExtraction.id}` : `/app/?project=${p.id}`;
+  return el('a', {class: 'project-card system-card', href}, strip,
     el('span', {class: 'project-name'}, p.name),
-    el('span', {class: `pill ${p.latestExtraction ? 'ok' : ''}`}, status),
-    el('span', {class: 'muted project-meta'}, `${plural(p.sources, 'source')} · ${plural(p.extractions, 'extraction')} · updated ${when(p.lastActivity)}`));
+    el('span', {class: 'muted project-meta'}, p.latestExtraction ? `Updated ${new Date(p.latestExtraction.createdAt).toLocaleDateString(undefined, {day: 'numeric', month: 'short', year: 'numeric'})}` : 'Not read yet'));
 }
-let noProjects = false;   // the empty state has its own New project button
 async function showHome() {
-  setCrumbs([{label: 'Projects'}]);
+  setCrumbs([]);
   $('#home').hidden = false;
   try {
     const projects = await api('/v1/projects');
-    noProjects = !projects.length; $('#new-project').hidden = noProjects;
-    $('#projects').replaceChildren(...(projects.length ? projects.map(projectCard) : [el('div', {class: 'empty-state'},
-      el('h2', {}, 'Start with your first project'),
-      el('p', {class: 'muted'}, 'Add a website, Figma file, brand guide or code. GapScan reads it and lays out the design system it finds, then shows what moving to another system would take.'),
-      el('button', {class: 'primary', type: 'button', onclick: openNewProject}, 'New project'))]));
-  } catch (error) { $('#projects').replaceChildren(el('p', {class: 'error'}, error.message)); }
+    $('#mine').hidden = !projects.length;
+    $('#projects').replaceChildren(...projects.map(projectCard));
+  } catch (error) { $('#mine').hidden = false; $('#projects').replaceChildren(el('p', {class: 'error'}, error.message)); }
 }
-function openNewProject() {
-  $('#new-project-form').hidden = false; $('#new-project').hidden = true;
-  $('#new-project-name').focus();
+
+// Files chosen or dropped on the start box wait here until Get started.
+const startFiles = [];
+function renderStartFiles() {
+  $('#start-files-list').replaceChildren(...startFiles.map((file, i) => el('li', {class: 'start-file'}, el('span', {}, file.name), el('span', {class: 'muted'}, size(file.size)),
+    el('button', {type: 'button', class: 'quiet', 'aria-label': `Remove ${file.name}`, onclick: () => { startFiles.splice(i, 1); renderStartFiles(); }}, 'Remove'))));
 }
-function closeNewProject() { $('#new-project-form').hidden = true; $('#new-project').hidden = noProjects; $('#new-project-error').textContent = ''; }
-$('#new-project').addEventListener('click', openNewProject);
-$('#new-project-cancel').addEventListener('click', closeNewProject);
-$('#new-project-form').addEventListener('submit', async event => {
+function takeFiles(files) {
+  for (const file of files) {
+    if (file.size > MAX_BYTES) { $('#start-error').textContent = `${file.name} is ${size(file.size)}; the limit is 40 MB.`; continue; }
+    startFiles.push(file);
+  }
+  renderStartFiles();
+}
+$('#start-files').addEventListener('change', () => { takeFiles([...$('#start-files').files]); $('#start-files').value = ''; });
+const box = $('#start-box');
+for (const type of ['dragenter', 'dragover']) box.addEventListener(type, event => { event.preventDefault(); box.classList.add('is-over'); });
+for (const type of ['dragleave', 'dragend']) box.addEventListener(type, () => box.classList.remove('is-over'));
+box.addEventListener('drop', event => { event.preventDefault(); box.classList.remove('is-over'); takeFiles([...event.dataTransfer.files]); });
+
+// A name people will recognise: the site's address, or the first file's name.
+function nameFor(uri, files) {
+  if (uri) { try { return new URL(uri).hostname.replace(/^www\./, ''); } catch {} }
+  return files[0]?.name.replace(/\.[^.]+$/, '').replace(/[-_]+/g, ' ') || 'My design system';
+}
+$('#start-form').addEventListener('submit', async event => {
   event.preventDefault();
+  $('#start-error').textContent = '';
+  const typed = $('#start-url').value.trim(), uri = typed ? withScheme(typed) : null;
+  if (!uri && !startFiles.length) { $('#start-error').textContent = 'Paste a link or choose files to start.'; $('#start-url').focus(); return; }
+  if (uri) { try { new URL(uri); } catch { $('#start-error').textContent = 'That doesn’t look like a web address.'; return; } }
+  $('#start-go').disabled = true; $('#start-go').textContent = 'Starting…';
+  let project;
   try {
-    const project = await api('/v1/projects', {method: 'POST', body: JSON.stringify({name: $('#new-project-name').value})});
-    location.href = `/app/?project=${project.id}`;
-  } catch (error) { $('#new-project-error').textContent = error.message; }
+    project = await api('/v1/projects', {method: 'POST', body: JSON.stringify({name: nameFor(uri, startFiles)})});
+    if (uri) await api(`/v1/projects/${project.id}/sources`, {method: 'POST', body: JSON.stringify({kind: 'url', uri, consent: true})});
+    for (const file of startFiles) await api(`/v1/projects/${project.id}/sources`, {method: 'POST', body: JSON.stringify(await fileBody(file))});
+    const {events} = await api(`/v1/projects/${project.id}/extractions`, {method: 'POST', body: JSON.stringify({})});
+    followReading(events, project.id);
+  } catch (error) {
+    $('#start-go').disabled = false; $('#start-go').textContent = 'Get started';
+    $('#start-error').replaceChildren(error.message, ...(project ? [' ', el('a', {href: `/app/?project=${project.id}`}, 'Check the sources')] : []));
+  }
 });
+function followReading(events, id) {
+  $('#reading').hidden = false; $('#start-form').hidden = true;
+  $('#reading').scrollIntoView({behavior: 'smooth', block: 'start'});
+  renderSteps('collect', 'Starting…', 0, 0, $('#home-steps'));
+  const stream = new EventSource(events);
+  stream.addEventListener('progress', e => { const {body} = JSON.parse(e.data); renderSteps(body.stage, body.message, body.done, body.total, $('#home-steps')); });
+  stream.addEventListener('complete', e => { stream.close(); renderSteps('done', 'Done.', 0, 0, $('#home-steps')); location.href = `/app/review.html?id=${JSON.parse(e.data).body.resultId}`; });
+  stream.addEventListener('failed', e => {
+    stream.close();
+    $('#reading-failed').hidden = false; $('#reading-message').textContent = JSON.parse(e.data).body.message;
+    $('#reading-open').href = `/app/?project=${id}`;
+  });
+}
 
 // ── One project ──
 async function openProject(id) {
@@ -61,7 +105,7 @@ async function openProject(id) {
 }
 function showName(name) {
   $('#project-title').textContent = name;
-  setCrumbs([{label: 'Projects', href: '/app/'}, {label: name}]);
+  setCrumbs([{label: 'Design systems', href: '/app/'}, {label: name}]);
 }
 $('#rename').addEventListener('click', () => {
   $('#rename-input').value = $('#project-title').textContent;
@@ -135,13 +179,16 @@ async function addSource(body, name) {
     return true;
   } catch (error) { item.error = error.message; renderSources(); return false; }
 }
+async function fileBody(file) {
+  const buffer = new Uint8Array(await file.arrayBuffer());
+  let binary = ''; for (let i = 0; i < buffer.length; i += 0x8000) binary += String.fromCharCode(...buffer.subarray(i, i + 0x8000));
+  return {kind: 'file', name: file.name.replace(/[^\w .()@-]/g, '_'), base64: btoa(binary)};
+}
 async function addFiles(files) {
   for (const file of files) {
     const name = file.name.replace(/[^\w .()@-]/g, '_');
     if (file.size > MAX_BYTES) { pending.push({name, error: `${size(file.size)} is over the 40 MB limit.`}); renderSources(); continue; }
-    const buffer = new Uint8Array(await file.arrayBuffer());
-    let binary = ''; for (let i = 0; i < buffer.length; i += 0x8000) binary += String.fromCharCode(...buffer.subarray(i, i + 0x8000));
-    await addSource({kind: 'file', name, base64: btoa(binary)}, name);
+    await addSource(await fileBody(file), name);
   }
 }
 $('#files').addEventListener('change', async () => { const files = [...$('#files').files]; $('#files').value = ''; await addFiles(files); });
@@ -175,9 +222,9 @@ $('#add-code').addEventListener('click', async () => {
 // ── Extract: named steps from the job's progress events, the raw log behind "Details" ──
 const STEPS = [['collect', 'Reading sources'], ['parse', 'Finding components'], ['normalize', 'Measuring tokens and scales'], ['audit', 'Checking for issues'], ['done', 'Opening your review']];
 let stepState = {};
-function renderSteps(active, detail, done = 0, total = 0) {
+function renderSteps(active, detail, done = 0, total = 0, target = $('#steps')) {
   const reached = STEPS.findIndex(([id]) => id === active);
-  $('#steps').replaceChildren(...STEPS.map(([id, label], i) => {
+  target.replaceChildren(...STEPS.map(([id, label], i) => {
     const state = i < reached ? 'done' : i === reached ? 'active' : 'todo';
     return el('li', {class: `step is-${state}`, ...(state === 'active' ? {'aria-current': 'step'} : {})},
       el('span', {class: 'step-dot', 'aria-hidden': 'true'}),
@@ -234,7 +281,7 @@ $('#invite').addEventListener('submit', async event => {
 
 // Wait for the sign-in check so a signed-out visitor goes straight to the sign-in page.
 whoami.then(() => projectParam ? openProject(projectParam).catch(error => {
-  setCrumbs([{label: 'Projects', href: '/app/'}, {label: 'Not found'}]);
+  setCrumbs([{label: 'Design systems', href: '/app/'}, {label: 'Not found'}]);
   $('#project-view').hidden = false; $('#project-title').textContent = 'Project not found'; $('#rename').hidden = true;
   $('#project-summary').textContent = `${error.message} It may have been removed, or you may not be a member.`;
   document.querySelectorAll('#project-view section').forEach(s => { s.hidden = true; });
