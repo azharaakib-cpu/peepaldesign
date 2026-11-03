@@ -24,7 +24,7 @@ async function load() {
   $('#preview-open').href = preview;
   // Until each action gets its own simple view, they open the matching part of the full review.
   $('#action-export').href = `/app/export.html?id=${id}`;
-  $('#action-documents').href = `/app/review.html?id=${id}#documentation`;
+  $('#action-documents').href = `/app/documents.html?id=${id}`;
   $('#action-migrate').href = `/app/review.html?id=${id}#migrate`;
   api(`/v1/extractions/${id}/recommendations`).then(ranked => {
     if (ranked[0]) $('#migrate-note').textContent = `Closest match: ${ranked[0].library}. See what moving to it takes.`;

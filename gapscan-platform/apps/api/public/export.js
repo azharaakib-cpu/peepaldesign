@@ -14,7 +14,7 @@ async function load() {
   api(`/v1/extractions/${id}/objects`).then(list => {
     const approved = list.flatMap(o => o.sections).filter(s => s.approval).length;
     $('#pdf-docs').replaceChildren(approved ? `Includes ${approved} approved documentation section${approved === 1 ? '' : 's'}. ` : 'No documentation approved yet. ',
-      el('a', {href: `/app/review.html?id=${id}#documentation`}, approved ? 'Review documents' : 'Write documents first'));
+      el('a', {href: `/app/documents.html?id=${id}`}, approved ? 'Review documents' : 'Write documents first'));
   }).catch(() => {});
 }
 $('#pdf-make').addEventListener('click', async () => {

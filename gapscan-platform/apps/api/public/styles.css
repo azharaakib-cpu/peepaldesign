@@ -367,3 +367,5 @@ main.wide { max-width: 1240px; }
 .icon-pdf::before { width: 16px; height: 20px; border-radius: 2px; }
 .icon-code::before { width: 18px; height: 4px; box-shadow: 0 -6px 0 var(--accent), 0 6px 0 var(--accent); }
 @media (max-width: 900px) { .export-grid { grid-template-columns: 1fr; } }
+.fine-tag { font-size: 12px; }
+.docs-main-head .row { gap: 6px; }
