@@ -15,7 +15,7 @@ async function load() {
     showName(project.name);
     const sources = project.sources.filter(s => s.role !== 'application');
     const latest = [...project.extractions].sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0];
-    $('#system-meta').textContent = `Read from ${sources.map(s => s.kind === 'url' ? new URL(s.uri).hostname.replace(/^www\./, '') : s.label || s.uri.replace(/^inline:/, '')).join(', ') || 'your sources'} · ${new Date(record.createdAt).toLocaleDateString(undefined, {day: 'numeric', month: 'long', year: 'numeric'})}`;
+    $('#system-meta').textContent = `Read from ${sources.map(s => s.kind === 'figma' ? `Figma file “${decodeURIComponent(new URL(s.uri).pathname.split('/')[3] ?? 'Figma').replace(/[-_]+/g, ' ')}”` : s.kind === 'url' ? new URL(s.uri).hostname.replace(/^www\./, '') : s.label || s.uri.replace(/^inline:/, '')).join(', ') || 'your sources'} · ${new Date(record.createdAt).toLocaleDateString(undefined, {day: 'numeric', month: 'long', year: 'numeric'})}`;
     if (latest && latest.id !== id) $('#system-meta').append(' · ', el('a', {href: `/app/system.html?id=${latest.id}`}, 'A newer version exists'));
     $('#update').href = `/app/?project=${projectId}`;
     // Sources added after this version was read are waiting for "Update my design system".
