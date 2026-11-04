@@ -412,3 +412,5 @@ details > summary:has(.inline-h2) { cursor: pointer; }
 .reader-select { width: auto; max-width: 100%; font: inherit; font-size: 13px; padding: 4px 8px; border-radius: 6px; border: 1px solid var(--line-strong); background: var(--surface); color: var(--text); }
 .reader-note { flex-basis: 100%; }
 .start .reader-note { text-align: center; }
+.reasons { margin: 8px 0 0; padding-left: 18px; font-size: 14px; }
+.start-hint.warn { color: var(--minor); }

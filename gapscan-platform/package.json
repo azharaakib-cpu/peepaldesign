@@ -11,8 +11,8 @@
     "apps/*"
   ],
   "scripts": {
-    "start": "node apps/api/src/main.ts",
-    "dev": "node --watch apps/api/src/main.ts",
+    "start": "node --env-file-if-exists=.env apps/api/src/main.ts",
+    "dev": "node --env-file-if-exists=.env --watch apps/api/src/main.ts",
     "typecheck": "tsc -p tsconfig.json",
     "test": "node --test \"packages/*/test/*.test.ts\" \"apps/*/test/*.test.ts\"",
     "check": "npm run typecheck && npm test"

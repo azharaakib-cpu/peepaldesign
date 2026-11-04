@@ -52,6 +52,11 @@ function takeFiles(files) {
   }
   renderStartFiles();
 }
+$('#start-url').addEventListener('input', () => {
+  const figmaOff = isFigma($('#start-url').value.trim()) && !figmaConnected;
+  $('#start-hint').textContent = figmaOff ? FIGMA_OFF : 'You can also drop files anywhere on this box: brand guides, PDFs, token files or screenshots.';
+  $('#start-hint').classList.toggle('warn', figmaOff);
+});
 $('#start-files').addEventListener('change', () => { takeFiles([...$('#start-files').files]); $('#start-files').value = ''; });
 const box = $('#start-box');
 for (const type of ['dragenter', 'dragover']) box.addEventListener(type, event => { event.preventDefault(); box.classList.add('is-over'); });
@@ -69,6 +74,8 @@ $('#start-form').addEventListener('submit', async event => {
   const typed = $('#start-url').value.trim(), uri = typed ? withScheme(typed) : null;
   if (!uri && !startFiles.length) { $('#start-error').textContent = 'Paste a link or choose files to start.'; $('#start-url').focus(); return; }
   if (uri) { try { new URL(uri); } catch { $('#start-error').textContent = 'That doesn’t look like a web address.'; return; } }
+  // A Figma link this GapScan can't read: the hint under the box already says why, so create nothing.
+  if (uri && isFigma(uri) && !figmaConnected && !startFiles.length) { $('#start-url').focus(); return; }
   $('#start-go').disabled = true; $('#start-go').textContent = 'Starting…';
   let project;
   try {
@@ -86,12 +93,14 @@ function followReading(events, id) {
   $('#reading').hidden = false; $('#start-form').hidden = true;
   $('#reading').scrollIntoView({behavior: 'smooth', block: 'start'});
   renderSteps('collect', 'Starting…', 0, 0, $('#home-steps'));
-  const stream = new EventSource(events);
+  const stream = new EventSource(events), warnings = [];
   stream.addEventListener('progress', e => { const {body} = JSON.parse(e.data); renderSteps(body.stage, body.message, body.done, body.total, $('#home-steps')); });
+  stream.addEventListener('warning', e => warnings.push(JSON.parse(e.data).body.message));
   stream.addEventListener('complete', e => { stream.close(); renderSteps('done', 'Done.', 0, 0, $('#home-steps')); location.href = `/app/system.html?id=${JSON.parse(e.data).body.resultId}`; });
   stream.addEventListener('failed', e => {
     stream.close();
-    $('#reading-failed').hidden = false; $('#reading-message').textContent = JSON.parse(e.data).body.message;
+    $('#reading-failed').hidden = false;
+    $('#reading-message').replaceChildren(JSON.parse(e.data).body.message, ...(warnings.length ? [el('ul', {class: 'reasons'}, warnings.map(w => el('li', {}, w)))] : []));
     $('#reading-open').href = `/app/?project=${id}`;
   });
 }
@@ -214,9 +223,12 @@ addEventListener('dragover', event => event.preventDefault());
 addEventListener('drop', event => event.preventDefault());
 
 const withScheme = uri => /^[a-z]+:\/\//i.test(uri) ? uri : `https://${uri}`;   // "acme.com" means the site
+let figmaConnected = true;
+api('/v1/figma').then(f => { figmaConnected = f.connected; }).catch(() => {});
+const FIGMA_OFF = 'Figma isn’t connected on this GapScan, so Figma files can’t be read yet. Export the styles as CSS or token JSON, or use the live site’s link instead.';
 const isFigma = uri => { try { return /(^|\.)figma\.com$/.test(new URL(withScheme(uri)).hostname); } catch { return false; } };
 $('#url').addEventListener('input', () => {
-  $('#url-hint').textContent = isFigma($('#url').value.trim()) ? 'Figma file: variables, styles and components are read through the Figma API.'
+  $('#url-hint').textContent = isFigma($('#url').value.trim()) ? (figmaConnected ? 'Figma file: variables, styles and components are read through the Figma API.' : FIGMA_OFF)
     : 'Websites are rendered in a sandboxed browser at desktop, tablet and phone widths, plus dark mode.';
 });
 $('#link-form').addEventListener('submit', async event => {
@@ -260,14 +272,17 @@ async function runExtraction() {
     $('#extract-panel').scrollIntoView({behavior: 'smooth', block: 'nearest'});
     stream = new EventSource(events);
     stream.addEventListener('progress', e => { const {body} = JSON.parse(e.data); log(body.message); renderSteps(body.stage, body.message, body.done, body.total); });
-    stream.addEventListener('warning', e => { const message = JSON.parse(e.data).body.message; log('⚠ ' + message); stepState.warnings++; $('#status').textContent = `${plural(stepState.warnings, 'warning')}: see Details.`; });
+    stream.addEventListener('warning', e => { const message = JSON.parse(e.data).body.message; log('⚠ ' + message); stepState.warnings++; (stepState.reasons ??= []).push(message); $('#status').textContent = `${plural(stepState.warnings, 'warning')}: see Details.`; });
     const finish = () => { stream.close(); activeJob = null; renderSources(); };
     stream.addEventListener('complete', e => { finish(); renderSteps('done', 'Done.'); location.href = `/app/system.html?id=${JSON.parse(e.data).body.resultId}`; });
-    stream.addEventListener('failed', e => { finish(); fail('The extraction stopped', JSON.parse(e.data).body.message); });
+    stream.addEventListener('failed', e => { finish(); fail('The extraction stopped', JSON.parse(e.data).body.message, stepState.reasons ?? []); });
     stream.addEventListener('cancelled', () => { finish(); setMode('idle'); $('#extract-ready').textContent = 'Extraction cancelled. Pages already read from websites are kept for next time.'; });
   } catch (error) { activeJob = null; renderSources(); fail('The extraction couldn’t start', error.message); }
 }
-function fail(title, message) { setMode('failed'); $('#failed-title').textContent = title; $('#failed-message').textContent = message; }
+function fail(title, message, reasons = []) {
+  setMode('failed'); $('#failed-title').textContent = title;
+  $('#failed-message').replaceChildren(message, ...(reasons.length ? [el('ul', {class: 'reasons'}, reasons.map(r => el('li', {}, r)))] : []));
+}
 $('#run').addEventListener('click', runExtraction);
 $('#retry').addEventListener('click', runExtraction);
 $('#cancel').addEventListener('click', () => {

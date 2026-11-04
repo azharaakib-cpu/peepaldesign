@@ -159,6 +159,8 @@ export function buildApp({infra, handlers = {}, logger = false, heartbeatMs = HE
     return (await store.renameProject(id, body.name)) ?? fail(reply, 404, 'Project not found.');
   });
 
+  // Whether Figma links can be read here (never the token itself).
+  app.get('/v1/figma', async () => ({connected: Boolean(figma.token)}));
   // Ways to read a website: GapScan's browser always; Scrapling when it's installed on the server.
   app.get('/v1/readers', async () => {
     const scrapling = await scraplingAvailable();
@@ -194,6 +196,8 @@ export function buildApp({infra, handlers = {}, logger = false, heartbeatMs = HE
       try { url = publicUrl(body.uri); } catch (error) { return fail(reply, 400, error instanceof UnsafeUrlError ? error.message : 'Invalid URL.'); }
       if (body.role === 'application' && !githubRepo(url.href)) return fail(reply, 400, 'Application code links must be public github.com repositories (https://github.com/owner/repo).');
       const kind = /^(www\.)?figma\.com$/.test(url.hostname) ? 'figma' as const : 'url' as const;
+      // Figma's API needs a token for every file, public or not; without one, say so now rather than fail later.
+      if (kind === 'figma' && !figma.token) return fail(reply, 400, 'Figma files can’t be read here yet: this GapScan isn’t connected to Figma. Add the file’s styles another way (export them as CSS or token JSON, or paste the link of the live site), or ask whoever runs GapScan to connect Figma.');
       const scrapling = kind === 'url' && body.role === 'system' && body.reader === 'scrapling';
       if (scrapling) { const check = await scraplingAvailable(); if (!check.available) return fail(reply, 400, `${check.reason} Use GapScan’s own reader for this site.`); }
       const source = {id, projectId, kind, uri: url.href, label: url.hostname, sha256: createHash('sha256').update(url.href).digest('hex'),

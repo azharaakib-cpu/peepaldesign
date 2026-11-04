@@ -74,7 +74,7 @@ export function accessRules(store: Store): Record<string, Rule> {
     'GET /health': pub, 'GET /healthz': pub, 'GET /': pub, 'GET /app/*': pub,
     'POST /v1/auth/link': pub, 'POST /v1/auth/session': pub, 'GET /v1/auth/me': pub, 'POST /v1/auth/logout': pub,
     'GET /v1/auth/providers': pub, 'POST /v1/auth/test-session': pub, 'GET /v1/auth/sso/:provider/start': pub, 'GET /v1/auth/sso/:provider/callback': pub,
-    'GET /v1/library': user, 'GET /v1/saved-sites': user, 'GET /v1/readers': user, 'GET /v1/library/:id': user, 'GET /v1/templates': user, 'POST /v1/projects': user, 'GET /v1/projects': user,
+    'GET /v1/library': user, 'GET /v1/saved-sites': user, 'GET /v1/readers': user, 'GET /v1/figma': user, 'GET /v1/library/:id': user, 'GET /v1/templates': user, 'POST /v1/projects': user, 'GET /v1/projects': user,
     'GET /v1/admin/design-systems': admin, 'GET /v1/admin/activity': admin, 'GET /v1/admin/settings': admin,
     'GET /v1/projects/:id': viaProject, 'PATCH /v1/projects/:id': viaProject, 'POST /v1/projects/:id/sources': viaProject, 'POST /v1/projects/:id/extractions': viaProject,
     'POST /v1/projects/:id/usage': viaProject, 'GET /v1/projects/:id/usage': viaProject, 'GET /v1/projects/:id/members': viaProject,

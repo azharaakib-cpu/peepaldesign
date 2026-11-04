@@ -65,14 +65,17 @@ const whoami = me.then(info => {
 });
 // Drafting with Claude is on only when the server says so; buttons stay hidden otherwise.
 const aiStatus = location.pathname.endsWith('/signin.html') ? Promise.resolve({enabled: false}) : fetch('/v1/ai').then(r => r.ok ? r.json() : {enabled: false}).catch(() => ({enabled: false}));
+// A failure message followed by the reasons each source gave (warnings are otherwise easy to miss).
+function withReasons(message, warnings) { return warnings.length ? `${message} ${warnings.join(' ')}` : message; }
 // Starts a job and resolves when it completes; progress messages go to `onProgress`.
 async function runJob(path, onProgress = () => {}) {
   const {events} = await api(path, {method: 'POST'});
   return new Promise((resolve, reject) => {
-    const stream = new EventSource(events);
+    const stream = new EventSource(events), warnings = [];
     stream.addEventListener('progress', e => onProgress(JSON.parse(e.data).body.message));
+    stream.addEventListener('warning', e => warnings.push(JSON.parse(e.data).body.message));
     stream.addEventListener('complete', e => { stream.close(); resolve(JSON.parse(e.data).body); });
-    stream.addEventListener('failed', e => { stream.close(); reject(new Error(JSON.parse(e.data).body.message)); });
+    stream.addEventListener('failed', e => { stream.close(); reject(Object.assign(new Error(withReasons(JSON.parse(e.data).body.message, warnings)), {warnings})); });
     stream.addEventListener('cancelled', () => { stream.close(); reject(new Error('Cancelled.')); });
   });
 }

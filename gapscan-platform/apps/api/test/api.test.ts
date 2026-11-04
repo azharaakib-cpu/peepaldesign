@@ -165,8 +165,11 @@ test('uploaded PPTX, PDF and zipped code go through their adapters into one extr
     assert.equal((await upload('guide.pdf', brandPdf([{lines: [[28, 'Colour'], [11, 'Primary Blue'], [11, 'HEX #0052CC']]}]))).body.kind, 'pdf');
     assert.equal((await upload('site.zip', writeZip({'src/tokens.css': ':root{--brand:#0B5FD6} .btn{background:#0B5FD6;color:#fff;padding:8px 16px}', 'node_modules/x/y.css': '.junk{color:red}'}))).body.kind, 'zip');
     assert.equal((await upload('photo.heic', new Uint8Array([1]))).status, 415);
+    // Without a Figma token, a Figma link is refused when added, with what to do instead.
+    assert.deepEqual((await h.json('GET', '/v1/figma')).body, {connected: false});
     const figma = await h.json('POST', `/v1/projects/${h.project.id}/sources`, {kind: 'url', uri: 'https://www.figma.com/design/AbCdEf1234567890/Acme'});
-    assert.equal(figma.body.kind, 'figma');
+    assert.equal(figma.status, 400);
+    assert.match(figma.body.error, /isn’t connected to Figma/);
 
     const {jobId} = (await h.json('POST', `/v1/projects/${h.project.id}/extractions`)).body;
     await h.infra.queue.idle();
@@ -177,7 +180,7 @@ test('uploaded PPTX, PDF and zipped code go through their adapters into one extr
     assert.ok(eds.tokens.some(t => t.path === '--brand'), 'zipped CSS token');
     assert.ok(!eds.evidence.some(e => /node_modules/.test(e.locator)), 'dependency folders are skipped');
     assert.ok(eds.quirks.some(q => q.kind === 'declared_observed_drift'), 'guide and deck blue differ from the site blue');
-    assert.ok(eds.quirks.some(q => q.kind === 'coverage_gap' && /Figma is not connected/.test(q.summary)));
+
     const scales = (await h.json('GET', `/v1/extractions/${job.resultId}/scales`)).body;
     assert.ok(Array.isArray(scales.colors) && scales.colors.length > 0);
   } finally { await h.close(); }

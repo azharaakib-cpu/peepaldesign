@@ -70,7 +70,7 @@ export function createExtractHandler({store, blobs, stageDelayMs = 0, figmaToken
       await checkpoint();
     }
     if (!results.some(r => r.result && (r.result.observations.length || r.result.fetched)))
-      throw new Error('None of the sources could be read, so there is nothing to extract. Check the warnings above and add a readable source.');
+      throw new Error('None of the sources could be read, so there is nothing to extract.');
 
     // Component inventories from code still come from the prototype extractor (Phase 2 bridge).
     let external: ExternalComponent[] = [];

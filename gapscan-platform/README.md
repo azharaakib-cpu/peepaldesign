@@ -129,7 +129,7 @@ review the result, then compare it against a reference system.
 | `GAPSCAN_MAX_PAGES` | `8` | New pages rendered per website per extraction |
 | `GAPSCAN_SITE_MAX_PAGES` | `24` | Most pages kept for one website across extractions; once reached, extractions reuse them without reading the site |
 | `GAPSCAN_SITE_MAX_AGE_DAYS` | `30` | Saved websites older than this are read again |
-| `GAPSCAN_FIGMA_TOKEN` | unset | Personal access token for reading Figma files. Without it, Figma links are recorded as "not connected". Variables need a Figma plan with REST variable access; otherwise styles and usage are read. |
+| `GAPSCAN_FIGMA_TOKEN` | unset | Personal access token for reading Figma files (Figma → Settings → Security → Personal access tokens, with read access to file content). Without it, Figma links are refused when added, with what to do instead. Put it in `gapscan-platform/.env` (`GAPSCAN_FIGMA_TOKEN=…`), which `npm start` reads and git ignores. Variables need a Figma plan with REST variable access; otherwise styles and usage are read. |
 | `GAPSCAN_AI` | `off` | `claude` turns on drafting with Claude. Credentials come from the Anthropic SDK: `ANTHROPIC_API_KEY` (or `ANTHROPIC_AUTH_TOKEN`, or an Anthropic profile). GapScan never stores or logs them. |
 | `GAPSCAN_AI_MODEL`, `GAPSCAN_AI_EFFORT` | `claude-opus-5-5`, `medium` | Model and effort (`low`, `medium`, `high`) for drafting |
 | `GAPSCAN_LEGACY_ENGINE` | `../gapscan/engine/` | The prototype extractor, still used for component inventories in code |
