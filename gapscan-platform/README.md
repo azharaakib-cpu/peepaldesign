@@ -125,6 +125,7 @@ review the result, then compare it against a reference system.
 | `GAPSCAN_AUTH_TEST_USERS` | unset | Local development only: comma-separated test accounts that sign in with one click on the sign-in page, no email. The last one used signs in again automatically; signing out forgets it. The server refuses to start with this set unless `GAPSCAN_PUBLIC_URL` is on localhost and the store is local, and only requests from this machine are accepted. |
 | `GAPSCAN_AUTH_EMAIL_LINKS` | on | `off` leaves single sign-on as the only way in |
 | `GAPSCAN_AUTH_DOMAINS` | unset (anyone) | Comma-separated email domains that can create an account. Others can still sign in once an owner invites them. |
+| `GAPSCAN_SCRAPLING_PYTHON` | `python3` | A Python 3.10+ with Scrapling installed, for the optional Scrapling website reader (see below). Without one, the option shows as not available. |
 | `GAPSCAN_MAX_PAGES` | `8` | New pages rendered per website per extraction |
 | `GAPSCAN_SITE_MAX_PAGES` | `24` | Most pages kept for one website across extractions; once reached, extractions reuse them without reading the site |
 | `GAPSCAN_SITE_MAX_AGE_DAYS` | `30` | Saved websites older than this are read again |
@@ -221,6 +222,33 @@ in whichever Figma file you open it in: Plugins → Development → Import plugi
 then run it and choose the file. It fetches nothing, re-runs update variables and styles by name,
 and existing component sets are left alone. When the site's typeface isn't installed for Figma,
 styles use a similar sans and say so.
+
+## Website readers
+
+People choose how a website is read when they add it:
+
+- **GapScan's browser** (default): renders each page in Chromium at three widths and in dark
+  mode, measures hover, focus-visible and pressed states, and screenshots each variant.
+- **Scrapling**: [Scrapling](https://github.com/D4Vinci/Scrapling)'s HTTP fetcher (BSD-3-Clause)
+  downloads the pages and their stylesheets, and GapScan reads the CSS. It is faster, but nothing
+  is rendered: no screenshots, measured states, extra widths or dark mode. Use it for sites whose
+  styles live in their stylesheets.
+
+Scrapling runs as a child process (`apps/api/scrapling/bridge.py`) that only fetches the URLs
+GapScan gives it. GapScan finds stylesheets and same-site links in the HTML itself, checks every
+URL with the same public-address rule as everything else, and sends Scrapling's traffic through
+the same egress proxy as the browser, so it reaches only vetted public addresses on 443.
+Scrapling's Cloudflare-solving and stealth browser are not used.
+
+To turn it on, give GapScan a Python 3.10 or newer with Scrapling's fetchers:
+
+```bash
+python3.12 -m venv .venv-scrapling
+.venv-scrapling/bin/pip install "scrapling[fetchers]"
+GAPSCAN_SCRAPLING_PYTHON=$PWD/.venv-scrapling/bin/python npm start
+```
+
+The HTTP fetcher needs no browser download (`scrapling install` is only for its browser fetchers).
 
 ## How a website is read
 

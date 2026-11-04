@@ -4,6 +4,18 @@ let projectId = null, sources = [], activeJob = null, stream = null;
 const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
 const when = iso => new Date(iso).toLocaleString(undefined, {day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'});
 
+// ── Website readers: GapScan's browser, or Scrapling when the server has it ──
+let readers = [{id: 'default', label: 'GapScan’s browser', description: '', available: true}];
+function fillReaders(select, note) {
+  select.replaceChildren(...readers.map(r => el('option', {value: r.id, disabled: !r.available}, r.available ? r.label : `${r.label} (not available)`)));
+  const explain = () => { const r = readers.find(x => x.id === select.value); note.textContent = r?.description ?? ''; };
+  const off = readers.find(r => !r.available);
+  note.title = off?.reason ?? '';
+  select.addEventListener('change', explain); explain();
+}
+const readerBody = select => select.value === 'scrapling' ? {reader: 'scrapling'} : {};
+api('/v1/readers').then(list => { readers = list; fillReaders($('#start-reader'), $('#start-reader-note')); fillReaders($('#url-reader'), $('#url-reader-note')); }).catch(() => {});
+
 // ── Home: one start box, then your design systems ──
 // Each card shows the system's own colours as a strip, read from the saved scales.
 function projectCard(p) {
@@ -61,7 +73,7 @@ $('#start-form').addEventListener('submit', async event => {
   let project;
   try {
     project = await api('/v1/projects', {method: 'POST', body: JSON.stringify({name: nameFor(uri, startFiles)})});
-    if (uri) await api(`/v1/projects/${project.id}/sources`, {method: 'POST', body: JSON.stringify({kind: 'url', uri, consent: true})});
+    if (uri) await api(`/v1/projects/${project.id}/sources`, {method: 'POST', body: JSON.stringify({kind: 'url', uri, consent: true, ...readerBody($('#start-reader'))})});
     for (const file of startFiles) await api(`/v1/projects/${project.id}/sources`, {method: 'POST', body: JSON.stringify(await fileBody(file))});
     const {events} = await api(`/v1/projects/${project.id}/extractions`, {method: 'POST', body: JSON.stringify({})});
     followReading(events, project.id);
@@ -147,7 +159,7 @@ const pending = [];
 function sourceCard(s) {
   const [kindLabel, icon] = KINDS[s.kind] ?? [s.kind, 'doc'];
   const title = s.kind === 'url' ? new URL(s.uri).host + new URL(s.uri).pathname.replace(/\/$/, '') : s.label || s.uri.replace(/^inline:/, '');
-  const detail = s.kind === 'url' || s.kind === 'figma' ? s.uri : `${kindLabel} · ${size(s.bytes)}`;
+  const detail = s.kind === 'figma' ? s.uri : s.kind === 'url' ? `${s.uri}${s.reader === 'scrapling' ? ' · read with Scrapling' : ''}` : `${kindLabel} · ${size(s.bytes)}`;
   return el('li', {class: 'source-card'}, el('span', {class: `kind-icon kind-${icon}`, 'aria-hidden': 'true'}),
     el('span', {class: 'source-text'}, el('span', {class: 'source-title', title: s.label || s.uri}, title), el('span', {class: 'muted source-detail'}, detail),
       savedNotes.get(s.uri) ? el('span', {class: 'muted saved'}, savedNotes.get(s.uri)) : null),
@@ -212,7 +224,7 @@ $('#link-form').addEventListener('submit', async event => {
   const typed = $('#url').value.trim();
   if (!typed) return $('#url').focus();
   const uri = withScheme(typed);
-  if (await addSource({kind: 'url', uri, consent: true}, uri)) { $('#url').value = ''; $('#url').dispatchEvent(new Event('input')); }
+  if (await addSource({kind: 'url', uri, consent: true, ...readerBody($('#url-reader'))}, uri)) { $('#url').value = ''; $('#url').dispatchEvent(new Event('input')); }
 });
 $('#add-code').addEventListener('click', async () => {
   const content = $('#code').value, name = $('#code-name').value.trim() || 'styles.css';

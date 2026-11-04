@@ -20,6 +20,8 @@ export const SourceAsset = z.object({
   blobKey: z.string().optional(),          // stored payload for uploads and pasted code
   budget: z.object({maxPages: z.number().int().positive(), maxBytes: z.number().int().positive()}),
   consent: z.boolean().optional(),
+  // Websites: GapScan's own browser (default) or Scrapling's HTTP fetcher.
+  reader: z.enum(['default', 'scrapling']).optional(),
   // `system` sources describe the design system; `application` sources are the product code that uses it.
   role: z.enum(['system', 'application']).default('system'),
   createdAt: isoDate,

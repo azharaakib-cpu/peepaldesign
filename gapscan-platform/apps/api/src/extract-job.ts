@@ -18,7 +18,7 @@ const NOT_SUPPORTED: Partial<Record<SourceKind, string>> = {
   url: 'Rendered website extraction is not configured on this server. Paste or upload the site\'s CSS/HTML instead.',
 };
 
-export type ExtractOptions = {store: Store; blobs: BlobStore; stageDelayMs?: number; figmaToken?: string; urlAdapter?: Adapter};
+export type ExtractOptions = {store: Store; blobs: BlobStore; stageDelayMs?: number; figmaToken?: string; urlAdapter?: Adapter; scraplingAdapter?: Adapter};
 
 // Unzips code archives into documents for both the native foundations adapter and the component bridge.
 function codeDocuments(source: SourceAsset, bytes: Buffer): CodeDocument[] {
@@ -30,7 +30,7 @@ function codeDocuments(source: SourceAsset, bytes: Buffer): CodeDocument[] {
     .map(e => ({assetId: source.id, name: e.name, content: zip.read(e.name).toString('utf8')}));
 }
 
-export function createExtractHandler({store, blobs, stageDelayMs = 0, figmaToken = process.env.GAPSCAN_FIGMA_TOKEN, urlAdapter}: ExtractOptions): JobHandler {
+export function createExtractHandler({store, blobs, stageDelayMs = 0, figmaToken = process.env.GAPSCAN_FIGMA_TOKEN, urlAdapter, scraplingAdapter}: ExtractOptions): JobHandler {
   const adapters: Partial<Record<SourceKind, Adapter>> = {pptx: pptxAdapter, docx: docxAdapter, pdf: pdfAdapter, image: imageAdapter, figma: createFigmaAdapter(figmaToken), ...(urlAdapter ? {url: urlAdapter} : {})};
   return async ({job, signal, progress, warn}) => {
     // Stages yield (and can be slowed in tests) so cancellation is honoured between them.
@@ -54,7 +54,7 @@ export function createExtractHandler({store, blobs, stageDelayMs = 0, figmaToken
           const parts = await Promise.all(docs.map(doc => codeAdapter({assetId: source.id, name: doc.name, uri: source.uri, bytes: Buffer.from(doc.content)}, context)));
           result = {observations: parts.flatMap(p => p.observations), fetched: docs.length, failed: parts.flatMap(p => p.failed), budgetHit: parts.some(p => p.budgetHit)};
         } else {
-          const adapter = adapters[source.kind];
+          const adapter = source.kind === 'url' && source.reader === 'scrapling' ? scraplingAdapter : adapters[source.kind];
           if (!adapter) throw new Error(NOT_SUPPORTED[source.kind] ?? `${source.kind} sources are not supported yet.`);
           result = await adapter({assetId: source.id, name: label, uri: source.uri, bytes: bytes ?? Buffer.alloc(0)}, context);
         }

@@ -28,6 +28,7 @@ import {codemodPlan, createCodemodHandler, loadCodemodRun} from './codemod-job.t
 import {buildScript} from '@gapscan/codemod';
 import {isVisitor, registerAuth} from './auth.ts';
 import {missingItems} from './missing.ts';
+import {createScraplingAdapter, scraplingAvailable} from './scrapling.ts';
 import type {AuthConfig} from './auth.ts';
 import {createUrlGuard, publicUrl, UnsafeUrlError, createPinnedResolver} from './url-safety.ts';
 import {lookup} from 'node:dns/promises';
@@ -42,7 +43,7 @@ const HEARTBEAT_MS = 15_000;
 const SourceRole = z.enum(['system', 'application']).default('system');
 const CreateProjectBody = z.object({name: z.string().trim().min(1).max(200)});
 const AddSourceBody = z.discriminatedUnion('kind', [
-  z.object({kind: z.literal('url'), uri: z.string().min(1).max(2048), consent: z.boolean().optional(), role: SourceRole}),
+  z.object({kind: z.literal('url'), uri: z.string().min(1).max(2048), consent: z.boolean().optional(), role: SourceRole, reader: z.enum(['default', 'scrapling']).optional()}),
   z.object({kind: z.literal('code'), name: z.string().trim().min(1).max(200).regex(/^[\w .()@-]+$/, 'Use letters, numbers, spaces, dots, dashes, underscores or @.'), content: z.string().min(1), role: SourceRole}),
   z.object({kind: z.literal('file'), name: z.string().trim().min(1).max(200).regex(/^[\w .()@-]+$/, 'Use letters, numbers, spaces, dots, dashes, underscores or @.'), base64: z.string().min(1), role: SourceRole}),
 ]);
@@ -60,7 +61,10 @@ export function buildApp({infra, handlers = {}, logger = false, heartbeatMs = HE
   const siteMemory = createSiteMemory(blobs, {maxAgeDays: Number(process.env.GAPSCAN_SITE_MAX_AGE_DAYS) || SITE_MEMORY_MAX_AGE_DAYS});
   const urlAdapter: Adapter = (input, context) =>
     createUrlAdapter({allowUrl: createUrlGuard(lookupAll), egress: createPinnedResolver(lookupAll), maxPages: Number(process.env.GAPSCAN_MAX_PAGES) || 8, maxSitePages: Number(process.env.GAPSCAN_SITE_MAX_PAGES) || 24, memory: siteMemory})(input, context);
-  queue.register('extract', handlers.extract ?? createExtractHandler({store, blobs, urlAdapter}));
+  // The alternative website reader; each read gets its own URL guard and pinned resolver, as above.
+  const scraplingAdapter: Adapter = (input, context) =>
+    createScraplingAdapter({allowUrl: createUrlGuard(lookupAll), resolve: createPinnedResolver(lookupAll), maxPages: Number(process.env.GAPSCAN_MAX_PAGES) || 8})(input, context);
+  queue.register('extract', handlers.extract ?? createExtractHandler({store, blobs, urlAdapter, scraplingAdapter}));
   queue.register('gapscan', handlers.gapscan ?? createGapScanHandler({store, blobs}));
   queue.register('render', handlers.render ?? createRenderHandler({store, blobs}));
   queue.register('usage', handlers.usage ?? createUsageHandler({store, blobs, allowUrl: url => createUrlGuard(lookupAll)(url)}));
@@ -155,6 +159,13 @@ export function buildApp({infra, handlers = {}, logger = false, heartbeatMs = HE
     return (await store.renameProject(id, body.name)) ?? fail(reply, 404, 'Project not found.');
   });
 
+  // Ways to read a website: GapScan's browser always; Scrapling when it's installed on the server.
+  app.get('/v1/readers', async () => {
+    const scrapling = await scraplingAvailable();
+    return [{id: 'default', label: 'GapScan’s browser', description: 'Renders each page at three widths and in dark mode, measures hover and focus states, and takes screenshots.', available: true},
+      {id: 'scrapling', label: 'Scrapling', description: 'Downloads the pages and their stylesheets with Scrapling’s HTTP fetcher and reads the CSS. Faster; no screenshots, measured states or dark mode.', available: scrapling.available, ...(scrapling.reason ? {reason: scrapling.reason} : {})}];
+  });
+
   // What's saved for a website: pages read, pages still queued, when it was first read.
   app.get('/v1/saved-sites', async (request, reply) => {
     const url = String((request.query as {url?: string}).url ?? '');
@@ -183,8 +194,10 @@ export function buildApp({infra, handlers = {}, logger = false, heartbeatMs = HE
       try { url = publicUrl(body.uri); } catch (error) { return fail(reply, 400, error instanceof UnsafeUrlError ? error.message : 'Invalid URL.'); }
       if (body.role === 'application' && !githubRepo(url.href)) return fail(reply, 400, 'Application code links must be public github.com repositories (https://github.com/owner/repo).');
       const kind = /^(www\.)?figma\.com$/.test(url.hostname) ? 'figma' as const : 'url' as const;
+      const scrapling = kind === 'url' && body.role === 'system' && body.reader === 'scrapling';
+      if (scrapling) { const check = await scraplingAvailable(); if (!check.available) return fail(reply, 400, `${check.reason} Use GapScan’s own reader for this site.`); }
       const source = {id, projectId, kind, uri: url.href, label: url.hostname, sha256: createHash('sha256').update(url.href).digest('hex'),
-        bytes: 0, budget: {maxPages: 40, maxBytes: 20_000_000}, ...(body.consent !== undefined ? {consent: body.consent} : {}), role: body.role, createdAt};
+        bytes: 0, budget: {maxPages: 40, maxBytes: 20_000_000}, ...(body.consent !== undefined ? {consent: body.consent} : {}), role: body.role, ...(scrapling ? {reader: 'scrapling' as const} : {}), createdAt};
       await store.addSource(source);
       return reply.code(201).send(source);
     }

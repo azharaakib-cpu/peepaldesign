@@ -393,3 +393,20 @@ test('typefaces set without a size still count, and what is missing is listed so
     assert.equal((await h.json('GET', '/v1/extractions/nope/missing')).status, 404);
   } finally { await h.close(); }
 });
+
+test('website readers: GapScan’s browser always; Scrapling refused with a reason when it isn’t installed', async () => {
+  const h = await harness();
+  try {
+    const readers = (await h.json('GET', '/v1/readers')).body;
+    assert.deepEqual(readers.map((r: {id: string}) => r.id), ['default', 'scrapling']);
+    assert.equal(readers[0].available, true);
+    if (!readers[1].available) {
+      assert.ok(readers[1].reason, 'says why it is off');
+      const refused = await h.json('POST', `/v1/projects/${h.project.id}/sources`, {kind: 'url', uri: 'https://example.com/', reader: 'scrapling'});
+      assert.equal(refused.status, 400);
+      assert.match(refused.body.error, /Use GapScan’s own reader/);
+    }
+    const plain = (await h.json('POST', `/v1/projects/${h.project.id}/sources`, {kind: 'url', uri: 'https://example.com/'})).body;
+    assert.equal(plain.reader, undefined, 'the default reader is not written down');
+  } finally { await h.close(); }
+});
