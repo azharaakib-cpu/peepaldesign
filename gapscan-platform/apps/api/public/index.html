@@ -70,7 +70,7 @@
     </header>
 
     <section class="card" aria-labelledby="versions-title">
-      <h2 id="versions-title">Extractions</h2>
+      <h2 id="versions-title">Versions</h2>
       <ul class="plain" id="versions"></ul>
     </section>
 
@@ -83,7 +83,7 @@
 
       <label class="dropzone" id="dropzone" for="files">
         <input id="files" class="visually-hidden" type="file" multiple accept=".pptx,.docx,.pdf,.zip,.css,.scss,.sass,.less,.json,.html,.htm,.md,.mdx,.txt,.js,.jsx,.ts,.tsx,.mjs,.vue,.svelte,.png,.jpg,.jpeg,.webp,.gif">
-        <span class="dropzone-icon" aria-hidden="true"></span>
+        <span class="dropzone-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V5"/><path d="m7.5 9.5 4.5-4.5 4.5 4.5"/><path d="M4.5 15.5v3A1.5 1.5 0 0 0 6 20h12a1.5 1.5 0 0 0 1.5-1.5v-3"/></svg></span>
         <span class="dropzone-title">Drop files here, or <u>choose files</u></span>
         <span class="muted dropzone-hint">PDF, PowerPoint, Word, ZIP, CSS / SCSS / token JSON, component code, HTML, Markdown, or screenshots (PNG, JPEG, WebP). Up to 40 MB each.</span>
       </label>
@@ -115,12 +115,12 @@
 
     <section class="card extract-panel" id="extract-panel" aria-labelledby="run-title">
       <div class="card-head">
-        <h2 id="run-title">Extract</h2>
+        <h2 id="run-title">Read your sources</h2>
       </div>
       <div id="extract-idle">
         <p class="muted" id="extract-ready">Add at least one source to extract.</p>
         <div class="row">
-          <button class="primary" id="run" type="button" disabled>Extract design system</button>
+          <button class="primary" id="run" type="button" disabled>Update my design system</button>
           <label class="inline muted" id="refresh-row" hidden><input type="checkbox" id="refresh"> Read saved websites again instead of reusing them</label>
         </div>
       </div>

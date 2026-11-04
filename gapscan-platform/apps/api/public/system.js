@@ -60,7 +60,9 @@ function renderMissing(missing) {
   $('#missing-found').textContent = `${missing.found.components} component${missing.found.components === 1 ? '' : 's'} found`;
   const chips = [...missing.components.map(name => ({name, kind: 'code'})), ...missing.foundations.map(name => ({name, kind: 'tokens'}))];
   $('#missing-chips-wrap').hidden = !chips.length;
-  $('#missing-chips').replaceChildren(...chips.map(chip => el('button', {type: 'button', class: 'chip', onclick: () => startAdding(chip)}, chip.name)));
+  const FIRST = 8, chip = c => el('button', {type: 'button', class: 'chip', onclick: () => startAdding(c)}, c.name);
+  const more = chips.length > FIRST ? el('button', {type: 'button', class: 'chip more', onclick: () => more.replaceWith(...chips.slice(FIRST).map(chip))}, `${chips.length - FIRST} more`) : null;
+  $('#missing-chips').replaceChildren(...chips.slice(0, FIRST).map(chip), ...(more ? [more] : []));
 }
 const TOKEN_KINDS = {'Colours': 'color', 'Typefaces': 'font-family', 'Type sizes': 'font-size', 'Spacing': 'space', 'Corner radius': 'radius', 'Shadows': 'shadow'};
 function startAdding(chip) {

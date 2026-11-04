@@ -91,10 +91,11 @@ async function openProject(id) {
   $('#project-view').hidden = false;
   showName(project.name);
   const extractions = [...project.extractions].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-  $('#project-summary').textContent = `${plural(sources.length, 'source')} · ${extractions.length ? `latest extraction ${when(extractions[0].createdAt)}` : 'not extracted yet'}`;
+  $('#project-summary').textContent = `${plural(sources.length, 'source')} · ${extractions.length ? `last read ${when(extractions[0].createdAt)}` : 'not read yet'}`;
   $('#versions').replaceChildren(...(extractions.length ? extractions.map((e, i) => el('li', {class: 'source'},
     el('a', {href: `/app/system.html?id=${e.id}`}, `Version ${e.version}`), el('span', {class: 'muted'}, `${when(e.createdAt)}${i === 0 ? ' · latest' : ''}`)))
-    : [el('li', {class: 'empty'}, 'No extraction yet. Add sources below, then extract.')]));
+    : [el('li', {class: 'empty'}, 'Not read yet. Add sources below, then read them.')]));
+  $('#run').textContent = extractions.length ? 'Update my design system' : 'Read my design system';
   renderSources();
   // Sharing needs accounts: visitors have a private space, so there is no People card for them.
   if (project.role && !(await me).anonymous) {
@@ -230,7 +231,7 @@ function renderSteps(active, detail, done = 0, total = 0, target = $('#steps')) 
       el('span', {class: 'step-dot', 'aria-hidden': 'true'}),
       el('span', {class: 'step-text'}, el('span', {class: 'step-label'}, label, id === 'collect' && total ? ` (${Math.min(done, total)} of ${total})` : ''),
         state === 'active' && detail ? el('span', {class: 'muted step-detail'}, detail) : null,
-        state === 'active' && id === 'collect' && total ? el('span', {class: 'bar-track'}, el('i', {style: `width:${Math.round(done / total * 100)}%`})) : null));
+        state === 'active' && id === 'collect' && total ? el('span', {class: 'bar-track'}, el('i', {style: `transform:scaleX(${(done / total).toFixed(3)})`})) : null));
   }));
 }
 function log(line) { const box = $('#log'); $('#log-details').hidden = false; box.textContent += line + '\n'; box.scrollTop = box.scrollHeight; }

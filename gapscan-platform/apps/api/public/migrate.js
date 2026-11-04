@@ -38,7 +38,7 @@ async function load() {
   const best = ranked[0];
   if (!best) { $('#best-title').textContent = 'No reference systems are available'; return; }
   $('#best-title').textContent = `${best.library} ${best.version}`;
-  $('#best-reason').textContent = `${sentence(best.reason)}. Built for ${best.framework}.`;
+  $('#best-reason').textContent = `Your closest match: ${best.reason.charAt(0).toLowerCase()}${best.reason.slice(1)}. Built for ${best.framework}.`;
   if (best.homepage) { $('#best-site').hidden = false; $('#best-site').href = best.homepage; }
   const existing = reportFor(best.id);
   if (existing) { $('#best-open').hidden = false; $('#best-open').href = `/app/gapscan.html?id=${existing.id}`; $('#best-open').classList.add('primary'); }
