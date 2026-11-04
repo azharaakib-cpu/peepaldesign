@@ -93,3 +93,24 @@ test('a match suggestion picks only from the candidates, or none', async () => {
   await assert.rejects(ask({candidate: 'polaris-modal', confidence: 'high', rationale: 'r', citedFacts: []}).result, /outside the candidate list/);
   await assert.rejects(suggestMatch(fakeClient({}).client, settings, {eds, sourceId: 'pill', referenceName: 'Polaris', candidates: []}), /no components/);
 });
+
+test('a whole document: batched sections, finished text, gaps listed, only the sections asked for', async () => {
+  const {draftDocument, DOCUMENT_BATCH} = await import('@gapscan/drafting');
+  const many: ObjectSection[] = Array.from({length: DOCUMENT_BATCH + 2}, (_, i) => ({id: i === 0 ? 'component-button' : `s${i}`, title: `Section ${i}`, status: 'missing', provenance: 'drafted', evidence: [], content: 'Draft: approve this.'}));
+  const requests: string[] = [];
+  const client: DraftingClient = {beta: {messages: {create: async params => {
+    const user = String(params.messages[0]!.content); requests.push(user);
+    const ids = [...user.matchAll(/<section id="([^"]+)"/g)].map(m => m[1]!);
+    const answer = {sections: [...ids.map(id => ({id, content: `Written ${id} [F1].`, missing: id === 'component-button' ? ['Focus style for Button'] : [], citedFacts: ['F1']})), {id: 'not-asked', content: 'x', missing: [], citedFacts: []}].slice(0, DOCUMENT_BATCH)};
+    return {id: 'm', type: 'message', role: 'assistant', model: DEFAULT_MODEL, stop_reason: 'end_turn', stop_sequence: null, container: null, context_management: null, usage: {} as never,
+      content: [{type: 'text', text: JSON.stringify(answer), citations: null}]} as unknown as Anthropic.Beta.Messages.BetaMessage;
+  }}}};
+  const result = await draftDocument(client, settings, {eds, objectTitle: 'Guidelines and documentation', sections: many});
+  assert.equal(requests.length, 2, 'sections are written in batches');
+  assert.match(requests[0]!, /^\[F1\] Component Button/m, 'the batch’s components lead the facts');
+  assert.deepEqual(result.sections.map(s => s.id).sort(), many.map(s => s.id).sort(), 'every section, once, and nothing it wasn’t asked for');
+  const button = result.sections.find(s => s.id === 'component-button')!;
+  assert.equal(button.content, 'Written component-button.');
+  assert.deepEqual(button.missing, ['Focus style for Button']);
+  assert.deepEqual(button.evidence, ['ev:Button']);
+});

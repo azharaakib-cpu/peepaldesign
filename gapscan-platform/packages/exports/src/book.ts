@@ -4,7 +4,7 @@
 import {renderDesignSystemHtml} from './design-system.ts';
 import type {DesignSystemDoc} from './design-system.ts';
 
-export type BookDocument = {title: string; sections: {title: string; content: string}[]};
+export type BookDocument = {title: string; sections: {title: string; content: string; missing?: string[]}[]};
 
 const esc = (text: string) => text.replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'})[c]!);
 const inline = (text: string) => esc(text)
@@ -37,8 +37,9 @@ export function markdownToHtml(source: string): string {
 export function renderDesignSystemBook(doc: DesignSystemDoc, documents: BookDocument[]): string {
   const written = documents.filter(d => d.sections.length);
   const docs = written.length
-    ? written.map(d => `<section class="book-doc"><h2>${esc(d.title)}</h2>${d.sections.map(s => `<article><h3>${esc(s.title)}</h3>${markdownToHtml(s.content)}</article>`).join('')}</section>`).join('')
-    : '<section class="book-doc"><h2>Documentation</h2><p class="empty">No documentation has been approved yet. Approve sections in GapScan’s Documents and they appear here.</p></section>';
+    ? written.map(d => `<section class="book-doc"><h2>${esc(d.title)}</h2>${d.sections.map(s => `<article><h3>${esc(s.title)}</h3>${markdownToHtml(s.content)}${s.missing?.length
+        ? `<aside class="missing"><strong>Missing</strong><ul>${s.missing.map(m => `<li>${esc(m)}</li>`).join('')}</ul></aside>` : ''}</article>`).join('')}</section>`).join('')
+    : '<section class="book-doc"><h2>Documentation</h2><p class="empty">No documentation has been written yet. Open Documents in GapScan to write it, and it appears here.</p></section>';
   return `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>${esc(doc.name)} design system</title>
 ${renderDesignSystemHtml(doc, {})}
 <style>
@@ -60,6 +61,8 @@ ${renderDesignSystemHtml(doc, {})}
 .book-doc p, .book-doc li { font-size: 13px; line-height: 1.55; }
 .book-doc table { border-collapse: collapse; font-size: 12px; margin: 8px 0; }
 .book-doc th, .book-doc td { border: 1px solid var(--line); padding: 5px 8px; text-align: left; }
+.book-doc .missing { margin: 10px 0 4px; padding: 8px 12px; border: 1px solid #e9b949; background: #fff7df; border-radius: 6px; font-size: 12px; break-inside: avoid; }
+.book-doc .missing strong { color: #8a5a00; } .book-doc .missing ul { margin: 4px 0 0; padding-left: 18px; }
 .book-doc pre { font-family: var(--mono); font-size: 10.5px; background: var(--sidebar); padding: 10px; white-space: pre-wrap; border-radius: 6px; }
 </style>
 <div class="page book-docs">${docs}</div>

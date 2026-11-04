@@ -159,7 +159,7 @@ const BUILDERS: Record<ObjectKind, (eds: ExtractedDesignSystem) => ObjectSection
 
 export type StoredApproval = {by: string; at: string; hash: string};
 // A draft written on request (by Claude) replaces the generated text and is always marked drafted.
-export type StoredDraft = {content: string; evidence: string[]; model: string; at: string; openQuestions: string[]};
+export type StoredDraft = {content: string; evidence: string[]; model: string; at: string; openQuestions: string[]; missing?: string[]};
 // Facts read straight from the extraction are never rewritten; component pages are, since their usage notes need writing.
 export const isDraftable = (section: ObjectSection) => section.provenance !== 'extracted' || section.id.startsWith('component-');
 
@@ -167,15 +167,18 @@ export function buildObjects(eds: ExtractedDesignSystem, approvals: Record<strin
   return (Object.keys(BUILDERS) as ObjectKind[]).map(kind => {
     const sections = BUILDERS[kind](eds).map((s): ObjectSection => {
       const draft = drafts[`${kind}:${s.id}`];
-      return draft && isDraftable(s) ? {...s, content: draft.content, provenance: 'drafted', evidence: [...new Set([...s.evidence, ...draft.evidence])],
-        draftedBy: {model: draft.model, at: draft.at, openQuestions: draft.openQuestions, original: s.content}} : s;
+      if (!draft || !isDraftable(s)) return s;
+      // A whole-document draft says what's missing; with nothing missing the section is written.
+      const status = draft.missing ? (draft.missing.length ? 'partial' as const : 'present' as const) : s.status;
+      return {...s, status, content: draft.content, provenance: 'drafted', evidence: [...new Set([...s.evidence, ...draft.evidence])],
+        draftedBy: {model: draft.model, at: draft.at, openQuestions: draft.openQuestions, original: s.content, ...(draft.missing ? {missing: draft.missing} : {})}};
     }).map(s => {
       const approval = approvals[`${kind}:${s.id}`];
       if (!approval) return s;
       return approval.hash === contentHash(s.content) ? {...s, approval: {by: approval.by, at: approval.at}} : {...s, stale: true};
     });
-    // Approved drafts count as present; unapproved drafts count for nothing.
-    const score = sections.reduce((sum, s) => sum + (s.approval ? 1 : s.provenance === 'drafted' ? 0 : STATUS_WEIGHT[s.status]), 0);
+    // Whole documents written from the extraction count as they stand (half while gaps remain); other drafts count once approved.
+    const score = sections.reduce((sum, s) => sum + (s.approval ? 1 : s.draftedBy?.missing ? STATUS_WEIGHT[s.status] : s.provenance === 'drafted' ? 0 : STATUS_WEIGHT[s.status]), 0);
     return {kind, title: OBJECT_TITLES[kind], edsId: eds.id, sections, completeness: sections.length ? Math.round(score / sections.length * 100) / 100 : 0};
   });
 }

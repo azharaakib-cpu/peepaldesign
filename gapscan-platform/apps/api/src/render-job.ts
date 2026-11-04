@@ -34,7 +34,9 @@ export function createRenderHandler({store, blobs}: {store: Store; blobs: BlobSt
     const scales = await blobs.get(`extractions/${eds.id}.scales.json`);
     const doc = buildDesignSystem(eds, scales ? JSON.parse(scales.toString('utf8')) : {}, name);
     const objects = buildObjects(eds, await readApprovals(blobs, eds.id), await readDrafts(blobs, eds.id));
-    const documents = objects.map(o => ({title: o.title, sections: o.sections.filter(s => s.approval).map(s => ({title: s.title, content: s.content}))}));
+    // Written documents: what's read from the sources, approved sections, and AI-written sections with their gaps.
+    const documents = objects.map(o => ({title: o.title, sections: o.sections.filter(s => s.approval || s.draftedBy || s.provenance === 'extracted')
+      .map(s => ({title: s.title, content: s.content, ...(s.draftedBy?.missing?.length ? {missing: s.draftedBy.missing} : {})}))}));
     const html = renderDesignSystemBook(doc, documents);
     const file = `${name.replace(/[^\w.-]+/g, '-').replace(/^-|-$/g, '') || 'design-system'}-design-system.pdf`;
     const bytes = await withOfflineBrowser(signal, async page => {
@@ -42,9 +44,9 @@ export function createRenderHandler({store, blobs}: {store: Store; blobs: BlobSt
       return page.pdf({format: 'A4', printBackground: true, margin: {top: '16mm', bottom: '16mm', left: '14mm', right: '14mm'}});
     });
     await blobs.put(assetKey(jobId, file), bytes);
-    const approved = documents.reduce((n, d) => n + d.sections.length, 0);
+    const approved = documents.reduce((n, d) => n + d.sections.length, 0), gaps = documents.reduce((n, d) => n + d.sections.reduce((m, s) => m + (s.missing?.length ?? 0), 0), 0);
     await blobs.put(assetKey(jobId, 'manifest.json'), JSON.stringify({template: {id: BOOK, label: 'Design system book', output: 'pdf'}, file, contentType: 'application/pdf', checks: [
-      {id: 'documents', pass: approved > 0, message: approved ? `${approved} approved documentation section${approved === 1 ? '' : 's'} included.` : 'No documentation approved yet, so the book has the design system only.'}], edsId: eds.id}));
+      {id: 'documents', pass: approved > 0, message: approved ? `${approved} documentation section${approved === 1 ? '' : 's'} included${gaps ? `, with ${gaps} missing item${gaps === 1 ? '' : 's'} highlighted` : ''}.` : 'No documentation written yet, so the book has the design system only.'}], edsId: eds.id}));
     await progress('render', 1, 1, 'Your PDF is ready.');
     return {resultId: jobId};
   }

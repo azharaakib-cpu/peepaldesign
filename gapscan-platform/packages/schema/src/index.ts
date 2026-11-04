@@ -170,7 +170,8 @@ export const ObjectSection = z.object({
   stale: z.boolean().optional(),
   // Written by a language model at a person's request; counts for nothing until approved.
   // `original` is GapScan's own text that the draft replaced, so reviewers can compare.
-  draftedBy: z.object({model: z.string(), at: isoDate, openQuestions: z.array(z.string()), original: z.string().optional()}).optional(),
+  // `missing` lists what the section should cover but the extraction doesn't establish (shown highlighted).
+  draftedBy: z.object({model: z.string(), at: isoDate, openQuestions: z.array(z.string()), original: z.string().optional(), missing: z.array(z.string()).optional()}).optional(),
 });
 export const ArchitecturalObject = z.object({
   kind: ObjectKind, title: z.string(), completeness: unit, edsId: id, sections: z.array(ObjectSection),

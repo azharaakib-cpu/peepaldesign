@@ -189,6 +189,17 @@ email rather than a typed name.
 
 ## Drafting with Claude
 
+**Documents.** With AI on, the Documents page writes all six documents (accessibility, guidelines,
+principles, tooling, content, brand) as one job the first time it's opened, and on request after that
+(`POST /v1/extractions/:id/documents`, optionally `{kinds}`). Each document is written whole, in
+batches of sections, as finished documentation following established practice (WCAG 2.2 AA and the
+WAI-ARIA Authoring Practices, W3C Design Tokens, the component-page structure of mature public
+design systems). What the extraction doesn't establish is never invented: each section lists it as
+**missing**, highlighted in the page, the Markdown download and the PDF. These documents count toward
+completeness as they stand (half while gaps remain), so nobody has to approve them; per-section
+drafting and approval remain in the admin review.
+
+
 Off unless `GAPSCAN_AI=claude` is set; nothing calls Claude otherwise. With it on, the review
 page shows **Draft with Claude** on the sections GapScan can only template (principles,
 keyboard behaviour, component usage notes…), and the GapScan report shows **Ask Claude for a

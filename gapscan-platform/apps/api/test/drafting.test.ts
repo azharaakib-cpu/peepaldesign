@@ -20,8 +20,10 @@ function stubClaude() {
   const requests: Anthropic.Beta.Messages.MessageCreateParamsNonStreaming[] = [];
   const client: DraftingClient = {beta: {messages: {create: async params => {
     requests.push(params);
-    const match = String(params.messages[0]!.content).includes('<candidates>');
-    const answer = match ? {candidate: 'C1', confidence: 'medium', rationale: 'Closest in purpose.', citedFacts: ['F1']}
+    const content = String(params.messages[0]!.content), match = content.includes('<candidates>');
+    const ids = [...content.matchAll(/<section id="([^"]+)"/g)].map(m => m[1]!);
+    const answer = ids.length ? {sections: ids.map((id, i) => ({id, content: `Written: ${id}.`, missing: i === 0 ? ['Minimum target size for icon buttons'] : [], citedFacts: ['F1']}))}
+      : match ? {candidate: 'C1', confidence: 'medium', rationale: 'Closest in purpose.', citedFacts: ['F1']}
       : {content: 'Draft: the product meets **WCAG 2.2 AA**, checked before each release.', citedFacts: ['F2'], openQuestions: ['AA or AAA?']};
     return {id: 'm', type: 'message', role: 'assistant', model: 'claude-opus-5-5', stop_reason: 'end_turn', stop_sequence: null, container: null, context_management: null, usage: {} as never,
       content: [{type: 'text', text: JSON.stringify(answer), citations: null}]} as unknown as Anthropic.Beta.Messages.BetaMessage;
@@ -119,5 +121,34 @@ test('a match suggestion is stored as advice; only the reviewer approval changes
     assert.equal(approved.item.match.status, 'confirmed');
     assert.equal(approved.item.match.targetId, suggestion.targetId);
     assert.equal((await h.json('POST', `/v1/gapscans/${reportId}/matches/${encodeURIComponent(open.match.sourceId)}/suggestion`)).status, 400, 'already confirmed');
+  } finally { await h.close(); }
+});
+
+test('writing every document: no approval needed, gaps kept and highlighted, completeness counts them', async () => {
+  const off = await harness(false);
+  try { assert.equal((await off.json('POST', `/v1/extractions/${off.edsId}/documents`)).status, 503); } finally { await off.close(); }
+  const h = await harness(true);
+  try {
+    const before = (await h.json('GET', `/v1/extractions/${h.edsId}/objects`)).body;
+    const started = await h.json('POST', `/v1/extractions/${h.edsId}/documents`);
+    assert.equal(started.status, 202);
+    await h.infra.queue.idle();
+    const job = (await h.json('GET', `/v1/jobs/${started.body.jobId}`)).body;
+    assert.equal(job.status, 'completed', JSON.stringify(job.error));
+    const after = (await h.json('GET', `/v1/extractions/${h.edsId}/objects`)).body.map((o: unknown) => ArchitecturalObject.parse(o));
+    const accessibility = after.find((o: {kind: string}) => o.kind === 'accessibility')!;
+    const target = accessibility.sections.find((s: {id: string}) => s.id === 'target')!;
+    assert.equal(target.content, 'Written: target.');
+    assert.deepEqual(target.draftedBy?.missing, ['Minimum target size for icon buttons']);
+    assert.equal(target.status, 'partial', 'a section with gaps is partly written');
+    assert.equal(accessibility.sections.find((s: {id: string}) => s.id === 'contrast')!.provenance, 'extracted', 'facts read from the sources are never rewritten');
+    const total = (list: {completeness: number}[]) => list.reduce((n, o) => n + o.completeness, 0);
+    assert.ok(total(after) > total(before), 'written documents count without approval');
+    assert.ok(after.every((o: {sections: {approval?: unknown}[]}) => o.sections.every(s => !s.approval)), 'nobody had to approve anything');
+    // Only the documents asked for.
+    const one = await h.json('POST', `/v1/extractions/${h.edsId}/documents`, {kinds: ['brand']});
+    await h.infra.queue.idle();
+    assert.equal((await h.json('GET', `/v1/jobs/${one.body.jobId}`)).body.status, 'completed');
+    assert.equal((await h.json('POST', `/v1/extractions/${h.edsId}/documents`, {kinds: ['nonsense']})).status, 400);
   } finally { await h.close(); }
 });

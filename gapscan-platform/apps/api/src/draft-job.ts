@@ -3,9 +3,9 @@
 // drafts through the section approval, suggestions through the existing match approval.
 import {matchComponent} from '@gapscan/gapscan';
 import {loadReference} from '@gapscan/library';
-import {buildObjects, OBJECT_TITLES} from '@gapscan/objects';
+import {buildObjects, isDraftable, OBJECT_TITLES} from '@gapscan/objects';
 import type {StoredApproval, StoredDraft} from '@gapscan/objects';
-import {draftSection, suggestMatch} from '@gapscan/drafting';
+import {draftDocument, draftSection, suggestMatch} from '@gapscan/drafting';
 import type {AiSettings, DraftingClient, MatchCandidate, MatchSuggestion} from '@gapscan/drafting';
 import type {ObjectKind} from '@gapscan/schema';
 import type {BlobStore, JobHandler, Store} from '@gapscan/infra';
@@ -13,7 +13,8 @@ import {loadExtraction, loadGapScan} from './gapscan-job.ts';
 
 export type Ai = AiSettings & {client: DraftingClient};
 export type StoredSuggestion = MatchSuggestion & {at: string};
-export type DraftPayload = {task: 'section'; edsId: string; kind: ObjectKind; sectionId: string} | {task: 'match'; gapscanId: string; sourceId: string};
+export type DraftPayload = {task: 'section'; edsId: string; kind: ObjectKind; sectionId: string} | {task: 'match'; gapscanId: string; sourceId: string}
+  | {task: 'documents'; edsId: string; kinds?: ObjectKind[]};
 
 const readJson = async <T>(blobs: BlobStore, key: string): Promise<T | null> => { const blob = await blobs.get(key); return blob ? JSON.parse(blob.toString('utf8')) as T : null; };
 export const approvalsKey = (edsId: string) => `objects/${edsId}.approvals.json`;
@@ -35,6 +36,24 @@ export function candidatesFor(source: Parameters<typeof matchComponent>[0], targ
 export function createDraftHandler({store, blobs, ai}: {store: Store; blobs: BlobStore; ai: Ai}): JobHandler {
   return async ({job, signal, progress}) => {
     const payload = job.payload as DraftPayload;
+    // Every document, written whole from the extraction; each is saved as soon as it's done.
+    if (payload.task === 'documents') {
+      const eds = await loadExtraction(store, blobs, payload.edsId);
+      if (!eds) throw new Error('The extraction could not be found.');
+      const objects = buildObjects(eds).filter(o => !payload.kinds || payload.kinds.includes(o.kind));
+      for (const [index, object] of objects.entries()) {
+        signal.throwIfAborted();
+        await progress('write', index, objects.length, `Writing ${object.title} (${index + 1} of ${objects.length})…`);
+        const sections = object.sections.filter(isDraftable);
+        if (!sections.length) continue;
+        const written = await draftDocument(ai.client, ai, {eds, objectTitle: object.title, sections}, signal);
+        const drafts = await readDrafts(blobs, eds.id), at = new Date().toISOString();
+        for (const s of written.sections) drafts[`${object.kind}:${s.id}`] = {content: s.content, evidence: s.evidence, model: written.model, at, openQuestions: [], missing: s.missing};
+        await blobs.put(draftsKey(eds.id), JSON.stringify(drafts));
+      }
+      await progress('write', objects.length, objects.length, 'Your documents are ready.');
+      return {resultId: eds.id};
+    }
     if (payload.task === 'section') {
       const eds = await loadExtraction(store, blobs, payload.edsId);
       if (!eds) throw new Error('The extraction could not be found.');

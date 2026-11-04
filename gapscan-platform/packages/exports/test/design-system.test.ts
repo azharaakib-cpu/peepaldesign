@@ -88,8 +88,10 @@ test('the design-system book: print layout, approved documentation, and Markdown
   const doc = buildDesignSystem(eds([token('--color-brand', '#0B5FD6')]), {}, 'Acme <web>');
   const empty = renderDesignSystemBook(doc, [{title: 'Accessibility standard', sections: []}]);
   assert.match(empty, /@page \{ size: A4/);
-  assert.match(empty, /No documentation has been approved yet/);
+  assert.match(empty, /No documentation has been written yet/);
   assert.match(empty, /Acme &lt;web&gt;/);
   const withDocs = renderDesignSystemBook(doc, [{title: 'Accessibility standard', sections: [{title: 'Conformance target', content: 'We meet **WCAG 2.2 AA**.'}]}]);
   assert.match(withDocs, /<h2>Accessibility standard<\/h2><article><h3>Conformance target<\/h3><p>We meet <strong>WCAG 2.2 AA<\/strong>\.<\/p>/);
+  const gaps = renderDesignSystemBook(doc, [{title: 'Accessibility standard', sections: [{title: 'Keyboard focus', content: 'Every control shows focus.', missing: ['Focus style for <Breadcrumb>']}]}]);
+  assert.match(gaps, /<aside class="missing"><strong>Missing<\/strong><ul><li>Focus style for &lt;Breadcrumb&gt;<\/li><\/ul><\/aside>/);
 });

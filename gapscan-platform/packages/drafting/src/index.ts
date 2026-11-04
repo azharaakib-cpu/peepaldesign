@@ -54,14 +54,15 @@ function describeComponent(c: ComponentObservation, detail = false): string {
 }
 
 // Facts about the whole system, with the component in focus (if any) first and in more detail.
-export function factsFor(eds: ExtractedDesignSystem, focusComponentId?: string): Fact[] {
+export function factsFor(eds: ExtractedDesignSystem, focusComponentIds?: string | readonly string[]): Fact[] {
   const rows: {text: string; evidence: string[]}[] = [];
-  const focus = eds.components.find(c => c.id === focusComponentId);
-  if (focus) rows.push({text: describeComponent(focus, true), evidence: focus.evidence.slice(0, 3)});
+  const ids = typeof focusComponentIds === 'string' ? [focusComponentIds] : focusComponentIds ?? [];
+  const focused = eds.components.filter(c => ids.includes(c.id)), focus = focused[0];
+  for (const c of focused) rows.push({text: describeComponent(c, true), evidence: c.evidence.slice(0, 3)});
   rows.push({text: `Sources read: ${list(eds.sources.map(s => s.kind === 'url' ? `website ${s.uri}` : s.kind))}`, evidence: []});
   for (const t of eds.tokens.filter(t => t.status !== 'unresolved' && !t.path.startsWith('color.palette.')).slice(0, 60))
     rows.push({text: `Token ${t.path} = ${clip(typeof t.value === 'string' ? t.value : JSON.stringify(t.value), 120)} (${trustOf(t.confidence)}, used ${t.usageCount} times)`, evidence: t.evidence.slice(0, 3)});
-  for (const c of eds.components.filter(c => c !== focus).slice(0, 40)) rows.push({text: describeComponent(c), evidence: c.evidence.slice(0, 2)});
+  for (const c of eds.components.filter(c => !focused.includes(c)).slice(0, 40)) rows.push({text: describeComponent(c), evidence: c.evidence.slice(0, 2)});
   for (const q of eds.quirks.slice(0, 25)) rows.push({text: `Finding (${q.severity}): ${clip(q.summary, 240)}`, evidence: q.evidence.slice(0, 2)});
   for (const v of eds.brandSignals.voiceSnippets.slice(0, 12)) rows.push({text: `Writing from the user's sources: ${quoted(v)}`, evidence: []});
   if (eds.brandSignals.logoAssets.length) rows.push({text: `Logo files: ${list(eds.brandSignals.logoAssets)}`, evidence: []});
@@ -92,6 +93,41 @@ export async function draftSection(client: DraftingClient, settings: AiSettings,
   const {data, model} = await ask(client, settings, system, user, SECTION_SCHEMA, SectionDraft, signal);
   const cited = citations(data.citedFacts, facts);
   return {content: stripIds(data.content), citedFacts: cited.map(f => f.id), evidence: [...new Set(cited.flatMap(f => f.evidence))].slice(0, 20), openQuestions: data.openQuestions, model};
+}
+
+// ── Writing a whole document ────────────────────────────────────────────────
+// One request per batch of sections: Claude writes each as finished documentation following
+// established practice, and lists in `missing` what the facts don't establish instead of inventing it.
+export type DocumentRequest = {eds: ExtractedDesignSystem; objectTitle: string; sections: readonly ObjectSection[]};
+export type DocumentSection = {id: string; content: string; missing: string[]; evidence: string[]};
+export type DocumentResult = {sections: DocumentSection[]; model: string};
+export const DOCUMENT_BATCH = 8;
+const STANDARDS = `Follow established industry practice for this kind of document: WCAG 2.2 level AA and the WAI-ARIA Authoring Practices for accessibility; the W3C Design Tokens format and semantic token naming for tokens and tooling; for component guidelines, the structure mature public design systems use (purpose, when to use and when not to, anatomy, variants and sizes, states, behaviour, accessibility, content); plain-language voice-and-tone guidance for content; and brand guidance covering logo, colour, typography and imagery.`;
+const DocumentDraft = z.object({sections: z.array(z.object({id: z.string(), content: z.string().trim().min(1).max(10_000), missing: z.array(z.string().trim().min(1).max(300)).max(10), citedFacts: z.array(z.string()).max(40)})).min(1).max(DOCUMENT_BATCH)});
+const documentSchema = (ids: readonly string[]) => ({type: 'object', additionalProperties: false, required: ['sections'], properties: {sections: {type: 'array', items: {
+  type: 'object', additionalProperties: false, required: ['id', 'content', 'missing', 'citedFacts'], properties: {
+    id: {type: 'string', enum: [...ids]},
+    content: {type: 'string', description: 'The finished section in Markdown, without a heading for the section itself.'},
+    missing: {type: 'array', items: {type: 'string'}, description: 'Specific things this section should cover that the facts do not establish, each a short phrase.'},
+    citedFacts: {type: 'array', items: {type: 'string'}, description: 'Ids of the facts used, such as F3.'}}}}}});
+
+export async function draftDocument(client: DraftingClient, settings: AiSettings, request: DocumentRequest, signal?: AbortSignal): Promise<DocumentResult> {
+  const sections: DocumentSection[] = [];
+  let model = settings.model;
+  for (let start = 0; start < request.sections.length; start += DOCUMENT_BATCH) {
+    const batch = request.sections.slice(start, start + DOCUMENT_BATCH);
+    const componentIds = batch.filter(s => s.id.startsWith('component-')).map(s => s.id.slice('component-'.length));
+    const facts = factsFor(request.eds, componentIds);
+    const system = `You write a product team's "${request.objectTitle}" document, part of their design system documentation, from what GapScan extracted from their own product. Write each section as finished documentation people will use, not a draft: no "Draft:" prefixes, no requests to approve.\n\n${STANDARDS}\n\n${RULES}\n- When a section needs something the facts don't establish (a value, a rule, a decision), don't invent it: write the section around it and list the gap in \`missing\`, short and specific (for example "Focus style for Breadcrumb", "Minimum logo size").\n- Markdown; subheadings at ### or below; keep each section focused and practical.`;
+    const user = `Write these sections, keeping every fact GapScan's current text states:\n${batch.map(s => `<section id="${s.id}" title="${s.title.replace(/"/g, "'")}">\n${clip(s.content, 2500)}\n</section>`).join('\n')}\n\nFacts:\n<facts>\n${sheet(facts)}\n</facts>`;
+    const {data, model: used} = await ask(client, settings, system, user, documentSchema(batch.map(s => s.id)), DocumentDraft, signal);
+    model = used;
+    for (const written of data.sections) {
+      if (!batch.some(s => s.id === written.id) || sections.some(s => s.id === written.id)) continue;   // only the sections asked for, once each
+      sections.push({id: written.id, content: stripIds(written.content), missing: written.missing.map(stripIds), evidence: [...new Set(citations(written.citedFacts, facts).flatMap(f => f.evidence))].slice(0, 20)});
+    }
+  }
+  return {sections, model};
 }
 
 // ── Suggesting a match ──────────────────────────────────────────────────────

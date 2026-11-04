@@ -414,3 +414,19 @@ details > summary:has(.inline-h2) { cursor: pointer; }
 .start .reader-note { text-align: center; }
 .reasons { margin: 8px 0 0; padding-left: 18px; font-size: 14px; }
 .start-hint.warn { color: var(--minor); }
+
+/* Documents as documents: read, with what's missing highlighted */
+.gen-status { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; border: 1px solid var(--line); background: var(--surface); }
+.gen-status.info { background: var(--info-soft); border-color: color-mix(in srgb, var(--info) 30%, transparent); }
+.gen-status.ok { background: color-mix(in srgb, var(--ok) 10%, var(--surface)); border-color: color-mix(in srgb, var(--ok) 35%, transparent); }
+.gen-status.error { background: var(--major-soft); border-color: color-mix(in srgb, var(--major) 35%, transparent); color: var(--major); }
+.gen-status .kind-busy { margin: 0; width: 18px; height: 18px; flex: none; }
+.doc-reader { gap: 0; }
+.doc-reader .docs-main-head { padding-bottom: 12px; border-bottom: 1px solid var(--line); margin-bottom: 4px; }
+.doc-reader .doc-title { font-size: 22px; }
+.doc-read { padding: 18px 0; border-bottom: 1px solid var(--line); max-width: 78ch; }
+.doc-read:last-child { border-bottom: 0; }
+.doc-read > h3 { margin: 0 0 6px; font-size: 17px; text-transform: none; letter-spacing: 0; color: var(--text); }
+.missing-box { margin: 12px 0 0; padding: 10px 14px; border: 1px solid color-mix(in srgb, var(--minor) 45%, transparent); background: var(--minor-soft); border-radius: 8px; }
+.missing-box strong { color: var(--minor); font-size: 13px; letter-spacing: .02em; }
+.missing-box ul { margin: 4px 0 0; padding-left: 18px; }

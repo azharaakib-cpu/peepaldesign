@@ -82,7 +82,7 @@ export function accessRules(store: Store): Record<string, Rule> {
     'GET /v1/jobs/:id': viaJob, 'DELETE /v1/jobs/:id': viaJob, 'GET /v1/jobs/:id/events': viaJob, 'GET /v1/assets/:id': viaJob, 'GET /v1/assets/:id/file': viaJob,
     'GET /v1/extractions/:id': viaExtraction, 'GET /v1/extractions/:id/scales': viaExtraction, 'GET /v1/extractions/:id/design-system': viaExtraction, 'GET /v1/extractions/:id/design-system.html': viaExtraction, 'GET /v1/extractions/:id/figma-export.json': viaExtraction, 'GET /v1/figma-plugin.zip': user, 'GET /v1/extractions/:id/export': viaExtraction,
     'GET /v1/extractions/:id/objects': viaExtraction, 'GET /v1/extractions/:id/gapscans': viaExtraction, 'GET /v1/extractions/:id/missing': viaExtraction, 'PUT /v1/extractions/:id/objects/:kind/sections/:sectionId/approval': viaExtraction,
-    'GET /v1/ai': user, 'POST /v1/extractions/:id/objects/:kind/sections/:sectionId/draft': viaExtraction, 'DELETE /v1/extractions/:id/objects/:kind/sections/:sectionId/draft': viaExtraction,
+    'GET /v1/ai': user, 'POST /v1/extractions/:id/documents': viaExtraction, 'POST /v1/extractions/:id/objects/:kind/sections/:sectionId/draft': viaExtraction, 'DELETE /v1/extractions/:id/objects/:kind/sections/:sectionId/draft': viaExtraction,
     'POST /v1/gapscans/:id/matches/:sourceId/suggestion': viaGapScan, 'GET /v1/gapscans/:id/suggestions': viaGapScan,
     'POST /v1/extractions/:id/figma-sync/plan': viaExtraction, 'POST /v1/extractions/:id/figma-sync/apply': viaExtraction, 'GET /v1/extractions/:id/brandkit': viaExtraction,
     'POST /v1/extractions/:id/assets': viaExtraction, 'POST /v1/extractions/:id/book': viaExtraction, 'GET /v1/extractions/:id/recommendations': viaExtraction,

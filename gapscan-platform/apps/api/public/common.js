@@ -68,8 +68,8 @@ const aiStatus = location.pathname.endsWith('/signin.html') ? Promise.resolve({e
 // A failure message followed by the reasons each source gave (warnings are otherwise easy to miss).
 function withReasons(message, warnings) { return warnings.length ? `${message} ${warnings.join(' ')}` : message; }
 // Starts a job and resolves when it completes; progress messages go to `onProgress`.
-async function runJob(path, onProgress = () => {}) {
-  const {events} = await api(path, {method: 'POST'});
+async function runJob(path, onProgress = () => {}, body) {
+  const {events} = await api(path, {method: 'POST', ...(body ? {body: JSON.stringify(body)} : {})});
   return new Promise((resolve, reject) => {
     const stream = new EventSource(events), warnings = [];
     stream.addEventListener('progress', e => onProgress(JSON.parse(e.data).body.message));

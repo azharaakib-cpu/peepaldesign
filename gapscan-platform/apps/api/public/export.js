@@ -12,9 +12,9 @@ async function load() {
   $('#figma-download').href = `/v1/extractions/${id}/figma-export.json`;
   $('#code-download').href = codeHref();
   api(`/v1/extractions/${id}/objects`).then(list => {
-    const approved = list.flatMap(o => o.sections).filter(s => s.approval).length;
-    $('#pdf-docs').replaceChildren(approved ? `Includes ${approved} approved documentation section${approved === 1 ? '' : 's'}. ` : 'No documentation approved yet. ',
-      el('a', {href: `/app/documents.html?id=${id}`}, approved ? 'Review documents' : 'Write documents first'));
+    const written = list.flatMap(o => o.sections).filter(s => s.approval || s.draftedBy).length;
+    $('#pdf-docs').replaceChildren(written ? `Includes ${written} written documentation section${written === 1 ? '' : 's'}. ` : 'No documents written yet. ',
+      el('a', {href: `/app/documents.html?id=${id}`}, written ? 'See the documents' : 'Write the documents first'));
   }).catch(() => {});
 }
 $('#pdf-make').addEventListener('click', async () => {

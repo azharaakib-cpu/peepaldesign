@@ -382,6 +382,16 @@ export function buildApp({infra, handlers = {}, logger = false, heartbeatMs = HE
     await queue.enqueue(job);
     return reply.code(202).send({jobId: job.id, events: `/v1/jobs/${job.id}/events`});
   });
+  // Write every document (or the ones named) with Claude from the extraction, as one job.
+  app.post('/v1/extractions/:id/documents', async (request, reply) => {
+    if (!ai) return fail(reply, 503, 'Writing documents with AI isn’t turned on for this GapScan.');
+    const {id} = IdParams.parse(request.params), extraction = await store.getExtraction(id);
+    if (!extraction) return fail(reply, 404, 'Extraction not found.');
+    const body = parse(z.object({kinds: z.array(ObjectKind).min(1).optional()}).default({}), request.body ?? {}, reply); if (!body) return reply;
+    const job = await store.createJob({type: 'generate', projectId: extraction.projectId, subjectId: id, payload: {task: 'documents', edsId: id, ...(body.kinds ? {kinds: body.kinds} : {})}});
+    await queue.enqueue(job);
+    return reply.code(202).send({jobId: job.id, events: `/v1/jobs/${job.id}/events`});
+  });
   // Discards a draft: the section goes back to GapScan's generated text.
   app.delete('/v1/extractions/:id/objects/:kind/sections/:sectionId/draft', async (request, reply) => {
     const params = SectionParams.safeParse(request.params);
