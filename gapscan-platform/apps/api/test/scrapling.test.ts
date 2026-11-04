@@ -21,7 +21,9 @@ test('the Scrapling reader: pages and stylesheets through the bridge, read as CS
   assert.ok(result.observations.some(o => o.type === 'color' && /7c3aed/i.test(o.value)), 'colours from the stylesheet');
   assert.ok(result.observations.some(o => o.type === 'radius'), 'radius from the inline <style>');
   assert.ok(result.observations.some(o => o.type === 'component' && /btn/i.test(o.name)), 'components from CSS classes');
-  assert.deepEqual(result.failed.map(f => [f.locator, f.reason]), [['https://acme.example/missing', 'The site answered 404.']], 'other sites are never followed');
+  assert.deepEqual(result.failed.map(f => f.locator), ['https://acme.example/missing', 'https://acme.example/archive'], 'other sites are never followed');
+  assert.match(result.failed[1]!.reason, /different stylesheets/);
+  assert.ok(!result.observations.some(o => o.type === 'color' && /337ab7/i.test(o.value)), 'an archived design is left out, and its links are not followed');
   assert.deepEqual([result.viewports, result.themes], [[], []], 'nothing rendered');
   assert.ok(progress.some(p => p.startsWith('Scrapling: reading /')));
 

@@ -410,3 +410,21 @@ test('website readers: GapScan’s browser always; Scrapling refused with a reas
     assert.equal(plain.reader, undefined, 'the default reader is not written down');
   } finally { await h.close(); }
 });
+
+test('typefaces given through CSS variables are looked up, and unresolvable ones are left out', async () => {
+  const read = async (css: string) => {
+    const h = await harness();
+    try {
+      await h.json('POST', `/v1/projects/${h.project.id}/sources`, {kind: 'code', name: 'vars.css', content: css});
+      const {jobId} = (await h.json('POST', `/v1/projects/${h.project.id}/extractions`)).body;
+      await h.infra.queue.idle();
+      const eds = (await h.json('GET', `/v1/extractions/${(await h.json('GET', `/v1/jobs/${jobId}`)).body.resultId}?include=full`)).body;
+      return (role: string) => eds.tokens.find((t: {path: string}) => t.path === `font.family.${role}`)?.value;
+    } finally { await h.close(); }
+  };
+  const family = await read(':root { --brand-font: "Mona Sans", sans-serif; --heading: var(--brand-font); }\nh1, h2 { font-family: var(--heading); }\nbody { font-family: var(--missing, Georgia, serif); }');
+  assert.equal(family('heading'), 'Mona Sans', 'followed through two variables');
+  assert.equal(family('body'), 'Georgia', 'the fallback when the variable is not declared');
+  const unresolved = await read('body { font-family: var(--nowhere); }');
+  assert.equal(unresolved('body'), undefined, 'never shown as var(...)');
+});

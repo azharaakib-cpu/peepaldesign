@@ -60,6 +60,14 @@ export function scraplingAvailable(python = process.env.GAPSCAN_SCRAPLING_PYTHON
 }
 export const resetScraplingCheck = () => { availability = null; };
 
+// Errors from the fetcher, in words a person can act on.
+function plainError(error: string): string {
+  if (/internal IP|SSRF/i.test(error)) return 'The page redirected to a private address, which is never followed.';
+  if (/timed? ?out|Timeout/i.test(error)) return 'The site took too long to answer.';
+  if (/resolve host|Could not resolve/i.test(error)) return 'The site’s address could not be found.';
+  return error;
+}
+
 // Links and stylesheets from HTML. Attribute values only; nothing in the page is run.
 const attr = (tag: string, name: string) => new RegExp(`\\b${name}\\s*=\\s*(?:"([^"]*)"|'([^']*)'|([^\\s>]+))`, 'i').exec(tag)?.slice(1).find(v => v !== undefined) ?? null;
 export function readHtml(html: string, base: URL) {
@@ -83,11 +91,14 @@ export function createScraplingAdapter({python = process.env.GAPSCAN_SCRAPLING_P
     const get = async (url: URL) => {
       if (!await allowUrl(url)) { failed.push({locator: url.href, reason: 'Not a public https:// address.'}); return null; }
       const answer = await bridge.ask({url: url.href});
-      if (answer.error) { failed.push({locator: url.href, reason: answer.error}); return null; }
+      if (answer.error) { failed.push({locator: url.href, reason: plainError(answer.error)}); return null; }
       if (!answer.status || answer.status >= 400) { failed.push({locator: url.href, reason: `The site answered ${answer.status ?? 'nothing'}.`}); return null; }
       return {url: new URL(answer.url ?? url.href), contentType: answer.contentType ?? '', text: Buffer.from(answer.body ?? '', 'base64').toString('utf8')};
     };
     const readCss = async (css: string, name: string) => { observations.push(...(await codeAdapter({assetId: input.assetId, name, uri: input.uri, bytes: Buffer.from(css)}, context)).observations); };
+    // Pages that use none of the first page's stylesheets belong to another design (an archived
+    // version, a separate product), so their styles are left out and their links not followed.
+    let design: Set<string> | null = null;
     try {
       const queue = [start];
       while (queue.length && seenPages.size < maxPages) {
@@ -99,8 +110,13 @@ export function createScraplingAdapter({python = process.env.GAPSCAN_SCRAPLING_P
         const page = await get(url);
         if (!page) continue;
         if (/text\/css/i.test(page.contentType)) { await readCss(page.text, `${url.hostname}${url.pathname}`); fetched++; continue; }
-        fetched++;
         const {stylesheets, styles, links} = readHtml(page.text, page.url);
+        if (!design) design = new Set(stylesheets.map(s => s.href));
+        else if (design.size && stylesheets.length && !stylesheets.some(s => design!.has(s.href))) {
+          failed.push({locator: url.href, reason: 'Uses different stylesheets from the first page (another design or an archived version), so it was left out.'});
+          continue;
+        }
+        fetched++;
         for (const [i, css] of styles.entries()) await readCss(css, `${url.hostname}${url.pathname} <style> ${i + 1}.css`);
         for (const sheet of stylesheets) {
           if (seenCss.has(sheet.href)) continue;

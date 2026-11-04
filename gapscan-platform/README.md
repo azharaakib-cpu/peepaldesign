@@ -238,7 +238,9 @@ Scrapling runs as a child process (`apps/api/scrapling/bridge.py`) that only fet
 GapScan gives it. GapScan finds stylesheets and same-site links in the HTML itself, checks every
 URL with the same public-address rule as everything else, and sends Scrapling's traffic through
 the same egress proxy as the browser, so it reaches only vetted public addresses on 443.
-Scrapling's Cloudflare-solving and stealth browser are not used.
+Scrapling's Cloudflare-solving and stealth browser are not used. Pages that use none of the first
+page's stylesheets (an archived version, a separate product) are listed as left out, so one site's
+old designs don't mix into the result.
 
 To turn it on, give GapScan a Python 3.10 or newer with Scrapling's fetchers:
 

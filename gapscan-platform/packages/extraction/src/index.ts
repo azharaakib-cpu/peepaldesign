@@ -208,13 +208,23 @@ export function assembleSystem(inputs: readonly AssetResult[], external: readonl
     if (type.irregular) quirks.push({id: 'q:offscale:type', kind: 'off_scale', severity: 'minor', subjectIds: type.sizes.map(s => `${s.px}px`),
       summary: `Font sizes do not follow a consistent scale (closest ratio ${type.ratio}, average miss ${Math.round(type.residual * 100)}%).`, detail: type, evidence: []});
   }
+  const customProperties = new Map(pick('token').filter(t => t.o.path.startsWith('--')).map(t => [t.o.path, t.o.value]));
+  const resolveVar = (value: string, depth = 0): string => {
+    const name = aliasTarget(value.trim());
+    if (!name || depth > 8) return value;
+    const next = customProperties.get(name) ?? value.match(/^var\(\s*--[\w-]+\s*,\s*(.+)\)$/)?.[1];
+    return next ? resolveVar(next, depth + 1) : value;
+  };
   for (const role of ['heading', 'body', 'display'] as const) {
     const declared = fonts.find(f => f.o.role === role && f.o.family && DECLARED_CHANNELS.has(f.o.channel));
     // A typeface set on the page itself or on top-level headings, even in a rule with no size.
     const BY_SELECTOR = {body: /(^|,)\s*(html|body|:root)\s*(,|$)/, heading: /(^|,)\s*h[1-3]\s*(,|$)/, display: null}[role];
     const styled = BY_SELECTOR ? fonts.find(f => f.o.family && f.o.selector && BY_SELECTOR.test(f.o.selector)) : undefined;
-    const clean = (value: string) => value.split(',')[0]?.replace(/['"]/g, '').trim() || undefined;
-    const family = declared ? clean(declared.o.family) : (role === 'body' ? type?.bodyFamily ?? type?.families[0] : undefined) ?? (styled ? clean(styled.o.family) : undefined);
+    // `var(--heading-font)` is looked up through the stylesheet's own custom properties (and fallbacks);
+    // a typeface that still can't be resolved is left out rather than shown as code.
+    const clean = (value: string | undefined) => { const first = value ? resolveVar(value).split(',')[0]?.replace(/['"]/g, '').trim() : undefined; return first && !/^var\(/.test(first) ? first : undefined; };
+    // An explicit rule on the page or headings beats the guess from the most-used text size.
+    const family = (declared ? clean(declared.o.family) : undefined) ?? (styled ? clean(styled.o.family) : undefined) ?? (role === 'body' ? clean(type?.bodyFamily) ?? clean(type?.families[0]) : undefined);
     const source = declared ?? (family && styled && clean(styled.o.family) === family ? styled : undefined);
     if (family) tokens.push({id: `tok:family:${role}`, tier: 'semantic', path: `font.family.${role}`, type: 'fontFamily', value: family, status: 'resolved',
       evidence: source ? [source.evidenceId] : [], confidence: declared ? confidence(declared.o.channel, 1, 1) : source ? 0.6 : 0.4, usageCount: fonts.filter(f => f.o.family.includes(family)).length});
