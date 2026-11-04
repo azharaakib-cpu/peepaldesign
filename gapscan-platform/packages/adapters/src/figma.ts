@@ -73,28 +73,31 @@ export function createFigmaAdapter(token: string | undefined): Adapter {
     } else failed.push({locator: 'variables', reason: variables.status === 403 ? 'Variables are not available to this account through the REST API; styles and usage were read instead.' : `Variables could not be read (${variables.status}).`});
 
     const styleNames = file.data.styles ?? {}, fills = new Map<string, {count: number; name?: string}>();
+    // The whole file is always walked for component definitions (cheap, and a big file keeps its
+    // components on later pages); the node budget only bounds sampling of fills, text and spacing.
     let visited = 0, budgetHit = false;
     const walk = (node: FigmaNode, inComponent: boolean) => {
-      if (budgetHit) return;
-      if (++visited > FIGMA_LIMITS.nodes) { budgetHit = true; return; }
-      context.signal.throwIfAborted();
-      for (const paint of node.fills ?? []) if (paint.type === 'SOLID' && paint.visible !== false && paint.color) {
+      const sampling = ++visited <= FIGMA_LIMITS.nodes;
+      if (!sampling) budgetHit = true;
+      if (visited % 5000 === 0) context.signal.throwIfAborted();
+      if (sampling) for (const paint of node.fills ?? []) if (paint.type === 'SOLID' && paint.visible !== false && paint.color) {
         const value = hex(paint.color, paint.opacity ?? 1), styleName = node.styles?.fill ? styleNames[node.styles.fill]?.name : undefined;
         const entry = fills.get(value) ?? {count: 0}; entry.count++; if (styleName) entry.name ??= styleName; fills.set(value, entry);
       }
-      if (node.type === 'TEXT' && node.style?.fontSize) {
+      if (sampling && node.type === 'TEXT' && node.style?.fontSize) {
         const styleName = node.styles?.text ? styleNames[node.styles.text]?.name : undefined;
         observations.push({type: 'font', channel: 'figma_styles', family: node.style.fontFamily ?? '', size: `${node.style.fontSize}px`,
           ...(node.style.fontWeight ? {weight: String(node.style.fontWeight)} : {}), ...(node.style.lineHeightPx ? {lineHeight: `${Math.round(node.style.lineHeightPx * 100) / 100}px`} : {}),
           ...(styleName ? {role: styleName} : {}), locator: `node ${node.id}`});
       }
-      if (inComponent) {
+      if (sampling && inComponent) {
         for (const value of [node.itemSpacing, node.paddingLeft, node.paddingRight, node.paddingTop, node.paddingBottom]) if (value) observations.push({type: 'spacing', channel: 'figma_styles', value: `${value}px`, locator: `node ${node.id}`});
         if (node.cornerRadius) observations.push({type: 'radius', channel: 'figma_styles', value: `${node.cornerRadius}px`, locator: `node ${node.id}`});
         for (const effect of node.effects ?? []) if (effect.type === 'DROP_SHADOW' && effect.visible !== false && effect.color)
           observations.push({type: 'shadow', channel: 'figma_styles', value: `${effect.offset?.x ?? 0}px ${effect.offset?.y ?? 0}px ${effect.radius ?? 0}px ${effect.spread ?? 0}px ${hex(effect.color)}`, locator: `node ${node.id}`});
       }
-      if (node.type === 'COMPONENT_SET' || (node.type === 'COMPONENT' && !inComponent)) {
+      // Names starting with "." or "_" are private building blocks by Figma convention, never published.
+      if ((node.type === 'COMPONENT_SET' || (node.type === 'COMPONENT' && !inComponent)) && !/^[._]/.test(node.name.trim())) {
         const options = Object.entries(node.componentPropertyDefinitions ?? {}).filter(([, d]) => d.type === 'VARIANT');
         const values = (pattern: RegExp, propName: RegExp) => options.flatMap(([name, d]) => propName.test(name) ? d.variantOptions ?? [] : (d.variantOptions ?? []).filter(v => pattern.test(v)));
         const states = values(STATE_WORDS, /state|status|interaction/i), sizes = values(SIZE_WORDS, /^size$/i);
@@ -106,6 +109,7 @@ export function createFigmaAdapter(token: string | undefined): Adapter {
     };
     walk(file.data.document, false);
     for (const [value, {count, name}] of fills) observations.push({type: 'color', channel: 'figma_styles', value, property: 'fill', count, ...(name ? {name} : {}), locator: name ? `style ${name}` : 'detached fills'});
+    if (budgetHit) failed.push({locator: 'styles', reason: `Colours, text and spacing were sampled from the first ${FIGMA_LIMITS.nodes.toLocaleString('en')} of ${visited.toLocaleString('en')} layers; every component was read.`});
     return {observations, fetched: Math.min(visited, FIGMA_LIMITS.nodes), failed, budgetHit, themes};
   };
 }

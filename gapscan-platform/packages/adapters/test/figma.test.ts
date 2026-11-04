@@ -94,3 +94,24 @@ test('a missing token or unshared file gives a clear reason', async () => {
   await assert.rejects(createFigmaAdapter('t')({...input, uri: 'https://www.figma.com/design/SCOPEKEY123456/x'}, {signal: new AbortController().signal, fetch}), /can’t read file content.*File content: Read only/);
   await assert.rejects(createFigmaAdapter('t')({...input, uri: 'https://www.figma.com/design/EXPIREDKEY1234/x'}, {signal: new AbortController().signal, fetch}), /expired or been revoked/);
 });
+
+test('a big file: every component is read past the sampling budget, and private components are left out', async () => {
+  const {FIGMA_LIMITS} = await import('@gapscan/adapters');
+  const filler = Array.from({length: FIGMA_LIMITS.nodes + 10}, (_, i) => ({id: `9:${i}`, name: 'Shape', type: 'RECTANGLE', fills: [{type: 'SOLID', color: blue}]}));
+  const big = {name: 'Big', styles: {}, document: {id: '0:0', name: 'Document', type: 'DOCUMENT', children: [
+    {id: '1:1', name: 'Covers', type: 'CANVAS', children: filler},
+    {id: '1:2', name: 'Components', type: 'CANVAS', children: [
+      {id: '5:1', name: 'Checkbox', type: 'COMPONENT_SET', componentPropertyDefinitions: {State: {type: 'VARIANT', variantOptions: ['Default', 'Checked', 'Disabled']}}, children: []},
+      {id: '5:2', name: '.helper frame', type: 'COMPONENT', children: []},
+      {id: '5:3', name: '_internal', type: 'COMPONENT_SET', children: []},
+    ]},
+  ]}};
+  const fetchImpl = (async (url: string | URL | Request) => {
+    const href = String(url), json = (status: number, body: unknown) => new Response(JSON.stringify(body), {status, headers: {'content-type': 'application/json'}});
+    return href.endsWith('/variables/local') ? json(403, {err: 'Invalid scope(s)'}) : json(200, big);
+  }) as typeof fetch;
+  const result = await createFigmaAdapter('t')(input, {signal: new AbortController().signal, fetch: fetchImpl});
+  assert.deepEqual(of(result.observations, 'component').map(c => c.name), ['Checkbox'], 'found on a later page; private ones are skipped');
+  assert.equal(result.budgetHit, true);
+  assert.ok(result.failed.some(f => /sampled from the first .* every component was read/.test(f.reason)));
+});

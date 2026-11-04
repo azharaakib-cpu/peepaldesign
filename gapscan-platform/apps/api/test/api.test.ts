@@ -431,3 +431,12 @@ test('typefaces given through CSS variables are looked up, and unresolvable ones
   const unresolved = await read('body { font-family: var(--nowhere); }');
   assert.equal(unresolved('body'), undefined, 'never shown as var(...)');
 });
+
+test('components named differently still count as found (Radio button, Dropdown, Notification, Expander)', async () => {
+  const {missingItems} = await import('../src/missing.ts');
+  const component = (canonical: string) => ({id: canonical, canonical, rawNames: [canonical], category: 'Misc', tier: 'primary', variants: [], sizes: [], statesObserved: [], statesMissing: [], a11y: {focusVisible: null}, instances: 1, evidence: [], confidence: 0.8});
+  const eds = {tokens: [], components: ['Radio button', 'Dropdown', 'Notification', 'Expander', 'Toggle Switch', 'Check-box element'].map(component)} as unknown as Parameters<typeof missingItems>[0];
+  const missing = missingItems(eds).components;
+  for (const name of ['Radio', 'Select', 'Alert', 'Accordion', 'Switch', 'Checkbox']) assert.ok(!missing.includes(name), `${name} counts as found`);
+  assert.ok(missing.includes('Modal'), 'nothing like a modal was given');
+});
