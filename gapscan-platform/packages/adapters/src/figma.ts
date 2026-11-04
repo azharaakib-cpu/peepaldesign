@@ -48,7 +48,11 @@ export function createFigmaAdapter(token: string | undefined): Adapter {
     if (!token) throw new AdapterError('Figma is not connected. Set GAPSCAN_FIGMA_TOKEN on the server to read Figma files.');
     const key = figmaFileKey(uri), observations: Observation[] = [], failed: {locator: string; reason: string}[] = [];
     const file = await get<FileResponse>(context, `/files/${key}`, token);
-    if (!file.ok) throw new AdapterError(file.status === 403 || file.status === 404 ? 'This Figma file is not shared with the connected account, or the link is wrong.' : `Figma returned ${file.status}: ${file.message}`);
+    if (!file.ok) throw new AdapterError(
+      // Figma says "Invalid scope" when the token exists but wasn't given read access to file content.
+      file.status === 403 && /scope/i.test(file.message) ? 'The Figma token can’t read file content. Make a new token in Figma (Settings → Security → Personal access tokens) with “File content: Read only”, and replace the old one.'
+      : file.status === 403 && /token/i.test(file.message) ? 'The Figma token was refused: it may have expired or been revoked. Make a new one in Figma and replace it.'
+      : file.status === 403 || file.status === 404 ? 'This Figma file is not shared with the connected account, or the link is wrong.' : `Figma returned ${file.status}: ${file.message}`);
 
     // Variables need a plan with REST variable access; without it we fall back to styles and usage.
     const variables = await get<VariablesResponse>(context, `/files/${key}/variables/local`, token);

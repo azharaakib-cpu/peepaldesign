@@ -42,6 +42,8 @@ function fakeFetch(variablesStatus = 200): {fetch: typeof fetch; calls: {url: st
     const json = (status: number, body: unknown) => new Response(JSON.stringify(body), {status, headers: {'content-type': 'application/json'}});
     if (href === `https://api.figma.com/v1/files/${KEY}`) return json(200, FILE);
     if (href === `https://api.figma.com/v1/files/${KEY}/variables/local`) return variablesStatus === 200 ? json(200, VARIABLES) : json(variablesStatus, {err: 'Forbidden'});
+    if (href.includes('/files/SCOPEKEY123456')) return json(403, {status: 403, err: 'Invalid scope(s): file_comments:read. This endpoint requires the file_content:read scope'});
+    if (href.includes('/files/EXPIREDKEY1234')) return json(403, {status: 403, err: 'Invalid token'});
     return json(404, {err: 'Not found'});
   }) as typeof fetch;
   return {fetch: fetchImpl, calls};
@@ -89,4 +91,6 @@ test('a missing token or unshared file gives a clear reason', async () => {
   await assert.rejects(createFigmaAdapter(undefined)(input, {signal: new AbortController().signal}), /not connected/);
   const {fetch} = fakeFetch();
   await assert.rejects(createFigmaAdapter('t')({...input, uri: 'https://www.figma.com/design/ZZZZZZZZZZZZ/x'}, {signal: new AbortController().signal, fetch}), /not shared/);
+  await assert.rejects(createFigmaAdapter('t')({...input, uri: 'https://www.figma.com/design/SCOPEKEY123456/x'}, {signal: new AbortController().signal, fetch}), /can’t read file content.*File content: Read only/);
+  await assert.rejects(createFigmaAdapter('t')({...input, uri: 'https://www.figma.com/design/EXPIREDKEY1234/x'}, {signal: new AbortController().signal, fetch}), /expired or been revoked/);
 });
