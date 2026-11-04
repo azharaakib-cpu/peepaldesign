@@ -51,9 +51,47 @@ function renderSettings(settings) {
     ...row('Sign-in', settings.signIn.length ? settings.signIn.join(', ') : '—'),
     ...row('Drafting with Claude', settings.drafting.enabled ? `On: ${settings.drafting.model}, ${settings.drafting.effort} effort` : 'Off (set GAPSCAN_AI=claude)'),
     ...row('Figma token', settings.figmaToken ? 'Set: Figma links are read, and admins can sync variables' : 'Not set: Figma links are recorded but not read'));
-  $('#library').replaceChildren(el('tr', {}, ['Design system', 'Version', 'Built for', 'Components', 'Pinned'].map(h => el('th', {}, h))),
-    ...settings.references.map(r => el('tr', {}, el('td', {}, el('strong', {}, r.library)), el('td', {}, r.version), el('td', {}, r.framework), el('td', {}, String(r.components)), el('td', {class: 'muted'}, new Date(r.pinnedAt).toLocaleDateString()))));
 }
+// The reference library: one card per system; its components load when opened.
+const READ_FROM = {css: 'Read from its published CSS', types: 'Read from its TypeScript types', recipes: 'Read from its style recipes', registry: 'Read from its component registry', 'web-components': 'Read from its web components'};
+const number = n => Number(n).toLocaleString();
+function libraryCard(r) {
+  const body = el('div', {class: 'library-components'});
+  const more = el('details', {class: 'library-more'}, el('summary', {}, `Show ${number(r.components)} components`), body);
+  more.addEventListener('toggle', async () => {
+    if (!more.open || body.dataset.loaded) return;
+    body.dataset.loaded = '1'; body.replaceChildren(el('p', {class: 'muted'}, 'Loading…'));
+    try {
+      const full = await api(`/v1/library/${encodeURIComponent(r.id)}`), groups = new Map();
+      for (const c of full.components) groups.set(c.category, [...(groups.get(c.category) ?? []), c]);
+      body.replaceChildren(...[...groups].sort((a, b) => b[1].length - a[1].length).map(([category, list]) => el('div', {class: 'library-group'},
+        el('h4', {}, `${category} `, el('span', {class: 'muted'}, String(list.length))),
+        el('ul', {class: 'chips plain'}, list.map(c => {
+          const detail = [c.variants?.length ? `${c.variants.length} styles` : '', c.sizes?.length ? `sizes ${c.sizes.join(', ')}` : '', (c.states ?? c.statesObserved)?.length ? `states ${(c.states ?? c.statesObserved).join(', ')}` : ''].filter(Boolean).join(' · ');
+          return el('li', {class: 'library-chip', title: detail || 'No published options'}, c.canonical);
+        })))));
+    } catch (error) { body.replaceChildren(el('p', {class: 'error'}, error.message)); }
+  });
+  return el('article', {class: 'library-card'},
+    el('div', {class: 'library-head'}, el('h3', {}, r.library), el('span', {class: 'pill', title: r.version}, r.version)),
+    el('p', {class: 'muted library-meta'}, `${r.framework} · ${READ_FROM[r.kind] ?? `Read as ${r.kind}`}`),
+    el('dl', {class: 'library-facts'},
+      el('div', {}, el('dt', {}, 'Components'), el('dd', {}, number(r.components))),
+      el('div', {}, el('dt', {}, 'Tokens'), el('dd', {}, r.tokens ? number(r.tokens) : '—')),
+      el('div', {}, el('dt', {}, 'Pinned'), el('dd', {}, new Date(r.pinnedAt).toLocaleDateString(undefined, {day: 'numeric', month: 'short', year: 'numeric'})))),
+    el('div', {class: 'row library-actions'}, r.homepage ? el('a', {href: r.homepage, target: '_blank', rel: 'noopener'}, 'Website') : null),
+    more);
+}
+async function renderLibrary() {
+  try {
+    const list = await api('/v1/library');
+    $('#count-library').textContent = list.length;
+    const components = list.reduce((n, r) => n + r.components, 0);
+    $('#library-summary').textContent = `${list.length} design systems · ${number(components)} components`;
+    $('#library').replaceChildren(...list.map(libraryCard));
+  } catch (error) { $('#library').replaceChildren(el('p', {class: 'error'}, error.message)); }
+}
+
 $('#search').addEventListener('input', renderSystems);
 $('#failed-only').addEventListener('change', renderActivity);
 setCrumbs([{label: 'Admin'}]);
@@ -65,6 +103,7 @@ setCrumbs([{label: 'Admin'}]);
     $('#count-failed').textContent = failed ? `${failed} failed` : '';
     renderSystems(); renderActivity();
     renderSettings(await api('/v1/admin/settings'));
+    renderLibrary();
   } catch (error) {
     $('#systems-status').replaceChildren(error.message === 'Admins only.' ? el('span', {}, 'Admins only. ', el('a', {href: '/app/signin.html'}, 'Sign in as an admin')) : error.message);
   }

@@ -23,6 +23,7 @@ const signinUrl = () => `/app/signin.html#next=${encodeURIComponent(location.pat
 // ── App bar: the same on every page. Brand, where you are, who you are, theme. ──
 const ICONS = {
   moon: '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M20.7 14.6A8.5 8.5 0 0 1 9.4 3.3a.8.8 0 0 0-1-1A10 10 0 1 0 21.7 15.6a.8.8 0 0 0-1-1Z"/></svg>',
+  gear: '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1.08-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1.08 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>',
   sun: '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><circle cx="12" cy="12" r="4.5" fill="currentColor"/><path stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M4.9 19.1l1.8-1.8M17.3 6.7l1.8-1.8"/></svg>',
 };
 const svg = markup => { const t = document.createElement('template'); t.innerHTML = markup; return t.content.firstChild; };   // fixed icons only, never data
@@ -58,7 +59,9 @@ const me = location.pathname.endsWith('/signin.html') ? Promise.resolve({user: n
 var sessionReady = me.then(() => {}, () => {});
 const whoami = me.then(info => {
   const user = info?.user ?? null, end = appBar.querySelector('.appbar-end');
-  if (info?.admin) end.prepend(el('a', {class: 'admin-link', href: '/app/admin.html'}, 'Admin'));
+  // Admins get a settings gear before the theme switch; it opens the admin area.
+  if (info?.admin) $('#theme').before(el('a', {class: 'icon-button admin-gear', href: '/app/admin.html', 'aria-label': 'Admin settings', title: 'Admin settings',
+    ...(location.pathname.endsWith('/admin.html') ? {'aria-current': 'page'} : {})}, svg(ICONS.gear)));
   if (user && !info.anonymous) end.prepend(el('div', {class: 'account'}, el('span', {class: 'muted account-email', title: user.email}, user.email),
     el('button', {type: 'button', class: 'quiet', onclick: async () => { await fetch('/v1/auth/logout', {method: 'POST'}); location.href = '/app/signin.html#signed-out'; }}, 'Sign out')));
   return user;
