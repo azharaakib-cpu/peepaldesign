@@ -1898,6 +1898,14 @@ html.js .hero::before{
   font-size:.8125rem;color:var(--silver-600);
 }
 .foot__legal{display:flex;gap:22px}
+/* The fixed to-top plate (56px, inset clamp(16px,2.6vw,30px)) parks over the
+   right end of this row whenever the viewport is narrower than the column plus
+   the plate — measured covering "Info" and half of "Terms of Use" at 947px.
+   Below that width the bar keeps enough ground under it for the row to finish
+   above the plate when the page is scrolled to the end. */
+@media (max-width:1400px){
+  .foot__bar{padding-bottom:calc(56px + clamp(16px,2.6vw,30px) + 22px)}
+}
 .foot__legal a{transition:color .25s var(--ease)}
 .foot__legal a:hover{color:var(--silver-200)}
 

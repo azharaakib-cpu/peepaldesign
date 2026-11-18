@@ -92,6 +92,8 @@ for page in "$STAGE"/*.html; do
   while read -r ref; do
     [[ -n "$ref" ]] || continue
     [[ -f "$STAGE/$ref" ]] && continue
+    # a folder link ("info/") is served as that folder's index.html
+    [[ "$ref" == */ && -f "$STAGE/${ref}index.html" ]] && continue
     if grep -qxF "$ref" <<<"$guarded"; then
       echo "note:  $(basename "$page") -> $ref absent, falls back via onerror"
       warned=$((warned + 1))
